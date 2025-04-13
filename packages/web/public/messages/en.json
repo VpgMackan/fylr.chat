@@ -1,6 +1,10 @@
 {
   "HomePage": {
     "welcome": "What's up, {name}!",
-    "yourPockets": "Your pockets"
+    "yourPockets": "Your pockets",
+    "viewAll": "View all",
+    "noPockets": "You don't have any pockets yet.",
+    "sources": "Sources: {amount}",
+    "created": "Created: {date}"
   }
 }
