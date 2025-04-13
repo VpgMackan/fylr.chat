@@ -1,17 +1,24 @@
 {
+  "common": {
+    "yourPockets": "Your pockets",
+    "createNew": "Create new",
+    "sources": "Sources: {amount}",
+    "created": "Created: {date}",
+    "viewAll": "View all",
+    "pocketName": "Pocket: {pocketName}",
+    "goToPodcast": "Go to podcast"
+  },
   "HomePage": {
     "welcome": "What's up, {name}!",
 
-    "yourPockets": "Your pockets",
-    "viewAll": "View all",
-
-    "sources": "Sources: {amount}",
-    "created": "Created: {date}",
-
     "mostRecentChat": "Most recent chats",
-    "pocketName": "Pocket: {pocketName}",
 
-    "pinnedPodcasts": "Pinned podcasts",
-    "goToPodcast": "Go to podcast"
+    "pinnedPodcasts": "Pinned podcasts"
+  },
+
+  "PocketPage": {
+    "searchPocketsPlaceholder": "Search pockets...",
+    "searchPocketsLabel": "Search Pockets",
+    "clearSearchLabel": "Clear search"
   }
 }
