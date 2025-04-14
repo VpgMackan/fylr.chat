@@ -4,19 +4,19 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useState } from "react";
 
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import Button from "@/components/Button";
 import Pocket from "@/components/Pocket";
 import SearchBar from "@/components/SearchBar";
 import Dropdown from "@/components/Dropdown";
 
-
 export default function PocketPage() {
   const common = useTranslations("common");
   const t = useTranslations("PocketPage");
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdwonValue, setDropdownValue] = useState("");
+  const router = useRouter();
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -35,7 +35,7 @@ export default function PocketPage() {
   return (
     <div>
       <div className="flex text-5xl items-center">
-        <Icon icon="weui:back-outlined" onClick={() => redirect("/")} />
+        <Icon icon="weui:back-outlined" onClick={() => router.back()} />
         <p className="ml-8 font-bold">{common("yourPockets")}</p>
       </div>
 
@@ -61,7 +61,10 @@ export default function PocketPage() {
             ariaLabel="Choose an item"
             className="mr-2"
           />
-          <Button text={common("createNew")} />
+          <Button
+            text={common("createNew")}
+            onClick={() => router.push("/pocket/new")}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -70,6 +73,7 @@ export default function PocketPage() {
             description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
             sources={12}
             created="2025/04/13"
+            id="e57b8ddd-c118-43cf-a595-067579b62b97"
           />
         </div>
       </div>

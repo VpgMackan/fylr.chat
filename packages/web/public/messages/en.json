@@ -20,5 +20,22 @@
     "searchPocketsPlaceholder": "Search pockets...",
     "searchPocketsLabel": "Search Pockets",
     "clearSearchLabel": "Clear search"
-  }
+  },
+
+  "NewPocketPage": {
+    "createPocket": "Create New Pocket",
+    "pocketNameLabel": "Pocket Name",
+    "pocketNamePlaceholder": "Enter a name for your pocket",
+    "sourcesLabel": "Sources (Optional, can be added later)",
+    "sourcesPlaceholder": "Add sources (e.g., URLs, text)",
+    "createPocketButton": "Create Pocket",
+    "cancelButton": "Cancel",
+    "pocketDescriptionLabel": "Pocket Description (Optional)",
+    "pocketDescriptionPlaceholder": "Enter a description for your pocket",
+    "pocketTagsLabel": "Pocket Tags (Optional)",
+    "pocketTagsPlaceholder": "Add tags (e.g., technology, health)",
+    "pocketTagsHint": "Separate tags with commas. Example: technology, health"
+  },
+
+  "PocketIdPage": {}
 }

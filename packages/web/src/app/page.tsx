@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import Button from "@/components/Button";
 import Pocket from "@/components/Pocket";
@@ -13,6 +13,7 @@ import PinnedPod from "@/components/Podcast";
 export default function HomePage() {
   const common = useTranslations("common");
   const t = useTranslations("HomePage");
+  const router = useRouter();
 
   return (
     <div>
@@ -28,9 +29,12 @@ export default function HomePage() {
             <Button
               text={common("viewAll")}
               className="mr-2"
-              onClick={() => redirect("/pocket")}
+              onClick={() => router.push("/pocket")}
             />
-            <Button text={common("createNew")} />
+            <Button
+              text={common("createNew")}
+              onClick={() => router.push("/pocket/new")}
+            />
           </div>
         </div>
 
@@ -40,6 +44,7 @@ export default function HomePage() {
             description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
             sources={12}
             created="2025/04/13"
+            id="e57b8ddd-c118-43cf-a595-067579b62b97"
           />
         </div>
       </div>
