@@ -6,7 +6,10 @@
     "created": "Created: {date}",
     "viewAll": "View all",
     "pocketName": "Pocket: {pocketName}",
-    "goToPodcast": "Go to podcast"
+    "goToPodcast": "Go to podcast",
+
+    "size": "Size: {size}",
+    "imported": "Imported: {date}"
   },
   "HomePage": {
     "welcome": "What's up, {name}!",
@@ -37,5 +40,13 @@
     "pocketTagsHint": "Separate tags with commas. Example: technology, health"
   },
 
-  "PocketIdPage": {}
+  "PocketIdPage": {
+    "yourSources": "Your sources",
+    "mostRecent": "Most recent activity",
+
+    "shortcuts": "Shortcuts",
+    "viewChats": "View all chats",
+    "viewSummaries": "View all summaries",
+    "viewPodcats": "View all podcasts"
+  }
 }
