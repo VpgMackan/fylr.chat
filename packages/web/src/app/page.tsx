@@ -11,8 +11,9 @@ import Chat from "@/components/Chat";
 import PinnedPod from "@/components/Podcast";
 
 export default function HomePage() {
-  const common = useTranslations("common");
-  const t = useTranslations("HomePage");
+  const common = useTranslations("common.buttons");
+  const yourPockets = useTranslations("pockets.labels");
+  const t = useTranslations("pages.home");
   const router = useRouter();
 
   return (
@@ -24,7 +25,7 @@ export default function HomePage() {
 
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">{common("yourPockets")}</p>
+          <p className="font-semibold text-3xl">{yourPockets("yourPockets")}</p>
           <div className="flex">
             <Button
               text={common("viewAll")}
@@ -32,7 +33,7 @@ export default function HomePage() {
               onClick={() => router.push("/pocket")}
             />
             <Button
-              text={common("createNew")}
+              text={common("create")}
               onClick={() => router.push("/pocket/new")}
             />
           </div>

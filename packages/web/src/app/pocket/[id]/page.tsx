@@ -3,13 +3,13 @@
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from "react";
-
 import { useRouter } from "next/navigation";
 
 import Button from "@/components/Button";
 import Source from "@/components/Source";
 import PinnedPod from "@/components/Podcast";
 import Chat from "@/components/Chat";
+import EditPocketDialog from "@/components/EditPocketDialog";
 
 export default function PocketIdPage({
   params,
@@ -17,10 +17,18 @@ export default function PocketIdPage({
   params: Promise<{ id: string }>;
 }) {
   const [id, setId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [pocketName, setPocketName] = useState("🧠 Lorem");
+  const [pocketDescription, setPocketDescription] = useState(
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+  );
+  const [pocketTags, setPocketTags] = useState("brain, lorem, example");
+
   const router = useRouter();
 
   const common = useTranslations("common");
-  const t = useTranslations("PocketIdPage");
+  const sources = useTranslations("sources");
+  const t = useTranslations("pages");
 
   useEffect(() => {
     params.then((res) => {
@@ -28,21 +36,52 @@ export default function PocketIdPage({
     });
   }, [params]);
 
+  const handleSavePocket = () => {
+    // Mock save functionality
+    console.log("Saving pocket:", {
+      pocketName,
+      pocketDescription,
+      pocketTags,
+    });
+    // Here you would typically call an API to save the changes
+  };
+
   return (
     <div>
-      <div className="flex text-5xl items-center">
-        <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-        <p className="ml-8 font-bold">🧠 Lorem</p>
+      <div className="flex text-5xl items-center justify-between">
+        <div className="flex">
+          <Icon icon="weui:back-outlined" onClick={() => router.back()} />
+          <p className="ml-8 font-bold">{pocketName}</p>
+        </div>
+        <Button
+          text={t("pocketDetail.editPocket")}
+          className="mr-2"
+          onClick={() => setIsEditModalOpen(true)}
+        />
       </div>
+
+      <EditPocketDialog
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        pocketName={pocketName}
+        pocketDescription={pocketDescription}
+        pocketTags={pocketTags}
+        setPocketName={setPocketName}
+        setPocketDescription={setPocketDescription}
+        setPocketTags={setPocketTags}
+        onSave={handleSavePocket}
+      />
 
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">{t("yourSources")}</p>
+          <p className="font-semibold text-3xl">
+            {sources("labels.yourSources")}
+          </p>
           <div className="flex">
             <Button
-              text={common("viewAll")}
+              text={common("buttons.viewAll")}
               className="mr-2"
-              onClick={() => router.push("/pocket")}
+              onClick={() => router.push("/pocket/" + id + "/sources")}
             />
           </div>
         </div>
@@ -61,14 +100,9 @@ export default function PocketIdPage({
 
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">{t("mostRecent")}</p>
-          <div className="flex">
-            <Button
-              text={common("viewAll")}
-              className="mr-2"
-              onClick={() => router.push("/pocket")}
-            />
-          </div>
+          <p className="font-semibold text-3xl">
+            {t("pocketDetail.mostRecent")}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -95,20 +129,22 @@ export default function PocketIdPage({
       </div>
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">{t("shortcuts")}</p>
+          <p className="font-semibold text-3xl">
+            {t("pocketDetail.shortcuts")}
+          </p>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-8">
           <Button
-            text={t("viewChats")}
-            onClick={() => router.push("/pocket")}
+            text={t("pocketDetail.viewChats")}
+            onClick={() => router.push("/pocket/" + id + "/chats")}
           />
           <Button
-            text={t("viewSummaries")}
-            onClick={() => router.push("/pocket")}
+            text={t("pocketDetail.viewSummaries")}
+            onClick={() => router.push("/pocket/" + id + "/summaries")}
           />
           <Button
-            text={t("viewPodcats")}
-            onClick={() => router.push("/pocket")}
+            text={t("pocketDetail.viewPodcasts")}
+            onClick={() => router.push("/pocket/" + id + "/podcasts")}
           />
         </div>
       </div>

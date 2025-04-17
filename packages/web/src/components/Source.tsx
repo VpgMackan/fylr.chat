@@ -37,8 +37,12 @@ export default function Pocket({
 
       <div>
         <hr />
-        <p className="text-xs mt-2">{common("size", { size: size })}</p>
-        <p className="text-xs">{common("imported", { date: imported })}</p>
+        <p className="text-xs mt-2">
+          {common("metadata.size", { size: size })}
+        </p>
+        <p className="text-xs">
+          {common("metadata.imported", { date: imported })}
+        </p>
       </div>
     </div>
   );

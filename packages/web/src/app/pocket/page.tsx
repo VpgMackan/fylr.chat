@@ -12,8 +12,10 @@ import SearchBar from "@/components/SearchBar";
 import Dropdown from "@/components/Dropdown";
 
 export default function PocketPage() {
-  const common = useTranslations("common");
-  const t = useTranslations("PocketPage");
+  const pocketsT = useTranslations("pockets");
+  const commonT = useTranslations("common");
+  const t = useTranslations("pages.pocketList");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdwonValue, setDropdownValue] = useState("");
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function PocketPage() {
     <div>
       <div className="flex text-5xl items-center">
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-        <p className="ml-8 font-bold">{common("yourPockets")}</p>
+        <p className="ml-8 font-bold">{pocketsT("labels.yourPockets")}</p>
       </div>
 
       <div>
@@ -45,8 +47,8 @@ export default function PocketPage() {
             value={searchTerm}
             onChange={handleSearchChange}
             onClear={handleClearSearch}
-            placeholder={t("searchPocketsPlaceholder")}
-            ariaLabel={t("searchPocketsLabel")}
+            placeholder={t("searchLabel")}
+            ariaLabel={t("searchLabel")}
             clearLabel={t("clearSearchLabel")}
           />
           <Dropdown
@@ -62,7 +64,7 @@ export default function PocketPage() {
             className="mr-2"
           />
           <Button
-            text={common("createNew")}
+            text={commonT("buttons.create")}
             onClick={() => router.push("/pocket/new")}
           />
         </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { Select } from "@headlessui/react";
 
 interface DropdownOption {
   value: string | number;
@@ -26,7 +27,7 @@ export default function Dropdown({
 }: DropdownProps) {
   return (
     <div className={`relative inline-block ${className || ""}`}>
-      <select
+      <Select
         className={`appearance-none border border-gray-300 rounded-lg py-2 px-4 pr-8 text-2xl hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full`}
         value={selectedValue ?? ""}
         onChange={onChange}
@@ -43,7 +44,7 @@ export default function Dropdown({
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
         <svg
           className="fill-current h-4 w-4"

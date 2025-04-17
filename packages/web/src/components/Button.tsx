@@ -1,4 +1,5 @@
 import React from "react";
+import { Button as HeadlessButton } from "@headlessui/react";
 
 interface ButtonProps {
   text: string;
@@ -18,7 +19,7 @@ export default function Button({
   className,
 }: ButtonProps) {
   return (
-    <button
+    <HeadlessButton
       className={`border border-gray-300 rounded-lg py-2 px-4 text-2xl hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className || ""}`}
       onClick={onClick}
       disabled={disabled}
@@ -26,6 +27,6 @@ export default function Button({
       id={id}
     >
       {text}
-    </button>
+    </HeadlessButton>
   );
 }

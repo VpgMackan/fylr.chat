@@ -17,7 +17,7 @@ export default function Pocket({
   id: string;
 }) {
   const router = useRouter();
-  const common = useTranslations("common");
+  const common = useTranslations("common.metadata");
 
   const handleClick = () => {
     router.push(`/pocket/${id}`);

@@ -8,8 +8,10 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 
 export default function NewPocketPage() {
-  const t = useTranslations("NewPocketPage");
+  const t = useTranslations("pages.newPocket");
+  const pocketT = useTranslations("pockets");
   const common = useTranslations("common");
+  const sourcesT = useTranslations("sources");
   const router = useRouter();
 
   const [pocketName, setPocketName] = useState("");
@@ -31,7 +33,7 @@ export default function NewPocketPage() {
             onClick={() => router.back()}
             className="cursor-pointer hover:text-gray-700"
           />
-          <p className="ml-8 font-bold">{t("createPocket")}</p>
+          <p className="ml-8 font-bold">{t("title")}</p>
         </div>
       </div>
 
@@ -42,7 +44,7 @@ export default function NewPocketPage() {
               htmlFor="pocketName"
               className="block text-lg font-medium text-gray-700 mb-1"
             >
-              {t("pocketNameLabel")}
+              {pocketT("labels.nameField")}
             </label>
             <input
               id="pocketName"
@@ -50,7 +52,7 @@ export default function NewPocketPage() {
               type="text"
               value={pocketName}
               onChange={(e) => setPocketName(e.target.value)}
-              placeholder={t("pocketNamePlaceholder")}
+              placeholder={pocketT("placeholders.nameField")}
               required
               className="border border-gray-300 rounded-lg py-2 px-4 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full" // Removed hover:bg-gray-100 for standard input feel
             />
@@ -60,12 +62,12 @@ export default function NewPocketPage() {
               htmlFor="sourceButton"
               className="block text-lg font-medium text-gray-700 mb-1"
             >
-              {t("sourcesLabel")}
+              {sourcesT("labels.sourcesField")}
             </label>
             <Button
               id="sourceButton"
               type="button"
-              text={t("sourcesPlaceholder")}
+              text={sourcesT("placeholders.sourcesField")}
             />
           </div>
         </div>
@@ -74,7 +76,7 @@ export default function NewPocketPage() {
             htmlFor="pocketDescription"
             className="block text-lg font-medium text-gray-700 mb-1"
           >
-            {t("pocketDescriptionLabel")}
+            {pocketT("labels.descriptionField")}
           </label>
           <textarea
             id="pocketDescription"
@@ -82,7 +84,7 @@ export default function NewPocketPage() {
             rows={3}
             value={pocketDescription}
             onChange={(e) => setPocketDescription(e.target.value)}
-            placeholder={t("pocketDescriptionPlaceholder")}
+            placeholder={pocketT("placeholders.descriptionField")}
             className="border border-gray-300 rounded-lg py-2 px-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
           />
         </div>
@@ -91,7 +93,7 @@ export default function NewPocketPage() {
             htmlFor="pocketTags"
             className="block text-lg font-medium text-gray-700 mb-1"
           >
-            {t("pocketTagsLabel")}
+            {pocketT("labels.tagsField")}
           </label>
           <input
             id="pocketTags"
@@ -99,17 +101,17 @@ export default function NewPocketPage() {
             type="text"
             value={pocketTags}
             onChange={(e) => setPocketTags(e.target.value)}
-            placeholder={t("pocketTagsPlaceholder")}
+            placeholder={pocketT("placeholders.tagsField")}
             className="border border-gray-300 rounded-lg py-2 px-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
           />
-          <p className="text-sm text-gray-500 mt-1">{t("pocketTagsHint")}</p>
+          <p className="text-sm text-gray-500 mt-1">{pocketT("hints.tags")}</p>
         </div>
 
         <hr />
 
         <div className="flex justify-end gap-4">
-          <Button type="submit" text={t("cancelButton")} />
-          <Button type="submit" text={t("createPocketButton")} />
+          <Button type="submit" text={common("buttons.create")} />
+          <Button type="submit" text={common("buttons.cancel")} />
         </div>
       </form>
     </div>
