@@ -1,6 +1,6 @@
 import { Dialog, DialogBackdrop } from "@headlessui/react";
 import { useTranslations } from "next-intl";
-import Button from "@/components/Button";
+import Button from "@/components/common/Button";
 
 interface EditPocketDialogProps {
   isOpen: boolean;

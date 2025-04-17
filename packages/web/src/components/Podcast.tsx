@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslations } from "next-intl";
-import Button from "./Button";
+import Button from "./common/Button";
 
 export default function PinnedPod({
   title,

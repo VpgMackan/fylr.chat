@@ -6,10 +6,10 @@ import { useState } from "react";
 
 import { useRouter } from "next/navigation";
 
-import Button from "@/components/Button";
+import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
 import SearchBar from "@/components/SearchBar";
-import Dropdown from "@/components/Dropdown";
+import Dropdown from "@/components/common/Dropdown";
 
 export default function PocketPage() {
   const pocketsT = useTranslations("pockets");

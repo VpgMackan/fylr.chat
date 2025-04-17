@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import Button from "@/components/Button";
+import Button from "@/components/common/Button";
 
 export default function NewPocketPage() {
   const t = useTranslations("pages.newPocket");

@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 
 import { useRouter } from "next/navigation";
 
-import Button from "@/components/Button";
+import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
 import Chat from "@/components/Chat";
 import PinnedPod from "@/components/Podcast";
