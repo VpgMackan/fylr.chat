@@ -75,6 +75,11 @@
       "yourSummareis": "Your summareis in {pocketName}",
       "searchLabel": "Search through summaries",
       "clearSearchLabel": "Clear search"
+    },
+    "chatsList": {
+      "yourSummareis": "Your chats in {pocketName}",
+      "searchLabel": "Search through chats",
+      "clearSearchLabel": "Clear search"
     }
   },
 

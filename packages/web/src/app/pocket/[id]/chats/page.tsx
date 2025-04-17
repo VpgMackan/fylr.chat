@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Button from "@/components/common/Button";
-import Summarie from "@/components/Summarie";
+import Chat from "@/components/Chat";
 
 import SearchBar from "@/components/SearchBar";
 import Dropdown from "@/components/common/Dropdown";
 
-export default function SummariePage({
+export default function ChatsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -22,7 +22,7 @@ export default function SummariePage({
 
   const router = useRouter();
 
-  const summarieT = useTranslations("pages.summariesList");
+  const chatsT = useTranslations("pages.chatsList");
   const commonT = useTranslations("common");
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +50,7 @@ export default function SummariePage({
       <div className="flex text-5xl items-center">
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
         <p className="ml-8 font-bold">
-          {summarieT("yourSummareis", { pocketName: "Lorem" })}
+          {chatsT("yourSummareis", { pocketName: "Lorem" })}
         </p>
       </div>
 
@@ -60,9 +60,9 @@ export default function SummariePage({
             value={searchTerm}
             onChange={handleSearchChange}
             onClear={handleClearSearch}
-            placeholder={summarieT("searchLabel")}
-            ariaLabel={summarieT("searchLabel")}
-            clearLabel={summarieT("clearSearchLabel")}
+            placeholder={chatsT("searchLabel")}
+            ariaLabel={chatsT("searchLabel")}
+            clearLabel={chatsT("clearSearchLabel")}
           />
           <Dropdown
             options={[
@@ -83,7 +83,7 @@ export default function SummariePage({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Summarie
+          <Chat
             title="🧠 Lorem"
             pocket="Lorem"
             description="Lorem ipsum dolor sit amet, consectetur adipiscing elit..."
