@@ -9,6 +9,7 @@ import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
 import Chat from "@/components/Chat";
 import PinnedPod from "@/components/Podcast";
+import Heading from "@/components/layout/Heading";
 
 export default function HomePage() {
   const common = useTranslations("common.buttons");
@@ -17,12 +18,10 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <div>
-      <div className="flex text-5xl ">
-        <p className="mr-8 font-bold">{t("welcome", { name: "Markus" })}</p>
-        <Icon icon="twemoji:waving-hand" flip="horizontal" />
-      </div>
-
+    <Heading
+      title={t("welcome", { name: "Markus" })}
+      behindTitle={<Icon icon="twemoji:waving-hand" flip="horizontal" />}
+    >
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
           <p className="font-semibold text-3xl">{yourPockets("yourPockets")}</p>
@@ -49,7 +48,6 @@ export default function HomePage() {
           />
         </div>
       </div>
-
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
           <p className="font-semibold text-3xl">{t("mostRecentChat")}</p>
@@ -63,7 +61,6 @@ export default function HomePage() {
           />
         </div>
       </div>
-
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
           <p className="font-semibold text-3xl">{t("pinnedPodcasts")}</p>
@@ -73,6 +70,6 @@ export default function HomePage() {
           <PinnedPod title="Lorem ipsum" pocket="Lorem" />
         </div>
       </div>
-    </div>
+    </Heading>
   );
 }

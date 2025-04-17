@@ -10,6 +10,7 @@ import Source from "@/components/Source";
 import PinnedPod from "@/components/Podcast";
 import Chat from "@/components/Chat";
 import EditPocketDialog from "@/components/EditPocketDialog";
+import Heading from "@/components/layout/Heading";
 
 export default function PocketIdPage({
   params,
@@ -47,19 +48,19 @@ export default function PocketIdPage({
   };
 
   return (
-    <div>
-      <div className="flex text-5xl items-center justify-between">
-        <div className="flex">
-          <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-          <p className="ml-8 font-bold">{pocketName}</p>
-        </div>
+    <Heading
+      title={pocketName}
+      infrontTitle={
+        <Icon icon="weui:back-outlined" onClick={() => router.back()} />
+      }
+      rightSideContent={
         <Button
           text={t("pocketDetail.editPocket")}
           className="mr-2"
           onClick={() => setIsEditModalOpen(true)}
         />
-      </div>
-
+      }
+    >
       <EditPocketDialog
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -148,6 +149,6 @@ export default function PocketIdPage({
           />
         </div>
       </div>
-    </div>
+    </Heading>
   );
 }

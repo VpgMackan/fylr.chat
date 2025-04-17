@@ -10,6 +10,7 @@ import Summarie from "@/components/Summarie";
 
 import SearchBar from "@/components/SearchBar";
 import Dropdown from "@/components/common/Dropdown";
+import Heading from "@/components/layout/Heading";
 
 export default function SummariePage({
   params,
@@ -46,14 +47,12 @@ export default function SummariePage({
   }, [params]);
 
   return (
-    <div>
-      <div className="flex text-5xl items-center">
+    <Heading
+      title={summarieT("yourSummareis", { pocketName: "Lorem" })}
+      infrontTitle={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-        <p className="ml-8 font-bold">
-          {summarieT("yourSummareis", { pocketName: "Lorem" })}
-        </p>
-      </div>
-
+      }
+    >
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
           <SearchBar
@@ -90,6 +89,6 @@ export default function SummariePage({
           />
         </div>
       </div>
-    </div>
+    </Heading>
   );
 }

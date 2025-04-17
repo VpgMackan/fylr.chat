@@ -10,6 +10,7 @@ import PinnedPod from "@/components/Podcast";
 
 import SearchBar from "@/components/SearchBar";
 import Dropdown from "@/components/common/Dropdown";
+import Heading from "@/components/layout/Heading";
 
 export default function PodcastsPage({
   params,
@@ -46,14 +47,12 @@ export default function PodcastsPage({
   }, [params]);
 
   return (
-    <div>
-      <div className="flex text-5xl items-center">
+    <Heading
+      title={podcastsT("yourPodcasts", { pocketName: "Lorem" })}
+      infrontTitle={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-        <p className="ml-8 font-bold">
-          {podcastsT("yourPodcasts", { pocketName: "Lorem" })}
-        </p>
-      </div>
-
+      }
+    >
       <div>
         <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
           <SearchBar
@@ -86,6 +85,6 @@ export default function PodcastsPage({
           <PinnedPod title="🧠 Lorem" pocket="Lorem" />
         </div>
       </div>
-    </div>
+    </Heading>
   );
 }
