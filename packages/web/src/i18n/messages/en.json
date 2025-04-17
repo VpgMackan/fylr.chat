@@ -13,7 +13,7 @@
       "size": "Size: {size}"
     }
   },
-  
+
   "pockets": {
     "labels": {
       "yourPockets": "Your pockets",
@@ -32,7 +32,7 @@
       "tags": "Separate tags with commas. Example: technology, health"
     }
   },
-  
+
   "sources": {
     "labels": {
       "yourSources": "Your sources",
@@ -43,7 +43,7 @@
       "sourcesField": "Add sources (e.g., URLs, text)"
     }
   },
-  
+
   "pages": {
     "home": {
       "welcome": "What's up, {name}!",
@@ -65,9 +65,19 @@
       "viewSummaries": "View all summaries",
       "viewPodcasts": "View all podcasts",
       "editPocket": "Edit pocket"
+    },
+    "podcastList": {
+      "yourPodcasts": "Your podcasts in {pocketName}",
+      "searchLabel": "Search through podcasts",
+      "clearSearchLabel": "Clear search"
+    },
+    "summariesList": {
+      "yourSummareis": "Your summareis in {pocketName}",
+      "searchLabel": "Search through summaries",
+      "clearSearchLabel": "Clear search"
     }
   },
-  
+
   "podcasts": {
     "goToPodcast": "Go to podcast"
   }
