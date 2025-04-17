@@ -80,7 +80,8 @@
       "yourSummareis": "Your chats in {pocketName}",
       "searchLabel": "Search through chats",
       "clearSearchLabel": "Clear search"
-    }
+    },
+    "podcast": {}
   },
 
   "podcasts": {
