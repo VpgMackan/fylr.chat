@@ -30,7 +30,7 @@ export default function ChatsPage({
 
   return (
     <ListPageLayout
-      title={chatsT("yourSummareis", { pocketName: "Lorem" })}
+      title={chatsT("yourChats", { pocketName: "Lorem" })}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}

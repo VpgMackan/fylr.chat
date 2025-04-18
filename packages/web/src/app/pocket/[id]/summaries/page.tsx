@@ -30,7 +30,7 @@ export default function SummariePage({
 
   return (
     <ListPageLayout
-      title={summarieT("yourSummareis", { pocketName: "Lorem" })}
+      title={summarieT("yourSummaries", { pocketName: "Lorem" })}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}
