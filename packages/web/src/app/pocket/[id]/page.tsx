@@ -11,6 +11,7 @@ import PinnedPod from "@/components/Podcast";
 import Chat from "@/components/Chat";
 import EditPocketDialog from "@/components/EditPocketDialog";
 import Heading from "@/components/layout/Heading";
+import Section from "@/components/layout/Section";
 
 export default function PocketIdPage({
   params,
@@ -38,13 +39,11 @@ export default function PocketIdPage({
   }, [params]);
 
   const handleSavePocket = () => {
-    // Mock save functionality
     console.log("Saving pocket:", {
       pocketName,
       pocketDescription,
       pocketTags,
     });
-    // Here you would typically call an API to save the changes
   };
 
   return (
@@ -73,82 +72,66 @@ export default function PocketIdPage({
         onSave={handleSavePocket}
       />
 
-      <div>
-        <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">
-            {sources("labels.yourSources")}
-          </p>
-          <div className="flex">
-            <Button
-              text={common("buttons.viewAll")}
-              className="mr-2"
-              onClick={() => router.push("/pocket/" + id + "/sources")}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <Source
-            title="🧠 Lorem"
-            summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-            size="2.4 KB"
-            imported="2025/04/13"
-            id="e57b8ddd-c118-43cf-a595-067579b62b97"
-            pocketId={id || ""}
-          />
-        </div>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">
-            {t("pocketDetail.mostRecent")}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <Source
-            title="🧠 Lorem"
-            summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-            size="2.4 KB"
-            imported="2025/04/13"
-            id="e57b8ddd-c118-43cf-a595-067579b62b97"
-            pocketId={id || ""}
-          />
-          <PinnedPod title="Lorem ipsum" pocket="Lorem" />
-          <Chat
-            title="Lorem ipsum"
-            pocket="Lorem"
-            description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          />
-          <Chat
-            title="Lorem ipsum"
-            pocket="Lorem"
-            description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          />
-        </div>
-      </div>
-      <div>
-        <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-          <p className="font-semibold text-3xl">
-            {t("pocketDetail.shortcuts")}
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-4 mt-8">
+      <Section
+        title={sources("labels.yourSources")}
+        actions={
           <Button
-            text={t("pocketDetail.viewChats")}
-            onClick={() => router.push("/pocket/" + id + "/chats")}
+            text={common("buttons.viewAll")}
+            className="mr-2"
+            onClick={() => router.push("/pocket/" + id + "/sources")}
           />
-          <Button
-            text={t("pocketDetail.viewSummaries")}
-            onClick={() => router.push("/pocket/" + id + "/summaries")}
-          />
-          <Button
-            text={t("pocketDetail.viewPodcasts")}
-            onClick={() => router.push("/pocket/" + id + "/podcasts")}
-          />
-        </div>
-      </div>
+        }
+        cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
+      >
+        <Source
+          title="🧠 Lorem"
+          summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+          size="2.4 KB"
+          imported="2025/04/13"
+          id="e57b8ddd-c118-43cf-a595-067579b62b97"
+          pocketId={id || ""}
+        />
+      </Section>
+
+      <Section
+        title={t("pocketDetail.mostRecent")}
+        cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
+      >
+        <Source
+          title="🧠 Lorem"
+          summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+          size="2.4 KB"
+          imported="2025/04/13"
+          id="e57b8ddd-c118-43cf-a595-067579b62b97"
+          pocketId={id || ""}
+        />
+        <PinnedPod title="Lorem ipsum" pocket="Lorem" />
+        <Chat
+          title="Lorem ipsum"
+          pocket="Lorem"
+          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+        />
+        <Chat
+          title="Lorem ipsum"
+          pocket="Lorem"
+          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+        />
+      </Section>
+
+      <Section title={t("pocketDetail.shortcuts")} cols="grid-cols-3">
+        <Button
+          text={t("pocketDetail.viewChats")}
+          onClick={() => router.push("/pocket/" + id + "/chats")}
+        />
+        <Button
+          text={t("pocketDetail.viewSummaries")}
+          onClick={() => router.push("/pocket/" + id + "/summaries")}
+        />
+        <Button
+          text={t("pocketDetail.viewPodcasts")}
+          onClick={() => router.push("/pocket/" + id + "/podcasts")}
+        />
+      </Section>
     </Heading>
   );
 }
