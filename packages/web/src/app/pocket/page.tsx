@@ -1,83 +1,44 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ListPageLayout, {
+  DropdownOption,
+} from "@/components/layout/ListPageLayout";
+import PinnedPod from "@/components/Podcast";
 
-import Button from "@/components/common/Button";
-import Pocket from "@/components/Pocket";
-import SearchBar from "@/components/SearchBar";
-import Dropdown from "@/components/common/Dropdown";
-import Heading from "@/components/layout/Heading";
-
-export default function PocketPage() {
-  const pocketsT = useTranslations("pockets");
-  const commonT = useTranslations("common");
-  const t = useTranslations("pages.pocketList");
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dropdwonValue, setDropdownValue] = useState("");
+export default function PodcastsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const [id, setId] = useState<string>();
   const router = useRouter();
+  const t = useTranslations("pages.podcastList");
+  const commonT = useTranslations("common");
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-  };
+  useEffect(() => {
+    params.then((r) => setId(r.id));
+  }, [params]);
 
-  const handleClearSearch = () => {
-    setSearchTerm("");
-  };
-
-  const handleDropdownChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setDropdownValue(event.target.value);
-  };
+  const dropdownOptions: DropdownOption[] = [
+    { value: 1, label: "Most recent" },
+    { value: 2, label: "Title" },
+    { value: 3, label: "Most sources" },
+  ];
 
   return (
-    <Heading
-      title={pocketsT("labels.yourPockets")}
-      infrontTitle={
-        <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-      }
+    <ListPageLayout
+      title={t("yourPodcasts", { pocketName: "Lorem" })}
+      onBack={() => router.back()}
+      onCreate={() => router.push("/pocket/new")}
+      createText={commonT("buttons.create")}
+      searchLabel={t("searchLabel")}
+      clearSearchLabel={t("clearSearchLabel")}
+      dropdownOptions={dropdownOptions}
     >
-      <div className="flex justify-between items-center space-x-4 mt-8 mb-4">
-        <SearchBar
-          value={searchTerm}
-          onChange={handleSearchChange}
-          onClear={handleClearSearch}
-          placeholder={t("searchLabel")}
-          ariaLabel={t("searchLabel")}
-          clearLabel={t("clearSearchLabel")}
-        />
-        <Dropdown
-          options={[
-            { value: 1, label: "Most recent" },
-            { value: 2, label: "Title" },
-            { value: 3, label: "Most sources" },
-          ]}
-          selectedValue={dropdwonValue}
-          onChange={handleDropdownChange}
-          placeholder="Select an option..."
-          ariaLabel="Choose an item"
-          className="mr-2"
-        />
-        <Button
-          text={commonT("buttons.create")}
-          onClick={() => router.push("/pocket/new")}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Pocket
-          title="🧠 Lorem"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          sources={12}
-          created="2025/04/13"
-          id="e57b8ddd-c118-43cf-a595-067579b62b97"
-        />
-      </div>
-    </Heading>
+      <PinnedPod title="🧠 Lorem" pocket="Lorem" />
+    </ListPageLayout>
   );
 }
