@@ -24,7 +24,7 @@ export default async function RootLayout({
   const locale = await getLocale();
   return (
     <html lang={locale} className={`${inter.variable}`}>
-      <body className="p-16 font-montserrat bg-blue-50 text-gray-900">
+      <body className="p-16 font-montserrat bg-blue-50 text-gray-900 h-screen">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

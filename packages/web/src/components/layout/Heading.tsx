@@ -14,7 +14,7 @@ export default function Heading({
   rightSideContent?: React.ReactNode;
 }) {
   return (
-    <div>
+    <>
       <div className="flex text-5xl items-center justify-between">
         <div className="flex">
           {infrontTitle ? <div className="mr-8">{infrontTitle}</div> : null}
@@ -24,6 +24,6 @@ export default function Heading({
         {rightSideContent}
       </div>
       {children}
-    </div>
+    </>
   );
 }
