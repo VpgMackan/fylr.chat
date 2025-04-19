@@ -1,0 +1,118 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkDeflist from "remark-deflist";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+
+export default function Chat({
+  user,
+  children,
+}: {
+  user: boolean;
+  children: string;
+}) {
+  const maxWidthClass = user ? "max-w-[30%]" : "max-w-[70%]";
+  const justifyContentClass = user ? "justify-end" : "justify-start";
+  return (
+    <div className={`flex ${justifyContentClass}`}>
+      <div
+        className={`bg-blue-200 border-2 border-blue-300 p-4 rounded-4xl ${maxWidthClass}`}
+      >
+        <ReactMarkdown
+          remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkDeflist]}
+          components={{
+            h1: ({ node, ...props }) => (
+              <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />
+            ),
+            h2: ({ node, ...props }) => (
+              <h2 className="text-xl font-bold mt-5 mb-3" {...props} />
+            ),
+            h3: ({ node, ...props }) => (
+              <h3 className="text-lg font-bold mt-4 mb-2" {...props} />
+            ),
+            p: ({ node, ...props }) => <p className="my-3" {...props} />,
+            a: ({ node, ...props }) => (
+              <a className="text-blue-600 hover:underline" {...props} />
+            ),
+            ul: ({ node, ...props }) => (
+              <ul className="list-disc ml-5 my-3" {...props} />
+            ),
+            ol: ({ node, ...props }) => (
+              <ol className="list-decimal ml-5 my-3" {...props} />
+            ),
+            li: ({ node, children, ...props }) => (
+              <li className="my-1" {...props}>
+                {children}
+              </li>
+            ),
+            blockquote: ({ node, ...props }) => (
+              <blockquote
+                className="border-l-4 border-gray-400 pl-4 italic my-3 text-gray-700"
+                {...props}
+              />
+            ),
+            table: ({ node, ...props }) => (
+              <div className="my-4 overflow-x-auto">
+                <table className="border-collapse w-full" {...props} />
+              </div>
+            ),
+            thead: ({ node, ...props }) => (
+              <thead className="bg-gray-200" {...props} />
+            ),
+            tr: ({ node, ...props }) => (
+              <tr className="border-b border-gray-300" {...props} />
+            ),
+            th: ({ node, ...props }) => (
+              <th className="py-2 px-3 text-left border" {...props} />
+            ),
+            td: ({ node, ...props }) => (
+              <td className="py-2 px-3 border" {...props} />
+            ),
+            code: ({ node, inline, className, children, ...props }) => {
+              const match = /language-(\w+)/.exec(className || "");
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  style={vscDarkPlus}
+                  language={match[1]}
+                  PreTag="div"
+                  className="rounded my-3"
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, "")}
+                </SyntaxHighlighter>
+              ) : (
+                <code
+                  className="bg-gray-200 px-1 py-0.5 rounded text-sm"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            },
+            // Custom component for task lists
+            input: ({ node, ...props }) =>
+              props.type === "checkbox" ? (
+                <input
+                  type="checkbox"
+                  className="mr-1 rounded"
+                  checked={props.checked}
+                  readOnly
+                />
+              ) : null,
+            // Custom styling for definitions
+            dt: ({ node, ...props }) => (
+              <dt className="font-bold mt-2" {...props} />
+            ),
+            dd: ({ node, ...props }) => <dd className="ml-4 mb-2" {...props} />,
+            // Special support for footnotes
+            sup: ({ node, ...props }) => (
+              <sup className="text-xs text-blue-600" {...props} />
+            ),
+          }}
+        >
+          {children}
+        </ReactMarkdown>
+      </div>
+    </div>
+  );
+}
