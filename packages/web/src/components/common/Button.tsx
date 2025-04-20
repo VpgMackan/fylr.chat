@@ -2,7 +2,7 @@ import React from "react";
 import { Button as HeadlessButton } from "@headlessui/react";
 
 interface ButtonProps {
-  text: string;
+  text: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   type?: "button" | "submit" | "reset";
