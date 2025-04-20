@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import Button from "@/components/common/Button";
 import Source from "@/components/Source";
-import PinnedPod from "@/components/Podcast";
+import PinnedPod from "@/components/PodcastListItem";
 import Chat from "@/components/Chat";
 import EditPocketDialog from "@/components/EditPocketDialog";
 import Heading from "@/components/layout/Heading";

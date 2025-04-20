@@ -75,7 +75,7 @@ PG_VERSION 17.2
 \`\`\`bash
 head -c 4096 shh | strings | grep PG_VERSION
 \`\`\`
--- if that still turns up nothing, try upping the byte count:
+‑‑ if that still turns up nothing, try upping the byte count:
 
 \`\`\`bash
 head -c 16384 shh | strings | grep PG_VERSION

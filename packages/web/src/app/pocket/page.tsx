@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
-import PinnedPod from "@/components/Podcast";
+import PinnedPod from "@/components/PodcastListItem";
 
 export default function PodcastsPage({
   params,

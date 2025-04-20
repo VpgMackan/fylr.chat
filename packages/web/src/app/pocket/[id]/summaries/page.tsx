@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
-import Summarie from "@/components/Summarie";
+import Summarie from "@/components/SummaryListItem";
 
 export default function SummariePage({
   params,
