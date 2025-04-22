@@ -8,9 +8,16 @@ import { AppService } from './app.service';
 import { PocketsController } from './pockets/pockets.controller';
 import { PocketsService } from './pockets/pockets.service';
 import { FileService } from './file.service';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), MinioModule.registerAsync()],
+  imports: [
+    ConfigModule.forRoot(),
+    MinioModule.registerAsync(),
+    UsersModule,
+    AuthModule,
+  ],
   controllers: [AppController, PocketsController],
   providers: [AppService, PocketsService, FileService],
 })
