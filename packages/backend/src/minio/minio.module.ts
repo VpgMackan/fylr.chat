@@ -1,5 +1,5 @@
 import { Global, Module, DynamicModule } from '@nestjs/common';
-import { ConfigService, ConfigModule } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
 import { MINIO_TOKEN } from './minio.decorator';
 
@@ -9,7 +9,6 @@ export class MinioModule {
   static registerAsync(): DynamicModule {
     return {
       module: MinioModule,
-      imports: [ConfigModule],
       providers: [
         {
           provide: MINIO_TOKEN,
