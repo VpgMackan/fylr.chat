@@ -23,15 +23,20 @@ export class AppController {
   @Post()
   @UseInterceptors(FileInterceptor('file'))
   async upload(@UploadedFile() file: Express.Multer.File) {
-    const fileId = uuidv4() + '.' + file.originalname.split('.').pop();
-    await this.fileSvc.upload('user-files', fileId, file.buffer, {
+    const fileId = uuidv4();
+    const originalName = file.originalname;
+    const fileExtension = originalName.split('.').pop() || '';
+    const objectName = fileExtension ? `${fileId}.${fileExtension}` : fileId;
+
+    await this.fileSvc.upload('user-files', objectName, file.buffer, {
       'Content-Type': file.mimetype,
+      'Original-Filename': originalName,
     });
-    return { message: 'Uploaded successfully', fileId: fileId };
+    return { message: 'Uploaded successfully', fileId: objectName };
   }
 
   @Get(':id')
-  async getFIle(
+  async getFile(
     @Param('id') id: string, // Directly get the id parameter
     @Res({ passthrough: true }) res: Response, // Inject Response and set passthrough
   ): Promise<StreamableFile> {

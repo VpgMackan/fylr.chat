@@ -15,11 +15,11 @@ export class MinioModule {
           inject: [ConfigService],
           useFactory: (cs: ConfigService): Minio.Client => {
             return new Minio.Client({
-              endPoint: cs.get('MINIO_ENDPOINT') || 'localhost',
-              port: cs.get('MINIO_PORT') || 9000,
-              useSSL: cs.get('MINIO_USE_SSL') === 'true',
-              accessKey: cs.get('MINIO_ACCESS_KEY') || '',
-              secretKey: cs.get('MINIO_SECRET_KEY') || '',
+              endPoint: cs.getOrThrow('MINIO_ENDPOINT') || 'localhost',
+              port: cs.getOrThrow('MINIO_PORT') || 9000,
+              useSSL: cs.getOrThrow('MINIO_USE_SSL') === 'true',
+              accessKey: cs.getOrThrow('MINIO_ACCESS_KEY') || '',
+              secretKey: cs.getOrThrow('MINIO_SECRET_KEY') || '',
             });
           },
         },

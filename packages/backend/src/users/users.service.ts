@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './users.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './create-user.dto';
+import { UpdateUserDto } from './update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -27,10 +28,28 @@ export class UsersService {
     return user;
   }
 
-  async createUser(userData: CreateUserDto): Promise<User> {
-    const user = await this.usersRepository.insert(userData);
-    return user.raw;
+  async createUser(userData: CreateUserDto): Promise<Omit<User, 'password'>> {
+    const newUser = this.usersRepository.create(userData);
+    await this.usersRepository.save(newUser);
+    const { password, ...result } = newUser;
+    return result;
   }
 
-  // update
+  async updateUser(
+    id: string,
+    updateData: UpdateUserDto,
+  ): Promise<Omit<User, 'password'>> {
+    const userToUpdate = await this.usersRepository.preload({
+      id: id,
+      ...updateData,
+    });
+
+    if (!userToUpdate) {
+      throw new NotFoundException(`User with ID "${id}" not found`);
+    }
+
+    await this.usersRepository.save(userToUpdate);
+    const { password, ...result } = userToUpdate;
+    return result;
+  }
 }

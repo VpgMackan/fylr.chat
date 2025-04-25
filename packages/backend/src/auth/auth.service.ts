@@ -5,9 +5,11 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { CreateUserDto } from 'src/users/create-user.dto';
 import { compare, hash } from 'bcrypt';
-import { NotFoundError } from 'rxjs';
+import { User } from 'src/users/users.entity';
+
+import { CreateUserDto } from 'src/users/create-user.dto';
+import { UpdateUserDto } from 'src/users/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -31,19 +33,37 @@ export class AuthService {
 
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = { id: user.id, name: user.name };
+    const payload = { id: user.id, name: user.name, email: user.email };
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
   }
 
-  async signUp(data: CreateUserDto) {
-    const password = await hash(data.password, 10);
+  async signUp(data: CreateUserDto): Promise<Omit<User, 'password'>> {
+    const saltRounds = 10;
+    const hashedPassword = await hash(data.password, saltRounds);
     const user = await this.usersService.createUser({
-      name: data.name,
-      email: data.email,
-      password,
+      ...data,
+      password: hashedPassword,
     });
     return user;
+  }
+
+  async updateProfile(
+    userId: string,
+    updateData: UpdateUserDto,
+  ): Promise<Omit<User, 'password'>> {
+    const dataToUpdate = { ...updateData };
+
+    if (dataToUpdate.password) {
+      const saltRounds = 10;
+      dataToUpdate.password = await hash(dataToUpdate.password, saltRounds);
+    }
+
+    const updatedUser = await this.usersService.updateUser(
+      userId,
+      dataToUpdate,
+    );
+    return updatedUser;
   }
 }
