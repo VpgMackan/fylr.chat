@@ -8,9 +8,12 @@ import {
   Request,
   UseGuards,
   BadRequestException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { CreateUserDto } from 'src/users/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -28,6 +31,12 @@ export class AuthController {
 
     // validate the data to for max security TODO!
     return this.authService.signIn(signInDto.email, signInDto.password);
+  }
+
+  @Post('signup')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  signUo(@Body() signUpDto: CreateUserDto) {
+    return this.authService.signUp(signUpDto);
   }
 
   @UseGuards(AuthGuard)
