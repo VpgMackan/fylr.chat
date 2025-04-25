@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
         global: true,
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: vconfigService.get<string>('JWT_EXPIRY', '3600s'),
+          expiresIn: configService.get<string>('JWT_EXPIRY', '3600s'),
         },
       }),
       inject: [ConfigService],
