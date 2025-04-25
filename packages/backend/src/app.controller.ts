@@ -15,19 +15,10 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
 import { FileService } from './file.service';
-import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
-  constructor(
-    private readonly appService: AppService,
-    private readonly fileSvc: FileService,
-  ) {}
-
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
+  constructor(private readonly fileSvc: FileService) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file'))
