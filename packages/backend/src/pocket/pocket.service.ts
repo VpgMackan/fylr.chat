@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Pocket } from './pocket.entity';
+import { UpdateUserDto } from 'src/users/update-user.dto';
+import { CreatePocketDto } from './create-pocket.dto';
 
 @Injectable()
 export class PocketService {
@@ -58,25 +60,33 @@ export class PocketService {
 
   /**
    * Creates a pocket and stores it in the database
-   * @param userId The id for the user that created the pocket
-   * @param icon An iconfiy class name
-   * @param description A text describing the content in the pocket
-   * @param tags A array of string with tags
+   * @param data An object containing the data for the new pocket
    * @returns A promise resolving the newly created pocket
    */
-  async createPocket(
-    userId: string,
-    icon: string,
-    description: string,
-    tags: string[],
-  ): Promise<Pocket> {
-    const newPocket = this.pocketRepository.create({
-      userId,
-      icon,
-      description,
-      tags,
-    });
+  async createPocket(data: CreatePocketDto): Promise<Pocket> {
+    const newPocket = this.pocketRepository.create(data);
     await this.pocketRepository.save(newPocket);
     return newPocket;
+  }
+
+  /**
+   * A function that updates a pocket
+   * @param id The id for the pocket that should to be updated
+   * @param updateData An object containing the fields to update (icon, description, tags)
+   * @returns A promise resolving the newly updated pocket
+   */
+  async updatePocket(id: string, updateData: UpdateUserDto): Promise<Pocket> {
+    const pocketToUpdate = await this.pocketRepository.preload({
+      id,
+      ...updateData,
+    });
+
+    if (!pocketToUpdate)
+      throw new NotFoundException(
+        `Pocket with the ID "${id}" doesn't exist in database`,
+      );
+
+    await this.pocketRepository.save(pocketToUpdate);
+    return pocketToUpdate;
   }
 }

@@ -45,9 +45,8 @@ export class UsersService {
       ...updateData,
     });
 
-    if (!userToUpdate) {
+    if (!userToUpdate)
       throw new NotFoundException(`User with ID "${id}" not found`);
-    }
 
     await this.usersRepository.save(userToUpdate);
     const { password, ...result } = userToUpdate;
