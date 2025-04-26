@@ -45,7 +45,7 @@ export class AppController {
     return { message: 'Uploaded successfully', fileId: objectName };
   }
 
-  @Get(':id')
+  @Get('/file/:id')
   async getFile(
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
