@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { FileService } from './file.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { PocketModule } from './pocket/pocket.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuthModule } from './auth/auth.module';
     MinioModule.registerAsync(),
     UsersModule,
     AuthModule,
+    PocketModule,
   ],
   controllers: [AppController],
   providers: [FileService],

@@ -1,5 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
+import { Pocket } from 'src/pocket/pocket.entity';
+
 @Entity('Users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -8,11 +10,14 @@ export class User {
   @Column('text', { unique: true })
   email: string;
 
-  @Column('text', { unique: true })
+  @Column('text')
   password: string;
 
   @Column('text')
   name: string;
+
+  @OneToMany(() => Pocket, (pocket) => pocket.user)
+  pockets: Pocket[];
 
   /*
   Here are the fields needed for relation support
@@ -21,8 +26,5 @@ export class User {
 
   @OneToMany(() => UserPinnedPodcast, upp => upp.user)
   pinnedPodcasts: UserPinnedPodcast[];
-
-  @OneToMany(() => Pocket, pocket => pocket.user)
-  pockets: Pocket[];
   */
 }
