@@ -24,6 +24,7 @@ export class MinioModule {
             });
           },
         },
+        MinioService,
       ],
       exports: [MINIO_TOKEN, MinioService],
     };

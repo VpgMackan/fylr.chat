@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { User } from 'src/users/users.entity';
+import { Source } from 'src/source/source.entity';
 
 @Entity('Pockets')
 export class Pocket {
@@ -32,4 +34,7 @@ export class Pocket {
 
   @Column('text', { array: true })
   tags: string[];
+
+  @OneToMany(() => Source, (source) => source.pocket)
+  source: Source[];
 }
