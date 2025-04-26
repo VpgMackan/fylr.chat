@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
 
 import { Pocket } from './pocket.entity';
-import { UpdateUserDto } from 'src/users/update-user.dto';
 import { CreatePocketDto } from './create-pocket.dto';
+import { UpdatePocketDto } from './update-pocket.dto';
 
 @Injectable()
 export class PocketService {
@@ -70,7 +70,7 @@ export class PocketService {
    * @param updateData An object containing the fields to update (icon, description, tags)
    * @returns A promise resolving the newly updated pocket
    */
-  async updatePocket(id: string, updateData: UpdateUserDto): Promise<Pocket> {
+  async updatePocket(id: string, updateData: UpdatePocketDto): Promise<Pocket> {
     const pocketToUpdate = await this.pocketRepository.preload({
       id,
       ...updateData,
