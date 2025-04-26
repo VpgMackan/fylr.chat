@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 
 import { Pocket } from './pocket.entity';
 import { UpdateUserDto } from 'src/users/update-user.dto';
@@ -8,11 +8,6 @@ import { CreatePocketDto } from './create-pocket.dto';
 
 @Injectable()
 export class PocketService {
-  /**
-   * Update pocket
-   * Delete pocket
-   */
-
   constructor(
     @InjectRepository(Pocket)
     private pocketRepository: Repository<Pocket>,
@@ -88,5 +83,23 @@ export class PocketService {
 
     await this.pocketRepository.save(pocketToUpdate);
     return pocketToUpdate;
+  }
+
+  /**
+   * A function that will remove a pocket from the database
+   * @param id The id for the pocket that should be deleted
+   * @returns A promise resolving a DeleteResult object indicating the outcome of the deletion.
+   */
+  async deletePocket(id: string): Promise<DeleteResult> {
+    await this.findOneById(id);
+    const result = await this.pocketRepository.delete(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException(
+        `Pocket with the ID "${id}" could not be deleted (unexpected error).`,
+      );
+    }
+
+    return result;
   }
 }
