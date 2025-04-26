@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Client as MinioClient, ItemBucketMetadata } from 'minio';
-import { InjectMinio } from './minio/minio.decorator';
-import { Readable } from 'stream'; // Import Readable stream type
+import { InjectMinio } from './minio.decorator';
+import { Readable } from 'stream';
 
 @Injectable()
-export class FileService {
+export class MinioService {
   constructor(@InjectMinio() private readonly client: MinioClient) {}
 
   /**
@@ -21,7 +21,7 @@ export class FileService {
     stream: Buffer | Readable,
     metaData?: ItemBucketMetadata,
   ) {
-    await this.ensureBucketExists(bucket); // Ensure bucket exists before upload
+    await this.ensureBucketExists(bucket);
     const size = stream instanceof Buffer ? stream.length : undefined;
     return this.client.putObject(bucket, name, stream, size, metaData);
   }
@@ -41,7 +41,7 @@ export class FileService {
           `Object '${name}' not found in bucket '${bucket}'`,
         );
       }
-      throw error; // Re-throw other errors
+      throw error;
     }
   }
 
@@ -55,10 +55,7 @@ export class FileService {
     try {
       await this.client.removeObject(bucket, name);
     } catch (error) {
-      // Handle cases where the object might not exist gracefully if needed,
-      // otherwise, let errors propagate or re-throw specific ones.
       if (error.code === 'NoSuchKey') {
-        // Optionally ignore if the object is already gone
         console.warn(
           `Attempted to delete non-existent object '${name}' from bucket '${bucket}'`,
         );
@@ -79,7 +76,6 @@ export class FileService {
       return await this.client.statObject(bucket, name);
     } catch (error) {
       if (error.code === 'NotFound' || error.code === 'NoSuchKey') {
-        // Minio client might return different codes
         throw new NotFoundException(
           `Object '${name}' not found in bucket '${bucket}'`,
         );
@@ -124,7 +120,7 @@ export class FileService {
    */
   async makeBucket(bucket: string, region?: string): Promise<void> {
     if (!(await this.bucketExists(bucket))) {
-      await this.client.makeBucket(bucket, region || ''); // Provide empty string if region is undefined
+      await this.client.makeBucket(bucket, region || '');
     }
   }
 
@@ -145,7 +141,6 @@ export class FileService {
    * @returns A promise resolving when the bucket is removed.
    */
   async removeBucket(bucket: string): Promise<void> {
-    // Add checks here if needed (e.g., ensure bucket is empty before removal)
     return this.client.removeBucket(bucket);
   }
 }

@@ -14,15 +14,14 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 
 import { v4 as uuidv4 } from 'uuid';
+import { SourceService } from './source.service';
 
-import { FileService } from './file.service';
-
-@Controller()
-export class AppController {
-  private readonly userFilesBucket: string;
+@Controller('source')
+export class SourceController {
+  /*private readonly userFilesBucket: string;
 
   constructor(
-    private readonly fileSvc: FileService,
+    private readonly sourceService: SourceService,
     private readonly configService: ConfigService,
   ) {
     this.userFilesBucket = this.configService.getOrThrow<string>(
@@ -69,5 +68,5 @@ export class AppController {
       }
       throw error;
     }
-  }
+  }*/
 }

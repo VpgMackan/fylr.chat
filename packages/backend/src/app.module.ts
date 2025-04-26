@@ -3,13 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { MinioModule } from './minio/minio.module';
-
-import { AppController } from './app.controller';
-import { FileService } from './file.service';
+//import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PocketModule } from './pocket/pocket.module';
+import { SourceModule } from './source/source.module';
 
 @Module({
   imports: [
@@ -28,12 +26,11 @@ import { PocketModule } from './pocket/pocket.module';
         autoLoadEntities: true,
       }),
     }),
-    MinioModule.registerAsync(),
     UsersModule,
     AuthModule,
     PocketModule,
+    SourceModule,
   ],
-  controllers: [AppController],
-  providers: [FileService],
+  //controllers: [AppController],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@ import { Global, Module, DynamicModule } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
 import { MINIO_TOKEN } from './minio.decorator';
+import { MinioService } from './minio.service';
 
 @Global()
 @Module({})
@@ -24,7 +25,7 @@ export class MinioModule {
           },
         },
       ],
-      exports: [MINIO_TOKEN],
+      exports: [MINIO_TOKEN, MinioService],
     };
   }
 }
