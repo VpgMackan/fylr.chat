@@ -33,6 +33,12 @@ export class Source {
   @Column('bigint')
   size: number;
 
-  @CreateDateColumn({ name: 'created_at' })
-  upload_time: Date;
+  @CreateDateColumn({ name: 'upload_time' })
+  uploadTime: Date;
+
+  @Column('uuid', { name: 'job_key' })
+  jobKey: string;
+
+  @Column('text')
+  status: string;
 }

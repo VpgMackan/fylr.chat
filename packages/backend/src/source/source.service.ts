@@ -15,9 +15,10 @@ export class SourceService {
     private readonly minioService: MinioService,
   ) {}
 
-  /**
-   * Add handeling to create source
-   * Add handeling to show file from bucket
-   * Add handeling to remove source
-   */
+  async createSourceDatabaseEntry(data) {
+    const newSoruce = this.sourceRepository.create(data);
+    await this.sourceRepository.save(newSoruce);
+    console.log(newSoruce);
+    return newSoruce;
+  }
 }
