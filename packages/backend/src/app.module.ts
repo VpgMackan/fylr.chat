@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PocketModule } from './pocket/pocket.module';
 import { SourceModule } from './source/source.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -24,6 +25,15 @@ import { SourceModule } from './source/source.module';
         password: configService.get<string>('DB_PASS'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
+      }),
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get('REDIS_URL'),
+          port: configService.get('REDIS_PORT'),
+        },
       }),
     }),
     UsersModule,

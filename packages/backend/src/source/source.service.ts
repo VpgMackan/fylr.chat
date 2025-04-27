@@ -18,7 +18,6 @@ export class SourceService {
   async createSourceDatabaseEntry(data) {
     const newSoruce = this.sourceRepository.create(data);
     await this.sourceRepository.save(newSoruce);
-    console.log(newSoruce);
     return newSoruce;
   }
 }

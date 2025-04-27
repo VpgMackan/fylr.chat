@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 
 import { MinioModule } from './minio/minio.module';
 import { MinioService } from './minio/minio.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
+import { SourceProcessor } from './source.processor';
 import { Source } from './source.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
@@ -22,9 +24,12 @@ import { AuthModule } from 'src/auth/auth.module';
       }),
       inject: [ConfigService],
     }),
+    BullModule.registerQueue({
+      name: 'file-processing',
+    }),
     AuthModule,
   ],
   controllers: [SourceController],
-  providers: [SourceService, MinioService],
+  providers: [SourceService, SourceProcessor, MinioService],
 })
 export class SourceModule {}
