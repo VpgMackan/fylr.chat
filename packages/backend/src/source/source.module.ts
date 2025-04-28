@@ -13,6 +13,7 @@ import { SourceProcessor } from './source.processor';
 import { Source } from './source.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
+import { EventsModule } from 'src/events/events.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from 'src/auth/auth.module';
       name: 'file-processing',
     }),
     AuthModule,
+    EventsModule,
   ],
   controllers: [SourceController],
   providers: [SourceService, SourceProcessor, MinioService],

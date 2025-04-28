@@ -2,13 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 
-//import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PocketModule } from './pocket/pocket.module';
 import { SourceModule } from './source/source.module';
-import { BullModule } from '@nestjs/bullmq';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -40,7 +40,7 @@ import { BullModule } from '@nestjs/bullmq';
     AuthModule,
     PocketModule,
     SourceModule,
+    EventsModule,
   ],
-  //controllers: [AppController],
 })
 export class AppModule {}
