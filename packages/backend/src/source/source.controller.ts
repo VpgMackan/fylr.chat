@@ -1,17 +1,13 @@
 import {
   Controller,
-  Get,
-  Param,
   Post,
   UploadedFile,
   UseInterceptors,
-  StreamableFile,
-  Res,
-  NotFoundException,
   Body,
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,6 +17,15 @@ import { Queue } from 'bullmq';
 import { SourceService } from './source.service';
 
 import { AuthGuard } from 'src/auth/auth.guard';
+
+const ALLOWED_MIME = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/html',
+  'application/epub+zip',
+];
 
 @UseGuards(AuthGuard)
 @Controller('source')
@@ -32,7 +37,22 @@ export class SourceController {
 
   @Post('create')
   @HttpCode(HttpStatus.ACCEPTED)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (_req, file, cb) => {
+        if (ALLOWED_MIME.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              `Invalid file type. Only PDF, PPTX, DOCX, XLSX, HTML or EPUB allowed.`,
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
   async createSource(@UploadedFile() file: Express.Multer.File, @Body() body) {
     if (!file) return { message: 'No file provided.' };
     const jobKey = uuidv4();
