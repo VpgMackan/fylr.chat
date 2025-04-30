@@ -63,7 +63,13 @@ export class SourceProcessor extends WorkerHost {
 
   private async processByType(type: string, data: Buffer) {
     this.logger.log(`Processing content for type ${type}`);
-    await new Promise((r) => setTimeout(r, 2000));
+    switch (type) {
+      case 'application/pdf':
+        this.porcessPdf();
+
+      default:
+        break;
+    }
   }
 
   private async cleanupTemp(path: string) {
@@ -74,19 +80,17 @@ export class SourceProcessor extends WorkerHost {
       this.logger.warn(`Could not delete temp file ${path}: ${e.message}`);
     }
   }
-}
 
-// Upload file to minio
-// Delete temp file
-// Proccess based on file type
-/**
- * PDF:
- * Extract content
- * Convert to chunks
- * Convert to vektors
- * Upload to database
- * TXT, md:
- * Convert to chunks
- * Convert to vektors
- * Upload to database
- */
+  private async porcessPdf() {
+    // Extract content using github.com/VikParuchuri/marker
+    // To get markdown
+
+    this.porcessMd();
+  }
+
+  private async porcessMd() {
+    // Convert the markdown to chunks
+    // Convert chunks to vectors
+    // Store vectors and chunks in database.
+  }
+}
