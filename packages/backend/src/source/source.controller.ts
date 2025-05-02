@@ -38,7 +38,7 @@ export class SourceController {
         } else {
           cb(
             new BadRequestException(
-              `Invalid file type. Only PDF, TXT and MD allowed.`,
+              `Invalid file type. Only PDF, TXT and MD allowed. ${file.mimetype}`,
             ),
             false,
           );
