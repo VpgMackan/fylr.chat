@@ -3,11 +3,15 @@ import { Job } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Inject, Logger } from '@nestjs/common';
 import * as fs from 'fs/promises';
+import { Repository } from 'typeorm';
 
 import { EventsGateway } from '../events/events.gateway';
 import { MinioService } from './minio/minio.service';
 
 import { ContentHandler } from './handler/content-handler.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+
+import { Source } from './source.entity';
 
 @Processor('file-processing')
 export class SourceProcessor extends WorkerHost {
@@ -19,6 +23,8 @@ export class SourceProcessor extends WorkerHost {
     private readonly config: ConfigService,
     @Inject('CONTENT_HANDLERS')
     private readonly handlers: Map<string, ContentHandler>,
+    @InjectRepository(Source)
+    private sourceRepository: Repository<Source>,
   ) {
     super();
   }
@@ -41,8 +47,12 @@ export class SourceProcessor extends WorkerHost {
     try {
       await this.ensureExists(url);
       buffer = await this.readFile(url);
-      await this.upload(name, type, buffer);
+      await this.upload(id, type, buffer);
       await this.handleContent(type, buffer, jobKey);
+      await this.sourceRepository.update(id, {
+        url: id,
+        status: '-',
+      });
       notify('completed', 'Done!');
       this.logger.log(`Completed job ${job.id}`);
       return { status: 'completed', fileId: id };
@@ -63,9 +73,9 @@ export class SourceProcessor extends WorkerHost {
     return fs.readFile(path);
   }
 
-  private upload(name: string, type: string, buffer: Buffer) {
+  private upload(id: string, type: string, buffer: Buffer) {
     const bucket = this.config.getOrThrow('MINIO_BUCKET_USER_FILE');
-    return this.minio.upload(bucket, name, buffer, { 'Content-Type': type });
+    return this.minio.upload(bucket, id, buffer, { 'Content-Type': type });
   }
 
   private async handleContent(type: string, buffer: Buffer, jobKey: string) {
