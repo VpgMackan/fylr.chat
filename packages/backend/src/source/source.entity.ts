@@ -5,9 +5,11 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  OneToMany,
 } from 'typeorm';
 
 import { Pocket } from 'src/pocket/pocket.entity';
+import { Vector } from './handler/vector.entity';
 
 @Entity('Sources')
 export class Source {
@@ -41,4 +43,7 @@ export class Source {
 
   @Column('text')
   status: string;
+
+  @OneToMany(() => Vector, (vector) => vector.source)
+  vectors: Vector[];
 }

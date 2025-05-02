@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { PdfHandler } from './pdf.handler';
 import { MarkdownHandler } from './markdown.handler';
 
 import { ContentHandler } from './content-handler.interface';
+import { Vector } from './vector.entity';
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Vector])],
   providers: [
     PdfHandler,
     MarkdownHandler,
