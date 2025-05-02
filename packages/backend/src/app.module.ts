@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { PocketModule } from './pocket/pocket.module';
 import { SourceModule } from './source/source.module';
 import { EventsModule } from './events/events.module';
+import { AiModule } from './aiService/aiService.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { EventsModule } from './events/events.module';
     PocketModule,
     SourceModule,
     EventsModule,
+    AiModule,
   ],
 })
 export class AppModule {}
