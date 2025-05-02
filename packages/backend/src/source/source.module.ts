@@ -14,6 +14,7 @@ import { Source } from './source.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
+import { ContentModule } from './handler/handler.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { EventsModule } from 'src/events/events.module';
     }),
     AuthModule,
     EventsModule,
+    ContentModule,
   ],
   controllers: [SourceController],
   providers: [SourceService, SourceProcessor, MinioService],

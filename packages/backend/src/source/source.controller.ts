@@ -18,14 +18,7 @@ import { SourceService } from './source.service';
 
 import { AuthGuard } from 'src/auth/auth.guard';
 
-const ALLOWED_MIME = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/html',
-  'application/epub+zip',
-];
+const ALLOWED_MIME = ['application/pdf', 'text/plain', 'text/markdown'];
 
 @UseGuards(AuthGuard)
 @Controller('source')
@@ -45,7 +38,7 @@ export class SourceController {
         } else {
           cb(
             new BadRequestException(
-              `Invalid file type. Only PDF, PPTX, DOCX, XLSX, HTML or EPUB allowed.`,
+              `Invalid file type. Only PDF, TXT and MD allowed.`,
             ),
             false,
           );
