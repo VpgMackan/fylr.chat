@@ -6,9 +6,10 @@ import { MarkdownHandler } from './markdown.handler';
 
 import { ContentHandler } from './content-handler.interface';
 import { Vector } from './vector.entity';
+import { AiModule } from 'src/aiService/aiService.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Vector])],
+  imports: [TypeOrmModule.forFeature([Vector]), AiModule],
   providers: [
     PdfHandler,
     MarkdownHandler,

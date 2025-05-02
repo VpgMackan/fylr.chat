@@ -1,4 +1,4 @@
 export interface ContentHandler {
   supportedMimeTypes: string[];
-  handle(buffer: Buffer, jobKey: string): Promise<void>;
+  handle(buffer: Buffer, jobKey: string, fileId: string): Promise<void>;
 }

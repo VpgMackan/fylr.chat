@@ -48,7 +48,7 @@ export class SourceProcessor extends WorkerHost {
       await this.ensureExists(url);
       buffer = await this.readFile(url);
       await this.upload(id, type, buffer);
-      await this.handleContent(type, buffer, jobKey);
+      await this.handleContent(type, buffer, jobKey, id);
       await this.sourceRepository.update(id, {
         url: id,
         status: '-',
@@ -78,7 +78,12 @@ export class SourceProcessor extends WorkerHost {
     return this.minio.upload(bucket, id, buffer, { 'Content-Type': type });
   }
 
-  private async handleContent(type: string, buffer: Buffer, jobKey: string) {
+  private async handleContent(
+    type: string,
+    buffer: Buffer,
+    jobKey: string,
+    fileId: string,
+  ) {
     const handler = this.handlers.get(type);
     if (!handler) {
       this.logger.warn(
@@ -86,7 +91,7 @@ export class SourceProcessor extends WorkerHost {
       );
       return;
     }
-    return handler.handle(buffer, jobKey);
+    return handler.handle(buffer, jobKey, fileId);
   }
 
   private async cleanup(path: string) {
