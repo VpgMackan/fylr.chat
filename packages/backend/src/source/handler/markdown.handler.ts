@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import pgvector from 'pgvector';
 
 import { ContentHandler } from './content-handler.interface';
 import { Vector } from './vector.entity';
@@ -28,6 +29,24 @@ export class MarkdownHandler implements ContentHandler {
     }
 
     this.logger.log(`Split markdown into ${chunks.length} chunks`);
-    // TODO: Convert chunks to vectors and persist
+
+    const vectors: Vector[] = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      const element = chunks[i];
+      
+      // Convert chunk to vector
+      // const vector = this.aiService.vector.generate(element, "model-name", {})
+
+      vectors.push(
+        this.vectorRepository.create({
+          fileId: '',
+          embedding: pgvector.toSql([]),
+          content: element,
+        }),
+      );
+    }
+
+    await this.vectorRepository.save(vectors);
   }
 }
