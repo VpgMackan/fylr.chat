@@ -9,6 +9,14 @@ import { Vector } from './vector.entity';
 
 import { AiService } from 'src/aiService/ai.service';
 
+type ChunkStrategy = 'fixed' | 'sentence';
+
+interface ChunkOptions {
+  strategy?: ChunkStrategy;
+  chunkSize?: number; // in characters
+  chunkOverlap?: number; // in characters
+}
+
 @Injectable()
 export class MarkdownHandler implements ContentHandler {
   readonly supportedMimeTypes = ['text/plain', 'text/markdown'];
@@ -61,63 +69,31 @@ export class MarkdownHandler implements ContentHandler {
     }
   }
 
-  // ...existing code...
-  private segmentText(text: string, maxChunkSize: number = 1000): string[] {
+  private segmentText(text: string, opts: ChunkOptions = {}): string[] {
+    const { strategy = 'fixed', chunkSize = 1000, chunkOverlap = 0 } = opts;
+
+    if (strategy === 'fixed') {
+      const chunks: string[] = [];
+      for (let i = 0; i < text.length; i += chunkSize - chunkOverlap) {
+        chunks.push(text.slice(i, i + chunkSize));
+      }
+      return chunks;
+    }
+
+    const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
     const chunks: string[] = [];
-    const paragraphs = text.split(/(\r?\n\r?\n)/).filter(Boolean);
+    let current = '';
 
-    let currentChunk = '';
-    let currentSize = 0;
-
-    for (const part of paragraphs) {
-      const partLength = part.length;
-
-      if (partLength > maxChunkSize) {
-        if (currentSize > 0) {
-          chunks.push(currentChunk.trim());
-          currentChunk = '';
-          currentSize = 0;
-        }
-
-        const sentences = part
-          .split(/((?<=[.?!])\s+|(?<=\r?\n))/g)
-          .filter(Boolean);
-        for (const sentence of sentences) {
-          const sentenceLength = sentence.length;
-          if (sentenceLength > maxChunkSize) {
-            if (currentSize > 0) {
-              chunks.push(currentChunk.trim());
-            }
-            chunks.push(sentence.trim());
-            currentChunk = '';
-            currentSize = 0;
-          } else if (currentSize + sentenceLength <= maxChunkSize) {
-            currentChunk += sentence;
-            currentSize += sentenceLength;
-          } else {
-            chunks.push(currentChunk.trim());
-            currentChunk = sentence;
-            currentSize = sentenceLength;
-          }
-        }
-        continue;
+    for (const sentence of sentences) {
+      if ((current + sentence).length > chunkSize && current.length > 0) {
+        chunks.push(current.trim());
+        current = current.slice(-chunkOverlap);
       }
-      if (currentSize + partLength <= maxChunkSize) {
-        currentChunk += part;
-        currentSize += partLength;
-      } else {
-        if (currentSize > 0) {
-          chunks.push(currentChunk.trim());
-        }
-        currentChunk = part;
-        currentSize = partLength;
-      }
+      current += sentence;
     }
-
-    if (currentSize > 0) {
-      chunks.push(currentChunk.trim());
+    if (current.trim()) {
+      chunks.push(current.trim());
     }
-
-    return chunks.filter((chunk) => chunk.length > 0);
+    return chunks;
   }
 }

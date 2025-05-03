@@ -16,6 +16,8 @@ import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
 import { ContentModule } from './handler/handler.module';
 
+import { AiModule } from 'src/aiService/aiService.module';
+
 @Module({
   imports: [
     MinioModule.registerAsync(),
@@ -32,6 +34,7 @@ import { ContentModule } from './handler/handler.module';
     AuthModule,
     EventsModule,
     ContentModule,
+    AiModule,
   ],
   controllers: [SourceController],
   providers: [SourceService, SourceProcessor, MinioService],

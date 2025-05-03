@@ -8,6 +8,8 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Get,
+  Param,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +19,7 @@ import { Queue } from 'bullmq';
 import { SourceService } from './source.service';
 
 import { AuthGuard } from 'src/auth/auth.guard';
+import { AiService } from 'src/aiService/ai.service';
 
 const ALLOWED_MIME = ['application/pdf', 'text/plain', 'text/markdown'];
 
@@ -26,6 +29,7 @@ export class SourceController {
   constructor(
     private sourceService: SourceService,
     @InjectQueue('file-processing') private readonly fileProcessingQueue: Queue,
+    private readonly aiService: AiService,
   ) {}
 
   @Post('create')
@@ -69,5 +73,10 @@ export class SourceController {
       jobKey: jobKey,
       database: entry,
     };
+  }
+
+  @Get('/:query')
+  test(@Param('query') query: string) {
+    return this.aiService.vector.search(query, '', {});
   }
 }
