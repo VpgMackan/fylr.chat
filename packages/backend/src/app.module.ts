@@ -9,11 +9,13 @@ import { AuthModule } from './auth/auth.module';
 import { PocketModule } from './pocket/pocket.module';
 import { SourceModule } from './source/source.module';
 import { EventsModule } from './events/events.module';
+import { validate } from './config/config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate,
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
