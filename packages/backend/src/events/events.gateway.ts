@@ -25,7 +25,7 @@ export class EventsGateway {
     this.logger.log('WebSocket Gateway Initialized');
   }
 
-  handleConnection(client: Socket, ...args: any[]) {
+  handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
   }
 
@@ -59,7 +59,7 @@ export class EventsGateway {
    * @param status A string indicating the current status (e.g., 'processing', 'completed', 'failed').
    * @param data Optional additional data (e.g., progress percentage, error message, final result).
    */
-  sendJobUpdate(jobKey: string, status: string, data?: any) {
+  sendJobUpdate(jobKey: string, status: string, data?: object) {
     this.logger.log(`Sending update for jobKey ${jobKey}: Status=${status}`);
     this.server.to(jobKey).emit('jobUpdate', {
       jobKey,

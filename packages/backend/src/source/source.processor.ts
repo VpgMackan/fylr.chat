@@ -50,16 +50,17 @@ export class SourceProcessor extends WorkerHost {
       await this.upload(id, type, buffer);
       await this.handleContent(type, buffer, jobKey, id);
       await this.sourceRepository.update(id, {
-        url: id,
-        status: '-',
+      url: id,
+      status: '-',
       });
       notify('completed', 'Done!');
       this.logger.log(`Completed job ${job.id}`);
       return { status: 'completed', fileId: id };
-    } catch (err: any) {
-      this.logger.error(`Job ${job.id} failed: ${err.message}`, err.stack);
-      notify('failed', err.message);
-      throw err;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.logger.error(`Job ${job.id} failed: ${error.message}`, error.stack);
+      notify('failed', error.message);
+      throw error;
     } finally {
       await this.cleanup(url);
     }
