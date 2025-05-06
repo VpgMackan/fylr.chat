@@ -48,7 +48,7 @@ class EnvironmentVariables {
   MINIO_PORT: number;
 
   @IsBoolean()
-  MINIO_USE_SLL: boolean;
+  MINIO_USE_SSL: boolean;
 
   @IsString()
   MINIO_ACCESS_KEY: string;

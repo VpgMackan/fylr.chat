@@ -17,7 +17,6 @@ import { EventsModule } from 'src/events/events.module';
 import { ContentModule } from './handler/handler.module';
 
 import { AiModule } from 'src/aiService/aiService.module';
-
 @Module({
   imports: [
     MinioModule.registerAsync(),
