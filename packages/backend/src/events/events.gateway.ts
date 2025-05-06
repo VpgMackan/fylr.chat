@@ -1,8 +1,5 @@
 import { Logger } from '@nestjs/common';
 import {
-  OnGatewayInit,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
@@ -21,7 +18,7 @@ export class EventsGateway {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(EventsGateway.name);
 
-  afterInit(server: Server) {
+  afterInit() {
     this.logger.log('WebSocket Gateway Initialized');
   }
 
