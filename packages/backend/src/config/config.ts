@@ -75,7 +75,7 @@ class EnvironmentVariables {
   JINA_API_KEY: string;
 
   @IsNumber()
-  PORT: number = 3000;
+  PORT = 3000;
 }
 
 export function validate(config: Record<string, unknown>) {

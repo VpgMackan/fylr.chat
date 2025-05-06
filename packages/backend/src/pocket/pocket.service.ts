@@ -22,8 +22,8 @@ export class PocketService {
    */
   async findMultipleByUserId(
     id: string,
-    take: number = 10,
-    offset: number = 0,
+    take = 10,
+    offset = 0,
   ): Promise<Pocket[]> {
     const pocket = await this.pocketRepository.find({
       where: { userId: id },
