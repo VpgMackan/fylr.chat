@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { AiVectorService } from './vector.service';
-import { ConfigService } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({

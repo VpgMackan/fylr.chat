@@ -14,10 +14,10 @@ export class AiVectorService {
   private async _fetchEmbeddingsFromJina(
     text: string,
     model: string,
-    jinaApiOptions: Record<string, any>,
+    jinaApiOptions: Record<string, unknown>,
     task?: string,
   ): Promise<number[]> {
-    const requestPayload: Record<string, any> = {
+    const requestPayload: Record<string, unknown> = {
       model,
       input: [{ text }],
       ...jinaApiOptions,
@@ -81,7 +81,7 @@ export class AiVectorService {
   async generate(
     text: string,
     model: string,
-    options: Record<string, any>,
+    options: Record<string, unknown>,
   ): Promise<number[]> {
     return this._fetchEmbeddingsFromJina(text, model, options);
   }
@@ -89,7 +89,7 @@ export class AiVectorService {
   async search(
     text: string,
     model: string,
-    options: Record<string, any>,
+    options: Record<string, unknown>,
   ): Promise<number[]> {
     return this._fetchEmbeddingsFromJina(
       text,

@@ -32,7 +32,7 @@ export class UsersService {
   async createUser(userData: CreateUserDto): Promise<Omit<User, 'password'>> {
     const newUser = this.usersRepository.create(userData);
     await this.usersRepository.save(newUser);
-    const { password, ...result } = newUser;
+    const { password: _password, ...result } = newUser;
     return result;
   }
 
@@ -49,7 +49,7 @@ export class UsersService {
       throw new NotFoundException(`User with ID "${id}" not found`);
 
     await this.usersRepository.save(userToUpdate);
-    const { password, ...result } = userToUpdate;
+    const { password: _password, ...result } = userToUpdate;
     return result;
   }
 }

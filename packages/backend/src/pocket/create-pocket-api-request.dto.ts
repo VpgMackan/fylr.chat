@@ -1,4 +1,4 @@
-import { IsString, IsArray, IsUUID } from 'class-validator';
+import { IsString, IsArray } from 'class-validator';
 
 export class CreatePocketDtoApiRequest {
   @IsString()
