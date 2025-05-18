@@ -40,7 +40,7 @@ export class MarkdownHandler implements ContentHandler {
     for (const content of chunks) {
       const embedding = await this.aiService.vector.generate(
         content,
-        'your-model-name',
+        'jina-clip-v2',
         {},
       );
 

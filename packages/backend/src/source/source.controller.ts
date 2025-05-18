@@ -84,8 +84,13 @@ export class SourceController {
     };
   }
 
-  @Get('/:query')
-  test(@Param('query') query: string) {
-    return this.aiService.vector.search(query, '', {});
+  @Post('search')
+  async test(@Body() body) {
+    const searchVector = await this.aiService.vector.search(
+      body.query,
+      'jina-clip-v2',
+      {},
+    );
+    return await this.sourceService.findByVector(searchVector, body.pocketId);
   }
 }

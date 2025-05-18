@@ -11,6 +11,7 @@ import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
 import { SourceProcessor } from './source.processor';
 import { Source } from './source.entity';
+import { Vector } from './handler/vector.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
@@ -20,7 +21,7 @@ import { AiModule } from 'src/aiService/aiService.module';
 @Module({
   imports: [
     MinioModule.registerAsync(),
-    TypeOrmModule.forFeature([Source]),
+    TypeOrmModule.forFeature([Source, Vector]),
     MulterModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
         dest: configService.get<string>('TEMP_FILE_DIR'),
