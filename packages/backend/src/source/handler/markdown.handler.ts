@@ -45,7 +45,6 @@ export class MarkdownHandler implements ContentHandler {
       );
 
       if (embedding) {
-        this.logger.log(embedding);
         vectors.push(
           this.vectorRepository.create({
             fileId,

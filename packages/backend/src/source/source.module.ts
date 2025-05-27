@@ -4,8 +4,8 @@ import { MulterModule } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 
-import { MinioModule } from './minio/minio.module';
-import { MinioService } from './minio/minio.service';
+import { S3Module } from './s3/s3.module';
+import { S3Service } from './s3/s3.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
@@ -20,7 +20,7 @@ import { ContentModule } from './handler/handler.module';
 import { AiModule } from 'src/aiService/aiService.module';
 @Module({
   imports: [
-    MinioModule.registerAsync(),
+    S3Module.registerAsync(),
     TypeOrmModule.forFeature([Source, Vector]),
     MulterModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
@@ -37,6 +37,6 @@ import { AiModule } from 'src/aiService/aiService.module';
     AiModule,
   ],
   controllers: [SourceController],
-  providers: [SourceService, SourceProcessor, MinioService],
+  providers: [SourceService, SourceProcessor, S3Service],
 })
 export class SourceModule {}

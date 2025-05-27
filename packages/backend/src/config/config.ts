@@ -42,22 +42,22 @@ class EnvironmentVariables {
   REDIS_PORT: number;
 
   @IsString()
-  MINIO_ENDPOINT: string;
+  S3_ENDPOINT: string;
 
   @IsNumber()
-  MINIO_PORT: number;
-
-  @IsBoolean()
-  MINIO_USE_SSL: boolean;
+  S3_PORT: number;
 
   @IsString()
-  MINIO_ACCESS_KEY: string;
+  S3_KEY_ID: string;
 
   @IsString()
-  MINIO_SECRET_KEY: string;
+  S3_SECRET_KEY: string;
 
   @IsString()
-  MINIO_BUCKET_USER_FILE: string;
+  S3_REGION: string;
+
+  @IsString()
+  S3_BUCKET_USER_FILE: string;
 
   @IsString()
   JWT_SECRET: string;

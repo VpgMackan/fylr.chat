@@ -1,11 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Client as MinioClient, ItemBucketMetadata } from 'minio';
-import { InjectMinio } from './minio.decorator';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  ListBucketsCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  DeleteBucketCommand,
+  PutObjectCommandInput,
+  BucketLocationConstraint,
+} from '@aws-sdk/client-s3';
+import { InjectS3 } from './s3.decorator';
 import { Readable } from 'stream';
 
 @Injectable()
-export class MinioService {
-  constructor(@InjectMinio() private readonly client: MinioClient) {}
+export class S3Service {
+  constructor(@InjectS3() private readonly client: S3Client) {}
 
   /**
    * Uploads a file to a specified bucket.
@@ -19,11 +32,19 @@ export class MinioService {
     bucket: string,
     name: string,
     stream: Buffer | Readable,
-    metaData?: ItemBucketMetadata,
+    metaData?: Record<string, string>,
   ) {
     await this.ensureBucketExists(bucket);
-    const size = stream instanceof Buffer ? stream.length : undefined;
-    return this.client.putObject(bucket, name, stream, size, metaData);
+
+    const params: PutObjectCommandInput = {
+      Bucket: bucket,
+      Key: name,
+      Body: stream,
+      Metadata: metaData,
+    };
+
+    const command = new PutObjectCommand(params);
+    return this.client.send(command);
   }
 
   /**
@@ -34,9 +55,18 @@ export class MinioService {
    */
   async getObject(bucket: string, name: string): Promise<Readable> {
     try {
-      return await this.client.getObject(bucket, name);
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: name,
+      });
+
+      const response = await this.client.send(command);
+      return response.Body as Readable;
     } catch (error) {
-      if (error.code === 'NoSuchKey') {
+      if (
+        error.name === 'NoSuchKey' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         throw new NotFoundException(
           `Object '${name}' not found in bucket '${bucket}'`,
         );
@@ -53,9 +83,17 @@ export class MinioService {
    */
   async deleteObject(bucket: string, name: string): Promise<void> {
     try {
-      await this.client.removeObject(bucket, name);
+      const command = new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: name,
+      });
+
+      await this.client.send(command);
     } catch (error) {
-      if (error.code === 'NoSuchKey') {
+      if (
+        error.name === 'NoSuchKey' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         console.warn(
           `Attempted to delete non-existent object '${name}' from bucket '${bucket}'`,
         );
@@ -69,13 +107,22 @@ export class MinioService {
    * Gets metadata for a specific object.
    * @param bucket The name of the bucket.
    * @param name The name of the object.
-   * @returns A promise resolving with the object's stat information.
+   * @returns A promise resolving with the object's metadata information.
    */
   async statObject(bucket: string, name: string) {
     try {
-      return await this.client.statObject(bucket, name);
+      const command = new HeadObjectCommand({
+        Bucket: bucket,
+        Key: name,
+      });
+
+      return await this.client.send(command);
     } catch (error) {
-      if (error.code === 'NotFound' || error.code === 'NoSuchKey') {
+      if (
+        error.name === 'NotFound' ||
+        error.name === 'NoSuchKey' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         throw new NotFoundException(
           `Object '${name}' not found in bucket '${bucket}'`,
         );
@@ -89,10 +136,16 @@ export class MinioService {
    * @param bucket The name of the bucket.
    * @param prefix Optional prefix to filter objects.
    * @param recursive Optional flag to list recursively (default: false).
-   * @returns A stream of object stat information.
+   * @returns A promise resolving with object information.
    */
-  listObjects(bucket: string, prefix?: string, recursive?: boolean) {
-    return this.client.listObjectsV2(bucket, prefix, recursive);
+  async listObjects(bucket: string, prefix?: string, recursive?: boolean) {
+    const command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      Delimiter: recursive ? undefined : '/',
+    });
+
+    return this.client.send(command);
   }
 
   /**
@@ -100,7 +153,9 @@ export class MinioService {
    * @returns A promise resolving with an array of bucket information.
    */
   async listBuckets() {
-    return this.client.listBuckets();
+    const command = new ListBucketsCommand({});
+    const response = await this.client.send(command);
+    return response.Buckets || [];
   }
 
   /**
@@ -109,7 +164,19 @@ export class MinioService {
    * @returns A promise resolving with true if the bucket exists, false otherwise.
    */
   async bucketExists(bucket: string): Promise<boolean> {
-    return this.client.bucketExists(bucket);
+    try {
+      const command = new HeadBucketCommand({ Bucket: bucket });
+      await this.client.send(command);
+      return true;
+    } catch (error) {
+      if (
+        error.name === 'NotFound' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -119,9 +186,13 @@ export class MinioService {
    * @returns A promise resolving when the bucket is created.
    */
   async makeBucket(bucket: string, region?: string): Promise<void> {
-    if (!(await this.bucketExists(bucket))) {
-      await this.client.makeBucket(bucket, region || '');
-    }
+    const command = new CreateBucketCommand({
+      Bucket: bucket,
+      CreateBucketConfiguration: region
+        ? { LocationConstraint: region as BucketLocationConstraint }
+        : undefined,
+    });
+    await this.client.send(command);
   }
 
   /**
@@ -141,6 +212,7 @@ export class MinioService {
    * @returns A promise resolving when the bucket is removed.
    */
   async removeBucket(bucket: string): Promise<void> {
-    return this.client.removeBucket(bucket);
+    const command = new DeleteBucketCommand({ Bucket: bucket });
+    await this.client.send(command);
   }
 }
