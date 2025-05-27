@@ -10,6 +10,7 @@ import {
 
 import { User } from 'src/users/users.entity';
 import { Source } from 'src/source/source.entity';
+import { Conversation } from 'src/chat/conversation.entity';
 
 @Entity('Pockets')
 export class Pocket {
@@ -37,4 +38,7 @@ export class Pocket {
 
   @OneToMany(() => Source, (source) => source.pocket)
   source: Source[];
+
+  @OneToMany(() => Conversation, (conversation) => conversation.pocket)
+  conversation: Conversation[];
 }
