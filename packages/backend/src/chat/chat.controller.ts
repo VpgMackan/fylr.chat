@@ -85,7 +85,9 @@ export class ChatController {
 
   // TODO
   @Post('message/:id/regenerate')
-  regenerateMessage() {}
+  regenerateMessage() {
+    return '200: OK this is not implemented yet';
+  }
 
   @Patch('message/:id')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))

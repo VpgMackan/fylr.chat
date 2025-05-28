@@ -45,8 +45,8 @@ export class SourceProcessor extends WorkerHost {
 
     let buffer: Buffer;
     try {
-      await this.ensureExists(url);
-      buffer = await this.readFile(url);
+      await SourceProcessor.ensureExists(url);
+      buffer = await SourceProcessor.readFile(url);
       await this.upload(id, type, buffer);
       await this.handleContent(type, buffer, jobKey, id);
       await this.sourceRepository.update(id, {
@@ -66,11 +66,11 @@ export class SourceProcessor extends WorkerHost {
     }
   }
 
-  private ensureExists(path: string) {
+  private static ensureExists(path: string) {
     return fs.access(path);
   }
 
-  private readFile(path: string) {
+  private static readFile(path: string) {
     return fs.readFile(path);
   }
 

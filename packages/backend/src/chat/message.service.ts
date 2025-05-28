@@ -77,7 +77,7 @@ export class MessageService {
   async getMessage(id: string) {
     try {
       return await this.messageRepository.findOne({
-        where: { id: id },
+        where: { id },
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -117,9 +117,7 @@ export class MessageService {
 
       return result;
     } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to delete message ${id}`,
-      );
+      throw new InternalServerErrorException(`Failed to delete message ${id}`);
     }
   }
 }

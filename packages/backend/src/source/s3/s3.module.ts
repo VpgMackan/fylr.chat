@@ -6,6 +6,7 @@ import { S3Service } from './s3.service';
 
 @Global()
 @Module({})
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class S3Module {
   static registerAsync(): DynamicModule {
     return {

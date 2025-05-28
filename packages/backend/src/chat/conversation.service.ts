@@ -7,7 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Conversation } from './conversation.entity';
-import { Message } from './message.entity';
 
 import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
@@ -17,8 +16,6 @@ export class ConversationService {
   constructor(
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
-    @InjectRepository(Message)
-    private messageRepository: Repository<Message>,
   ) {}
 
   async getConversations(pocketId: string) {
@@ -46,7 +43,7 @@ export class ConversationService {
       }
 
       const newConversation = this.conversationRepository.create({
-        pocketId: pocketId,
+        pocketId,
         title: body.title,
         metadata: body.metadata,
       });

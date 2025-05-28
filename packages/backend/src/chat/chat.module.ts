@@ -14,4 +14,5 @@ import { Message } from './message.entity';
   controllers: [ChatController],
   providers: [ConversationService, MessageService],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ChatModule {}

@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsString, IsObject, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsObject, IsOptional } from 'class-validator';
 
 export class UpdateConversationDto {
   @IsString()

@@ -1,7 +1,6 @@
 // filepath: d:\Programming\fylr.chat\packages\backend\src\config\config.ts
 import { plainToInstance } from 'class-transformer';
 import {
-  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,

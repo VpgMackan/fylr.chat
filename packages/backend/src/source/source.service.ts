@@ -3,12 +3,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { S3Service } from './s3/s3.service';
-
 import { Source } from './source.entity';
 import { toSql } from 'pgvector';
 import { Vector } from './handler/vector.entity';
-import { S3 } from '@aws-sdk/client-s3';
 
 @Injectable()
 export class SourceService {
@@ -17,7 +14,6 @@ export class SourceService {
     private sourceRepository: Repository<Source>,
     @InjectRepository(Vector)
     private vectorRepository: Repository<Vector>,
-    private readonly S3Service: S3Service,
   ) {}
 
   async createSourceDatabaseEntry(data) {
