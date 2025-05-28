@@ -4,12 +4,9 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { User } from 'src/users/users.entity';
-import { Source } from 'src/source/source.entity';
 import { Conversation } from './conversation.entity';
 
 @Entity('Messages')

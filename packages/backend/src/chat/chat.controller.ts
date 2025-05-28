@@ -1,48 +1,54 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
+  Param,
   Patch,
   Post,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
 import { ChatService } from './chat.service';
+import { CreateConversationDto } from './create-conversation.dto';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
 export class ChatController {
   constructor(private chatService: ChatService) {}
-  // # Conversations General
-  // Get all conversations
-  @Get('/conversations')
-  getConversations() {}
 
-  // Get all messags
-  @Get('/conversation/:id/messages')
-  getMessages() {}
+  // === CONVERSATIONS ===
+  @Get(':pocketId/conversations')
+  getConversations(@Param('pocketId') pocketId: string) {
+    return this.chatService.getConversations(pocketId);
+  }
 
-  // # Conversation
-  // Create Convo
-  @Post('/conversation')
-  createConversation() {}
+  @Post(':pocketId/conversation')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  createConversation(
+    @Body() body: CreateConversationDto,
+    @Param('pocketId') pocketId: string,
+  ) {
+    return this.chatService.createConversation(body, pocketId);
+  }
 
-  // Delete Convo
-  @Delete('/conversation/:id')
-  deletConversation() {}
-
-  // Update Convo (Pocket ID, Metadata, Title)
-  @Patch('/conversation/:id')
-  updateConversation() {}
-
-  // Read Convo + msg
-  @Get('/conversation/:id')
+  @Get(':pocketId/conversation/:id')
   getConversation() {}
 
-  // #Messages
-  // Create Message
-  @Post('/message')
+  @Patch(':pocketId/conversation/:id')
+  updateConversation() {}
+
+  @Delete(':pocketId/conversation/:id')
+  deletConversation() {}
+
+  // === MESSAGES ===
+  @Get('conversation/:id/messages')
+  getMessages() {}
+
+  @Post('conversation/:id/message')
   createMessage() {
     // Store message in database
     // Ask llm for rag question based on chat and context
@@ -51,19 +57,15 @@ export class ChatController {
     // Send resonse to user / Stream if possible
   }
 
-  // Get Message
-  @Get('/message/:id')
+  @Get('message/:id')
   getMessage() {}
 
-  // Regenerate
-  @Post('/message/:id/regenerate')
+  @Post('message/:id/regenerate')
   regenerateMessage() {}
 
-  // Delete Message
-  @Delete('/message/:id')
-  deleteMessage() {}
-
-  // Update Message (Metadata, Content)
-  @Patch('/message/:id')
+  @Patch('message/:id')
   updateMessage() {}
+
+  @Delete('message/:id')
+  deleteMessage() {}
 }

@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { Source } from 'src/source/source.entity';
 import { Pocket } from 'src/pocket/pocket.entity';
 import { Message } from './message.entity';
 
