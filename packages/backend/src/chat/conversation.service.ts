@@ -13,7 +13,7 @@ import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
 
 @Injectable()
-export class ChatService {
+export class ConversationService {
   constructor(
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,

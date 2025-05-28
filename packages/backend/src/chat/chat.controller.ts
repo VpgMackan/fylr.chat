@@ -12,19 +12,19 @@ import {
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ChatService } from './chat.service';
+import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
 export class ChatController {
-  constructor(private chatService: ChatService) {}
+  constructor(private conversationService: ConversationService) {}
 
   // === CONVERSATIONS ===
   @Get(':pocketId/conversations')
   getConversations(@Param('pocketId') pocketId: string) {
-    return this.chatService.getConversations(pocketId);
+    return this.conversationService.getConversations(pocketId);
   }
 
   @Post(':pocketId/conversation')
@@ -33,12 +33,12 @@ export class ChatController {
     @Body() body: CreateConversationDto,
     @Param('pocketId') pocketId: string,
   ) {
-    return this.chatService.createConversation(body, pocketId);
+    return this.conversationService.createConversation(body, pocketId);
   }
 
   @Get('conversation/:id')
   getConversation(@Param('id') id: string) {
-    return this.chatService.getConversation(id);
+    return this.conversationService.getConversation(id);
   }
 
   @Patch('conversation/:id')
@@ -47,12 +47,12 @@ export class ChatController {
     @Param('id') id: string,
     @Body() body: UpdateConversationDto,
   ) {
-    return this.chatService.updateConversation(body, id);
+    return this.conversationService.updateConversation(body, id);
   }
 
   @Delete('conversation/:id')
   deletConversation(@Param('id') id: string) {
-    return this.chatService.deleteConversation(id);
+    return this.conversationService.deleteConversation(id);
   }
 
   // === MESSAGES ===
