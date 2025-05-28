@@ -7,11 +7,13 @@ import {
   Post,
   Patch,
   Request,
+  Response,
   UseGuards,
   BadRequestException,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { Response as ExpressResponse } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
@@ -28,14 +30,33 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  signIn(@Body() loginDto: LoginDto) {
-    return this.authService.signIn(loginDto.email, loginDto.password);
+  async signIn(@Body() loginDto: LoginDto, @Response() res: ExpressResponse) {
+    const result = await this.authService.signIn(
+      loginDto.email,
+      loginDto.password,
+    );
+
+    res.cookie('access_token', result.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1 * 60 * 60 * 100,
+    });
+
+    return res.json(result);
   }
 
   @Post('signup')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   signUp(@Body() signUpDto: CreateUserDto) {
     return this.authService.signUp(signUpDto);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('logout')
+  logout(@Response() res: ExpressResponse) {
+    res.clearCookie('access_token');
+    return res.json({ message: 'Logged out successfully' });
   }
 
   @UseGuards(AuthGuard)
