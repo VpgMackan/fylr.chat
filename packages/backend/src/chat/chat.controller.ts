@@ -86,7 +86,7 @@ export class ChatController {
   // TODO
   @Post('message/:id/regenerate')
   regenerateMessage() {
-    return '200: OK this is not implemented yet';
+    return '200: OK this is not implemented yet' + id;
   }
 
   @Patch('message/:id')
