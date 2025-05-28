@@ -3,8 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { MinioService } from './minio/minio.service';
-
 import { Source } from './source.entity';
 import { toSql } from 'pgvector';
 import { Vector } from './handler/vector.entity';
@@ -16,7 +14,6 @@ export class SourceService {
     private sourceRepository: Repository<Source>,
     @InjectRepository(Vector)
     private vectorRepository: Repository<Vector>,
-    private readonly minioService: MinioService,
   ) {}
 
   async createSourceDatabaseEntry(data) {

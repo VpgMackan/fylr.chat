@@ -6,7 +6,7 @@ import * as fs from 'fs/promises';
 import { Repository } from 'typeorm';
 
 import { EventsGateway } from '../events/events.gateway';
-import { MinioService } from './minio/minio.service';
+import { S3Service } from './s3/s3.service';
 
 import { ContentHandler } from './handler/content-handler.interface';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,7 +19,7 @@ export class SourceProcessor extends WorkerHost {
 
   constructor(
     private readonly events: EventsGateway,
-    private readonly minio: MinioService,
+    private readonly S3: S3Service,
     private readonly config: ConfigService,
     @Inject('CONTENT_HANDLERS')
     private readonly handlers: Map<string, ContentHandler>,
@@ -45,13 +45,13 @@ export class SourceProcessor extends WorkerHost {
 
     let buffer: Buffer;
     try {
-      await this.ensureExists(url);
-      buffer = await this.readFile(url);
+      await SourceProcessor.ensureExists(url);
+      buffer = await SourceProcessor.readFile(url);
       await this.upload(id, type, buffer);
       await this.handleContent(type, buffer, jobKey, id);
       await this.sourceRepository.update(id, {
-      url: id,
-      status: '-',
+        url: id,
+        status: '-',
       });
       notify('completed', 'Done!');
       this.logger.log(`Completed job ${job.id}`);
@@ -66,17 +66,17 @@ export class SourceProcessor extends WorkerHost {
     }
   }
 
-  private ensureExists(path: string) {
+  private static ensureExists(path: string) {
     return fs.access(path);
   }
 
-  private readFile(path: string) {
+  private static readFile(path: string) {
     return fs.readFile(path);
   }
 
   private upload(id: string, type: string, buffer: Buffer) {
-    const bucket = this.config.getOrThrow('MINIO_BUCKET_USER_FILE');
-    return this.minio.upload(bucket, id, buffer, { 'Content-Type': type });
+    const bucket = this.config.getOrThrow('S3_BUCKET_USER_FILE');
+    return this.S3.upload(bucket, id, buffer, { 'Content-Type': type });
   }
 
   private async handleContent(

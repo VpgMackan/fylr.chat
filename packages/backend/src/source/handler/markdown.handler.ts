@@ -45,12 +45,11 @@ export class MarkdownHandler implements ContentHandler {
       );
 
       if (embedding) {
-        this.logger.log(embedding);
         vectors.push(
           this.vectorRepository.create({
             fileId,
             embedding: pgvector.toSql(embedding),
-            content: content,
+            content,
           }),
         );
       } else {
@@ -80,7 +79,7 @@ export class MarkdownHandler implements ContentHandler {
       return chunks;
     }
 
-    const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
     const chunks: string[] = [];
     let current = '';
 

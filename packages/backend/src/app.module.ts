@@ -10,6 +10,7 @@ import { PocketModule } from './pocket/pocket.module';
 import { SourceModule } from './source/source.module';
 import { EventsModule } from './events/events.module';
 import { validate } from './config/config';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { validate } from './config/config';
     PocketModule,
     SourceModule,
     EventsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
