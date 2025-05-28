@@ -13,13 +13,21 @@ import {
 
 import { AuthGuard } from 'src/auth/auth.guard';
 import { ConversationService } from './conversation.service';
+import { MessageService } from './message.service';
+
 import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
+
+import { CreateMessageDto } from './create-message.dto';
+import { UpdateMessageDto } from './update-message.dto';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
 export class ChatController {
-  constructor(private conversationService: ConversationService) {}
+  constructor(
+    private conversationService: ConversationService,
+    private messageService: MessageService,
+  ) {}
 
   // === CONVERSATIONS ===
   @Get(':pocketId/conversations')
@@ -57,26 +65,36 @@ export class ChatController {
 
   // === MESSAGES ===
   @Get('conversation/:id/messages')
-  getMessages() {}
+  getMessages(@Param('id') id: string) {
+    return this.messageService.getMessages(id);
+  }
 
   @Post('conversation/:id/message')
-  createMessage() {
-    // Store message in database
-    // Ask llm for rag question based on chat and context
-    // Get the sources
-    // Send all of the information to a LLM
-    // Send resonse to user / Stream if possible
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  createMessage(
+    @Body() body: CreateMessageDto,
+    @Param('pocketId') pocketId: string,
+  ) {
+    return this.messageService.createMessage(body, pocketId);
   }
 
   @Get('message/:id')
-  getMessage() {}
+  getMessage(@Param('id') id: string) {
+    return this.messageService.getMessage(id);
+  }
 
+  // TODO
   @Post('message/:id/regenerate')
   regenerateMessage() {}
 
   @Patch('message/:id')
-  updateMessage() {}
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  updateMessage(@Param('id') id: string, @Body() body: UpdateMessageDto) {
+    return this.messageService.updateMessage(body, id);
+  }
 
   @Delete('message/:id')
-  deleteMessage() {}
+  deleteMessage(@Param('id') id: string) {
+    return this.messageService.deleteMessage(id);
+  }
 }
