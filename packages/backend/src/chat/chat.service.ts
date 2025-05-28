@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -6,6 +10,7 @@ import { Conversation } from './conversation.entity';
 import { Message } from './message.entity';
 
 import { CreateConversationDto } from './create-conversation.dto';
+import { UpdateConversationDto } from './update-conversation.dto';
 
 @Injectable()
 export class ChatService {
@@ -50,6 +55,57 @@ export class ChatService {
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to create conversation: ${error.message}`,
+      );
+    }
+  }
+
+  async getConversation(conversationId: string) {
+    try {
+      return await this.conversationRepository.findOne({
+        where: { id: conversationId },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to retrieve conversation ${conversationId}`,
+      );
+    }
+  }
+
+  async updateConversation(body: UpdateConversationDto, id: string) {
+    try {
+      const conversationToUpdate = await this.conversationRepository.preload({
+        id,
+        ...body,
+      });
+
+      if (!conversationToUpdate)
+        throw new NotFoundException(
+          `Conversation with the ID "${id}" doesn't exist in database`,
+        );
+
+      await this.conversationRepository.save(conversationToUpdate);
+      return conversationToUpdate;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to update conversation ${id}`,
+      );
+    }
+  }
+
+  async deleteConversation(id: string) {
+    try {
+      const result = await this.conversationRepository.delete(id);
+
+      if (result.affected === 0) {
+        throw new NotFoundException(
+          `Conversation with the ID "${id}" could not be deleted (unexpected error).`,
+        );
+      }
+
+      return result;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to delete conversation ${id}`,
       );
     }
   }

@@ -14,6 +14,7 @@ import {
 import { AuthGuard } from 'src/auth/auth.guard';
 import { ChatService } from './chat.service';
 import { CreateConversationDto } from './create-conversation.dto';
+import { UpdateConversationDto } from './update-conversation.dto';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
@@ -35,14 +36,24 @@ export class ChatController {
     return this.chatService.createConversation(body, pocketId);
   }
 
-  @Get(':pocketId/conversation/:id')
-  getConversation() {}
+  @Get('conversation/:id')
+  getConversation(@Param('id') id: string) {
+    return this.chatService.getConversation(id);
+  }
 
-  @Patch(':pocketId/conversation/:id')
-  updateConversation() {}
+  @Patch('conversation/:id')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  updateConversation(
+    @Param('id') id: string,
+    @Body() body: UpdateConversationDto,
+  ) {
+    return this.chatService.updateConversation(body, id);
+  }
 
-  @Delete(':pocketId/conversation/:id')
-  deletConversation() {}
+  @Delete('conversation/:id')
+  deletConversation(@Param('id') id: string) {
+    return this.chatService.deleteConversation(id);
+  }
 
   // === MESSAGES ===
   @Get('conversation/:id/messages')
