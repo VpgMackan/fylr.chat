@@ -120,4 +120,8 @@ export class MessageService {
       throw new InternalServerErrorException(`Failed to delete message ${id}`);
     }
   }
+
+  async processMessage(id: string) {
+    this.messageRepository.findBy({ id });
+  }
 }

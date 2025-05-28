@@ -83,10 +83,9 @@ export class ChatController {
     return this.messageService.getMessage(id);
   }
 
-  // TODO
   @Post('message/:id/regenerate')
-  regenerateMessage() {
-    return '200: OK this is not implemented yet' + id;
+  regenerateMessage(@Param('id') id: string) {
+    return this.messageService.processMessage(id);
   }
 
   @Patch('message/:id')
