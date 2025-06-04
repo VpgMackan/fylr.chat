@@ -1,3 +1,5 @@
+"use client";
+
 import { useAuth } from "@/hooks/useAuth";
 
 export function withAuth<P extends object>(Component: React.ComponentType<P>) {

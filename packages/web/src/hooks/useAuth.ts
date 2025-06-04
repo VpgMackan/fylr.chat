@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -17,7 +19,7 @@ export function useAuth() {
       } catch (error: any) {
         if (error.response?.status === 401) {
           setIsAuthenticated(false);
-          router.push("/login");
+          router.push("/auth/login");
         }
       } finally {
         setIsLoading(false);

@@ -10,22 +10,14 @@ import Chat from "@/components/Chat";
 import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
-import { useAuth } from "@/hooks/useAuth";
+import { withAuth } from "@/components/auth/withAuth";
 
-export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth();
-
+function HomePage() {
   const common = useTranslations("common.buttons");
   const yourPockets = useTranslations("pockets.labels");
   const t = useTranslations("pages.home");
   const router = useRouter();
-  if (isLoading) {
-    return <div>Checking authentication...</div>;
-  }
 
-  if (!isAuthenticated) {
-    return <div>Redirecting to login...</div>;
-  }
   return (
     <Heading
       title={t("welcome", { name: "Markus" })}
@@ -71,3 +63,5 @@ export default function HomePage() {
     </Heading>
   );
 }
+
+export default withAuth(HomePage);
