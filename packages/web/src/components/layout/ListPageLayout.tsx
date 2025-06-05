@@ -17,7 +17,6 @@ interface ListPageLayoutProps {
   dropdownOptions: DropdownOption[];
   dropdownPlaceholder?: string;
   dropdownAriaLabel?: string;
-  // if you need to change grid cols for one page, you can override via className
   gridClassName?: string;
   children: ReactNode;
 }
@@ -30,8 +29,8 @@ export default function ListPageLayout({
   searchLabel,
   clearSearchLabel,
   dropdownOptions,
-  dropdownPlaceholder = "Select an option...",
-  dropdownAriaLabel = "Choose an item",
+  dropdownPlaceholder,
+  dropdownAriaLabel,
   gridClassName = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
   children,
 }: ListPageLayoutProps) {
