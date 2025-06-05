@@ -15,6 +15,7 @@ export default function ChatPage({
 }: {
   params: Promise<{ id: string; summarieid: string }>;
 }) {
+  const t = useTranslations("pages.summaries");
   const [id, setId] = useState<string | null>(null);
   const [summarieId, setSummarieId] = useState<string | null>(null);
 
@@ -33,10 +34,10 @@ export default function ChatPage({
       infrontTitle={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      rightSideContent={<Button text="Edit" />}
+      rightSideContent={<Button text={t("editButton")} />}
       sidebarContent={
         <>
-          <p className="text-xl">Summary Episodes</p>
+          <p className="text-xl">{t("summaryEpisodes")}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">

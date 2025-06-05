@@ -46,6 +46,10 @@
 
   "pages": {
     "auth": {
+      "withAuth": {
+        "checking": "Checking your authentication...",
+        "redirecting": "Redirecting to login..."
+      },
       "login": {
         "welcome": "Welcome back!",
         "signin": "Sign in to your account",
@@ -66,7 +70,10 @@
     "pocketList": {
       "yourPockets": "Your pockets",
       "searchLabel": "Search Pockets",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
     },
     "newPocket": {
       "title": "Create New Pocket",
@@ -97,7 +104,14 @@
     "summariesList": {
       "yourSummaries": "Your summaries in {pocketName}",
       "searchLabel": "Search through summaries",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
+    },
+    "summaries": {
+      "editButton": "Edit",
+      "summaryEpisodes": "Summary Episodes"
     },
     "chatsList": {
       "yourChats": "Your chats in {pocketName}",

@@ -13,9 +13,9 @@ export default function PocketPage() {
   const commonT = useTranslations("common");
 
   const dropdownOptions: DropdownOption[] = [
-    { value: 1, label: "Most recent" },
-    { value: 2, label: "Title" },
-    { value: 3, label: "Most sources" },
+    { value: 1, label: t("mostRecent") },
+    { value: 2, label: t("title") },
+    { value: 3, label: t("created") },
   ];
 
   return (

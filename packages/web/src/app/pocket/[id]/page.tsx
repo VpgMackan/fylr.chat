@@ -106,16 +106,8 @@ export default function PocketIdPage({
           pocketId={id || ""}
         />
         <PinnedPod title="Lorem ipsum" pocket="Lorem" />
-        <Chat
-          title="Lorem ipsum"
-          pocket="Lorem"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        />
-        <Chat
-          title="Lorem ipsum"
-          pocket="Lorem"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        />
+        <Chat title="Lorem ipsum" pocket="Lorem" />
+        <Chat title="Lorem ipsum" pocket="Lorem" />
       </Section>
 
       <Section title={t("pocketDetail.shortcuts")} cols="grid-cols-3">
