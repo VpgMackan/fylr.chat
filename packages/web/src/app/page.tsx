@@ -34,7 +34,6 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
-        await new Promise((f) => setTimeout(f, 1000));
         const { data: pocketsData } = await axios.get("pocket");
         setPockets(pocketsData);
 
@@ -76,17 +75,19 @@ function HomePage() {
               { length: Math.floor(Math.random() * 6) + 1 },
               (_, index) => <PocketSkeleton key={index} />
             )
-          : pockets.map(({ id, description, createdAt, title, icon }) => (
-              <Pocket
-                key={id}
-                title={title}
-                icon={icon}
-                description={description}
-                sources={12}
-                created={createdAt}
-                id={id}
-              />
-            ))}
+          : pockets.map(
+              ({ id, description, createdAt, title, icon, source }) => (
+                <Pocket
+                  key={id}
+                  title={title}
+                  icon={icon}
+                  description={description}
+                  sources={source.length}
+                  created={createdAt}
+                  id={id}
+                />
+              )
+            )}
       </Section>
 
       <Section title={t("mostRecentChat")}>
@@ -96,12 +97,7 @@ function HomePage() {
               (_, index) => <ChatSkeleton key={index} />
             )
           : recentChats.map(({ id, title, pocket }) => (
-              <Chat
-                key={id}
-                title={title}
-                pocket={pocket.title}
-                description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-              />
+              <Chat key={id} title={title} pocket={pocket.title} />
             ))}
       </Section>
 

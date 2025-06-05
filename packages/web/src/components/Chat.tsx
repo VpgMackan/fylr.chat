@@ -4,11 +4,9 @@ import { useTranslations } from "next-intl";
 export default function Chat({
   title,
   pocket,
-  description,
 }: {
   title: string;
   pocket: string;
-  description: string;
 }) {
   const [visible, setVisible] = useState(false);
   const common = useTranslations("pockets");
@@ -30,7 +28,6 @@ export default function Chat({
           {common("labels.pocketName", { pocketName: pocket })}
         </p>
       </div>
-      <p className="text-sm text-gray-500">{description}</p>
     </div>
   );
 }

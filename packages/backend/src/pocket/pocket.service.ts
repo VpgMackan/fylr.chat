@@ -25,17 +25,21 @@ export class PocketService {
     take = 10,
     offset = 0,
   ): Promise<Pocket[]> {
-    const pocket = await this.pocketRepository.find({
-      where: { userId: id },
-      take,
-      skip: offset,
-    });
-    if (!pocket)
+    const pockets = await this.pocketRepository
+      .createQueryBuilder('pocket')
+      .leftJoinAndSelect('pocket.source', 'source')
+      .where('pocket.userId = :id', { id })
+      .orderBy('pocket.createdAt', 'DESC')
+      .take(take)
+      .offset(offset)
+      .getMany();
+
+    if (!pockets || pockets.length === 0)
       throw new NotFoundException(
         `Pockets owned by user ID "${id}" could not be located in database`,
       );
 
-    return pocket;
+    return pockets;
   }
 
   /**
