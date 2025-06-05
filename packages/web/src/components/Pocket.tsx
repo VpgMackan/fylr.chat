@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ export default function Pocket({
   created: string;
   id: string;
 }) {
+  const [visible, setVisible] = useState(false);
   const router = useRouter();
   const common = useTranslations("common.metadata");
 
@@ -23,9 +24,16 @@ export default function Pocket({
     router.push(`/pocket/${id}`);
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 50); // Slight delay for transition
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div
-      className="border border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
+      className={`border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
+        visible ? "opacity-100" : "opacity-0"
+      }`}
       onClick={handleClick}
     >
       <div>

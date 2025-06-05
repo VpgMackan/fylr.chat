@@ -3,17 +3,17 @@
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import axios from "@/utils/axios";
 
 import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
+import PocketSkeleton from "@/components/loading/Pocket";
 import Chat from "@/components/Chat";
 import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
-import { useEffect, useRef, useState } from "react";
-import axios from "@/utils/axios";
-import { create } from "domain";
 
 function HomePage() {
   const hasFetched = useRef(false);
@@ -24,6 +24,7 @@ function HomePage() {
   const router = useRouter();
 
   const [pockets, setPockets] = useState([]);
+  const [loadingPocket, setLoadingPockets] = useState(true);
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -31,8 +32,10 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
+        await new Promise((f) => setTimeout(f, 1000));
         const { data } = await axios.get("pocket");
         setPockets(data);
+        setLoadingPockets(false);
       } catch (err: any) {
         console.error(err);
       }
@@ -62,16 +65,21 @@ function HomePage() {
         }
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
-        {pockets.map(({ id, description, createdAt }) => (
-          <Pocket
-            key={id}
-            title="🧠 Lorem"
-            description={description}
-            sources={12}
-            created={createdAt}
-            id={id}
-          />
-        ))}
+        {loadingPocket
+          ? Array.from(
+              { length: Math.floor(Math.random() * 6) + 1 },
+              (_, index) => <PocketSkeleton key={index} />
+            )
+          : pockets.map(({ id, description, createdAt }) => (
+              <Pocket
+                key={id}
+                title="🧠 Lorem"
+                description={description}
+                sources={12}
+                created={createdAt}
+                id={id}
+              />
+            ))}
       </Section>
 
       <Section title={t("mostRecentChat")}>
