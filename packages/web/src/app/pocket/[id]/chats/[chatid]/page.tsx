@@ -18,6 +18,8 @@ export default function ChatPage({
 }: {
   params: Promise<{ id: string; chatid: string }>;
 }) {
+  const t = useTranslations("pages.chatDetail");
+
   const [id, setId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
 
@@ -36,10 +38,10 @@ export default function ChatPage({
       infrontTitle={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      rightSideContent={<Button text="Edit" className="mr-2" />}
+      rightSideContent={<Button text={t("editButton")} className="mr-2" />}
       sidebarContent={
         <>
-          <p className="text-xl">Your sources</p>
+          <p className="text-xl">{t("yourSources")}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">

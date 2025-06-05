@@ -15,7 +15,7 @@ export default function ChatsPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const router = useRouter();
-  const chatsT = useTranslations("pages.chatsList");
+  const t = useTranslations("pages.chatsList");
   const commonT = useTranslations("common");
 
   useEffect(() => {
@@ -23,26 +23,22 @@ export default function ChatsPage({
   }, [params]);
 
   const dropdownOptions: DropdownOption[] = [
-    { value: 1, label: "Most recent" },
-    { value: 2, label: "Title" },
-    { value: 3, label: "Most sources" },
+    { value: 1, label: t("mostRecent") },
+    { value: 2, label: t("title") },
+    { value: 3, label: t("created") },
   ];
 
   return (
     <ListPageLayout
-      title={chatsT("yourChats", { pocketName: "Lorem" })}
+      title={t("yourChats", { pocketName: "Lorem" })}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}
-      searchLabel={chatsT("searchLabel")}
-      clearSearchLabel={chatsT("clearSearchLabel")}
+      searchLabel={t("searchLabel")}
+      clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
     >
-      <Chat
-        title="🧠 Lorem"
-        pocket="Lorem"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit..."
-      />
+      <Chat title="🧠 Lorem" pocket="Lorem" />
     </ListPageLayout>
   );
 }

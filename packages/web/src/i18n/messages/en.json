@@ -83,7 +83,16 @@
     "podcastList": {
       "yourPodcasts": "Your podcasts in {pocketName}",
       "searchLabel": "Search through podcasts",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
+    },
+    "podcast": {
+      "editButton": "Edit",
+      "podcastEpisodes": "Podcast Episodes",
+      "share": "Share",
+      "download": "Download"
     },
     "summariesList": {
       "yourSummaries": "Your summaries in {pocketName}",
@@ -93,9 +102,15 @@
     "chatsList": {
       "yourChats": "Your chats in {pocketName}",
       "searchLabel": "Search through chats",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
     },
-    "podcast": {}
+    "chatDetail": {
+      "editButton": "Edit",
+      "yourSources": "Your sources"
+    }
   },
 
   "podcasts": {
