@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import axios from "@/utils/axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -15,16 +15,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await axios.post(
-        "http://localhost:3001/auth/login",
-        {
-          email,
-          password,
-        },
-        {
-          withCredentials: true,
-        }
-      );
+      await axios.post("auth/login", {
+        email,
+        password,
+      });
       router.back();
     } catch (error: any) {
     } finally {

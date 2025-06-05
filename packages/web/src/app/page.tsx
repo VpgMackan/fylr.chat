@@ -11,12 +11,34 @@ import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
+import { useEffect, useRef, useState } from "react";
+import axios from "@/utils/axios";
+import { create } from "domain";
 
 function HomePage() {
+  const hasFetched = useRef(false);
+
   const common = useTranslations("common.buttons");
   const yourPockets = useTranslations("pockets.labels");
   const t = useTranslations("pages.home");
   const router = useRouter();
+
+  const [pockets, setPockets] = useState([]);
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const fetchData = async () => {
+      try {
+        const { data } = await axios.get("pocket");
+        setPockets(data);
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <Heading
@@ -40,13 +62,16 @@ function HomePage() {
         }
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
-        <Pocket
-          title="🧠 Lorem"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          sources={12}
-          created="2025/04/13"
-          id="e57b8ddd-c118-43cf-a595-067579b62b97"
-        />
+        {pockets.map(({ id, description, createdAt }) => (
+          <Pocket
+            key={id}
+            title="🧠 Lorem"
+            description={description}
+            sources={12}
+            created={createdAt}
+            id={id}
+          />
+        ))}
       </Section>
 
       <Section title={t("mostRecentChat")}>
