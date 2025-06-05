@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { Icon } from "@iconify/react";
 
 import { useRouter } from "next/navigation";
 
 export default function Pocket({
   title,
+  icon,
   description,
   sources,
   created,
   id,
 }: {
   title: string;
+  icon: string;
   description: string;
   sources: number;
   created: string;
@@ -37,7 +40,10 @@ export default function Pocket({
       onClick={handleClick}
     >
       <div>
-        <p className="font-semibold">{title}</p>
+        <div className="flex items-center">
+          <Icon icon={icon} className="h-5 w-5 mr-2" />
+          <p className="font-semibold">{title}</p>
+        </div>
         <p className="text-sm text-gray-500 mb-2">{description}</p>
       </div>
 

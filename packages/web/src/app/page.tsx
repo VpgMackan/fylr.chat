@@ -69,10 +69,11 @@ function HomePage() {
               { length: Math.floor(Math.random() * 6) + 1 },
               (_, index) => <PocketSkeleton key={index} />
             )
-          : pockets.map(({ id, description, createdAt }) => (
+          : pockets.map(({ id, description, createdAt, title, icon }) => (
               <Pocket
                 key={id}
-                title="🧠 Lorem"
+                title={title}
+                icon={icon}
                 description={description}
                 sources={12}
                 created={createdAt}
