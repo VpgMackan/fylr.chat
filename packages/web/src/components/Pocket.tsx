@@ -28,7 +28,7 @@ export default function Pocket({
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 50); // Slight delay for transition
+    const timer = setTimeout(() => setVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
 

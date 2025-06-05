@@ -1,4 +1,5 @@
 import {
+  Req,
   Body,
   Controller,
   Delete,
@@ -20,6 +21,7 @@ import { UpdateConversationDto } from './update-conversation.dto';
 
 import { CreateMessageDto } from './create-message.dto';
 import { UpdateMessageDto } from './update-message.dto';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
@@ -30,6 +32,12 @@ export class ChatController {
   ) {}
 
   // === CONVERSATIONS ===
+  @Get('user/all')
+  getConversationsByUser(@Req() req: RequestWithUser) {
+    const userId = req.user.id;
+    return this.conversationService.getConversationsByUserId(userId);
+  }
+
   @Get(':pocketId/conversations')
   getConversations(@Param('pocketId') pocketId: string) {
     return this.conversationService.getConversations(pocketId);

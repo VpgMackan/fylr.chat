@@ -30,6 +30,20 @@ export class ConversationService {
     }
   }
 
+  async getConversationsByUserId(userId: string): Promise<Conversation[]> {
+    try {
+      return await this.conversationRepository
+        .createQueryBuilder('conversation')
+        .innerJoinAndSelect('conversation.pocket', 'pocket')
+        .where('pocket.userId = :userId', { userId })
+        .getMany();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to retrieve conversations for user ${userId}: ${error.message}`,
+      );
+    }
+  }
+
   async createConversation(body: CreateConversationDto, pocketId: string) {
     try {
       if (typeof body.metadata === 'string') {

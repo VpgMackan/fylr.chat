@@ -14,6 +14,7 @@ import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
+import ChatSkeleton from "@/components/loading/Chat";
 
 function HomePage() {
   const hasFetched = useRef(false);
@@ -23,8 +24,9 @@ function HomePage() {
   const t = useTranslations("pages.home");
   const router = useRouter();
 
-  const [pockets, setPockets] = useState([]);
-  const [loadingPocket, setLoadingPockets] = useState(true);
+  const [pockets, setPockets] = useState<any[]>([]);
+  const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -32,9 +34,14 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
-        const { data } = await axios.get("pocket");
-        setPockets(data);
-        setLoadingPockets(false);
+        await new Promise((f) => setTimeout(f, 1000));
+        const { data: pocketsData } = await axios.get("pocket");
+        setPockets(pocketsData);
+
+        const { data: chatsData } = await axios.get("chat/user/all");
+        setRecentChats(chatsData);
+
+        setLoading(false);
       } catch (err: any) {
         console.error(err);
       }
@@ -64,7 +71,7 @@ function HomePage() {
         }
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
-        {loadingPocket
+        {loading
           ? Array.from(
               { length: Math.floor(Math.random() * 6) + 1 },
               (_, index) => <PocketSkeleton key={index} />
@@ -83,11 +90,19 @@ function HomePage() {
       </Section>
 
       <Section title={t("mostRecentChat")}>
-        <Chat
-          title="Lorem ipsum"
-          pocket="Lorem"
-          description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        />
+        {loading
+          ? Array.from(
+              { length: Math.floor(Math.random() * 3) + 1 },
+              (_, index) => <ChatSkeleton key={index} />
+            )
+          : recentChats.map(({ id, title, pocket }) => (
+              <Chat
+                key={id}
+                title={title}
+                pocket={pocket.title}
+                description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+              />
+            ))}
       </Section>
 
       <Section title={t("pinnedPodcasts")}>
