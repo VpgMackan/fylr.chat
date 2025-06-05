@@ -13,4 +13,7 @@ export class CreatePocketDto {
   @IsArray()
   @IsString({ each: true })
   tags: string[];
+
+  @IsString()
+  title: string;
 }

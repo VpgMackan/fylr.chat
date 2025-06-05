@@ -10,4 +10,7 @@ export class CreatePocketDtoApiRequest {
   @IsArray()
   @IsString({ each: true })
   tags: string[];
+
+  @IsString()
+  title: string;
 }

@@ -32,7 +32,6 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
-        await new Promise((f) => setTimeout(f, 1000));
         const { data } = await axios.get("pocket");
         setPockets(data);
         setLoadingPockets(false);

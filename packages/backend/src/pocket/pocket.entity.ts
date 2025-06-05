@@ -36,6 +36,9 @@ export class Pocket {
   @Column('text', { array: true })
   tags: string[];
 
+  @Column('character varying')
+  title: string;
+
   @OneToMany(() => Source, (source) => source.pocket)
   source: Source[];
 
