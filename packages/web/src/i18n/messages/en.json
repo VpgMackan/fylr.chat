@@ -129,5 +129,18 @@
 
   "podcasts": {
     "goToPodcast": "Go to podcast"
+  },
+
+  "features": {
+    "chat": {
+      "userMessage": "User message",
+      "assistantMessage": "Assistant message",
+      "inputPlaceholder": "Ask anything",
+      "upload": "Upload a file",
+      "webSearch": "Web search",
+      "more": "More",
+      "record": "Record message with microphone",
+      "send": "Send"
+    }
   }
 }
