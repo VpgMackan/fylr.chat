@@ -45,6 +45,19 @@
   },
 
   "pages": {
+    "auth": {
+      "login": {
+        "welcome": "Welcome back!",
+        "signin": "Sign in to your account",
+        "email": "Email Address",
+        "emailPlaceholder": "Enter your email",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "buttonSignIn": "Sign In",
+        "buttonSigningIn": "Signing in...",
+        "noAccount": "Don’t have an account? <signup>Sign up</signup>"
+      }
+    },
     "home": {
       "welcome": "What's up, {name}!",
       "mostRecentChat": "Most recent chats",
