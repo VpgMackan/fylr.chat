@@ -89,7 +89,7 @@ export default function LoginPage() {
               {t.rich("noAccount", {
                 signup: (children) => (
                   <a
-                    href="/auth/register"
+                    href="/auth/signup"
                     className="text-blue-600 hover:text-blue-500 font-medium"
                   >
                     {children}

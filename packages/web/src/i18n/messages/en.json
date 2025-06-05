@@ -50,6 +50,19 @@
         "checking": "Checking your authentication...",
         "redirecting": "Redirecting to login..."
       },
+      "signup": {
+        "createAccount": "Create your account",
+        "signupSubtitle": "Enter your details to get started",
+        "name": "Name",
+        "namePlaceholder": "Enter your name",
+        "email": "Email Address",
+        "emailPlaceholder": "Enter your email",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "buttonSignUp": "Sign Up",
+        "buttonSigningUp": "Signing up…",
+        "haveAccount": "Already have an account? <login>Sign in</login>"
+      },
       "login": {
         "welcome": "Welcome back!",
         "signin": "Sign in to your account",
@@ -59,7 +72,7 @@
         "passwordPlaceholder": "Enter your password",
         "buttonSignIn": "Sign In",
         "buttonSigningIn": "Signing in...",
-        "noAccount": "Don’t have an account? <signup>Sign up</signup>"
+        "noAccount": "Don't have an account? <signup>Sign up</signup>"
       }
     },
     "home": {
