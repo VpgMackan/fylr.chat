@@ -10,6 +10,9 @@ import {
   UsePipes,
   ValidationPipe,
   Delete,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -25,8 +28,12 @@ export class PocketController {
   constructor(private pocketService: PocketService) {}
 
   @Get()
-  getPockets(@Request() req: RequestWithUser) {
-    return this.pocketService.findMultipleByUserId(req.user.id);
+  getPockets(
+    @Request() req: RequestWithUser,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ) {
+    return this.pocketService.findMultipleByUserId(req.user.id, take, offset);
   }
 
   @Get('/:id')
