@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function ChatSkeleton() {
+export default function SourceSkeleton() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -14,9 +14,15 @@ export default function ChatSkeleton() {
         visible ? "opacity-100" : "opacity-0"
       }`}
     >
-      <div className="flex justify-between">
-        <div className="h-6 bg-gray-700 rounded w-1/2"></div>
-        <div className="h-6 bg-gray-700 rounded w-1/4"></div>
+      <div className="space-y-2">
+        <div className="h-5 bg-gray-700 rounded w-3/4" />
+        <div className="h-4 bg-gray-700 rounded w-full" />
+      </div>
+
+      <div>
+        <hr className="border-gray-600 my-2" />
+        <div className="h-3 bg-gray-700 rounded w-1/4 mb-1" />
+        <div className="h-3 bg-gray-700 rounded w-1/3" />
       </div>
     </div>
   );

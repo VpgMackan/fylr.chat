@@ -5,6 +5,7 @@ import { DeleteResult, Repository } from 'typeorm';
 import { Pocket } from './pocket.entity';
 import { CreatePocketDto } from './create-pocket.dto';
 import { UpdatePocketDto } from './update-pocket.dto';
+import { Conversation } from 'src/chat/conversation.entity';
 
 @Injectable()
 export class PocketService {
@@ -47,14 +48,22 @@ export class PocketService {
    * @param id The id for the pocket to be retrived
    * @returns A promise resolving a pocket
    */
-  async findOneById(id: string): Promise<Pocket> {
-    const pocket = await this.pocketRepository.findOneBy({ id });
+  async findOneById(
+    id: string,
+  ): Promise<
+    Omit<Pocket, 'conversation'> & { recentActivity: Conversation[] }
+  > {
+    const pocket = await this.pocketRepository.findOne({
+      where: { id },
+      relations: ['conversation', 'source'],
+    });
     if (!pocket)
       throw new NotFoundException(
         `Pocket with the ID "${id}" could not be located in database`,
       );
 
-    return pocket;
+    const { conversation, ...pocketData } = pocket;
+    return { ...pocketData, recentActivity: conversation };
   }
 
   /**

@@ -2,8 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "@/utils/axios";
 
 import Button from "@/components/common/Button";
 import Source from "@/components/Source";
@@ -12,6 +13,7 @@ import Chat from "@/components/Chat";
 import EditPocketDialog from "@/components/EditPocketDialog";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
+import SourceSkeleton from "@/components/loading/Source";
 
 export default function PocketIdPage({
   params,
@@ -20,30 +22,61 @@ export default function PocketIdPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [pocketName, setPocketName] = useState("🧠 Lorem");
-  const [pocketDescription, setPocketDescription] = useState(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-  );
-  const [pocketTags, setPocketTags] = useState("brain, lorem, example");
+  const [pocketName, setPocketName] = useState("");
+  const [pocketDescription, setPocketDescription] = useState("");
+  const [pocketTags, setPocketTags] = useState("");
+  const [originalPocket, setOriginalPocket] = useState({
+    title: "",
+    description: "",
+    tags: "",
+  });
+
+  const [sources, setSources] = useState([]);
 
   const router = useRouter();
 
   const common = useTranslations("common");
-  const sources = useTranslations("sources");
+  const sourcesT = useTranslations("sources");
   const t = useTranslations("pages");
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    params.then((res) => {
+    params.then(async (res) => {
       setId(res.id);
+      try {
+        const { data: pocketData } = await axios.get(`pocket/${res.id}`);
+        setPocketName(pocketData.title);
+        setPocketDescription(pocketData.description);
+        setPocketTags(pocketData.tags);
+        setSources(pocketData.source);
+
+        setOriginalPocket({
+          title: pocketData.title,
+          description: pocketData.description,
+          tags: pocketData.tags,
+        });
+
+        setLoading(false);
+      } catch (err: any) {
+        console.error(err);
+      }
     });
   }, [params]);
 
   const handleSavePocket = () => {
-    console.log("Saving pocket:", {
-      pocketName,
-      pocketDescription,
-      pocketTags,
-    });
+    const data: Record<string, string> = {};
+    if (pocketName !== originalPocket.title) {
+      data.title = pocketName;
+    }
+    if (pocketDescription !== originalPocket.description) {
+      data.description = pocketDescription;
+    }
+    if (pocketTags !== originalPocket.tags) {
+      data.tags = pocketTags;
+    }
+
+    axios.patch(`pocket/${id}`, data);
   };
 
   return (
@@ -73,7 +106,7 @@ export default function PocketIdPage({
       />
 
       <Section
-        title={sources("labels.yourSources")}
+        title={sourcesT("labels.yourSources")}
         actions={
           <Button
             text={common("buttons.viewAll")}
@@ -83,14 +116,22 @@ export default function PocketIdPage({
         }
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
-        <Source
-          title="🧠 Lorem"
-          summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          size="2.4 KB"
-          imported="2025/04/13"
-          id="e57b8ddd-c118-43cf-a595-067579b62b97"
-          pocketId={id || ""}
-        />
+        {loading
+          ? Array.from(
+              { length: Math.floor(Math.random() * 6) + 1 },
+              (_, index) => <SourceSkeleton key={index} />
+            )
+          : sources.map(({ id, name, size, pocketId }) => (
+              <Source
+                key={id}
+                title={name}
+                summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                size={size}
+                imported="2025/04/13"
+                id={id}
+                pocketId={pocketId}
+              />
+            ))}
       </Section>
 
       <Section
