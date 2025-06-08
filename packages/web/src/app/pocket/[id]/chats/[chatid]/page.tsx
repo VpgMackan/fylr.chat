@@ -12,6 +12,7 @@ import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
 
 import Chat from "@/components/features/chat/Chat";
 import ContentLayout from "@/components/layout/ContentLayout";
+import axios from "@/utils/axios";
 
 export default function ChatPage({
   params,
@@ -23,6 +24,11 @@ export default function ChatPage({
   const [id, setId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
 
+  const [sources, setSources] = useState([]);
+  const [messages, setMessages] = useState<
+    { id: string; role: string; content: string }[]
+  >([]);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -31,6 +37,36 @@ export default function ChatPage({
       setChatId(res.chatid);
     });
   }, [params]);
+
+  useEffect(() => {
+    if (!chatId) return;
+    async function load() {
+      try {
+        const { data } = await axios.get(
+          `chat/conversation/${chatId}/messages`
+        );
+        setMessages(data.reverse());
+      } catch (err) {
+        console.error("Failed to load messages", err);
+      }
+    }
+    load();
+  }, [chatId]);
+
+  const handleSend = async (content: string) => {
+    if (!chatId) return;
+    try {
+      const { data } = await axios.post(`chat/conversation/${chatId}/message`, {
+        content,
+        role: "user",
+        metadata: {},
+      });
+      const [userMsg, assistantMsg] = data;
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
+  };
 
   return (
     <ContentLayout
@@ -58,14 +94,14 @@ export default function ChatPage({
       }
     >
       <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4">
-        <Chat
-          user={true}
-        >{`Hello, how are you doing today? Can you give me some mock markdown?`}</Chat>
-
-        <Chat user={false}>{`No`}</Chat>
+        {messages.map((m) => (
+          <Chat key={m.id} user={m.role === "user"}>
+            {m.content}
+          </Chat>
+        ))}
       </div>
 
-      <ChatInput />
+      <ChatInput onSend={handleSend} />
     </ContentLayout>
   );
 }

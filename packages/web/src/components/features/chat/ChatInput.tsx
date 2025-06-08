@@ -4,7 +4,10 @@ import { useState, useRef, useLayoutEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useTranslations } from "next-intl";
 
-export default function ChatInput() {
+interface ChatInputProps {
+  onSend: (content: string) => void;
+}
+export default function ChatInput({ onSend }: ChatInputProps) {
   const t = useTranslations("features.chat");
 
   const [value, setValue] = useState("");
@@ -73,7 +76,15 @@ export default function ChatInput() {
               aria-label={t("record")}
             />
           </button>
-          <button className="p-2 bg-blue-500 rounded-full hover:bg-blue-700">
+          <button
+            className="p-2 bg-blue-500 rounded-full hover:bg-blue-700"
+            onClick={() => {
+              const text = value.trim();
+              if (!text) return;
+              onSend(text);
+              setValue("");
+            }}
+          >
             <Icon
               icon="mdi:arrow-up"
               width="20"
