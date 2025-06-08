@@ -11,12 +11,15 @@ import { CreateMessageDto } from './create-message.dto';
 import { UpdateMessageDto } from './update-message.dto';
 import { AiService } from 'src/aiService/ai.service';
 import { SourceService } from 'src/source/source.service';
+import { Conversation } from './conversation.entity';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
+    @InjectRepository(Conversation)
+    private conversationRepository: Repository<Conversation>,
     private aiService: AiService,
     private sourceService: SourceService,
   ) {}
@@ -64,6 +67,14 @@ export class MessageService {
       );
     }
 
+    const conversation = await this.conversationRepository.findOne({
+      where: { id },
+    });
+    if (!conversation) {
+      throw new NotFoundException(`Conversation with ID "${id}" not found.`);
+    }
+    const pocketId = conversation.pocketId;
+
     const searchQueryEmbedding = await this.aiService.vector.search(
       body.content,
       'jina-clip-v2',
@@ -72,15 +83,15 @@ export class MessageService {
 
     const relevantChunks = await this.sourceService.findByVector(
       searchQueryEmbedding,
-      'f3d4fff4-8099-431c-978c-38b0ac1fa2c3',
+      pocketId,
     );
     const context = relevantChunks
       .map((chunk) => chunk.content)
       .join('\n---\n');
 
     const prompt = `Based on the following context, answer the user's question.
-                Context: ${context}
-                Question: ${body.content}`;
+Context: ${context}
+Question: ${body.content}`;
 
     const aiResponseContent = await this.aiService.llm.generate(prompt);
 

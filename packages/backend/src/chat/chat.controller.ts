@@ -10,6 +10,9 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -39,8 +42,12 @@ export class ChatController {
   }
 
   @Get(':pocketId/conversations')
-  getConversations(@Param('pocketId') pocketId: string) {
-    return this.conversationService.getConversations(pocketId);
+  getConversations(
+    @Param('pocketId') pocketId: string,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ) {
+    return this.conversationService.getConversations(pocketId, take, offset);
   }
 
   @Post(':pocketId/conversation')

@@ -3,10 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "@/utils/axios";
+
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
 import Chat from "@/components/Chat";
+import ChatSkeleton from "@/components/loading/Chat";
 
 export default function ChatsPage({
   params,
@@ -37,8 +40,20 @@ export default function ChatsPage({
       searchLabel={t("searchLabel")}
       clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
-    >
-      <Chat title="🧠 Lorem" pocket="Lorem" />
-    </ListPageLayout>
+      dataLoader={
+        id
+          ? ({ take, offset }) =>
+              axios
+                .get(`chat/${id}/conversations`, { params: { take, offset } })
+                .then((r) => r.data)
+          : undefined
+      }
+      take={10}
+      skeleton={<ChatSkeleton />}
+      skeletonCount={6}
+      renderItems={(pockets: any[]) =>
+        pockets.map(({ id, title }) => <Chat key={id} title={title} id={id} />)
+      }
+    />
   );
 }

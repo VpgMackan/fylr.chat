@@ -18,10 +18,12 @@ export class ConversationService {
     private conversationRepository: Repository<Conversation>,
   ) {}
 
-  async getConversations(pocketId: string) {
+  async getConversations(pocketId: string, take = 10, offset = 0) {
     try {
-      return await this.conversationRepository.findBy({
-        pocketId,
+      return await this.conversationRepository.find({
+        where: { pocketId },
+        take,
+        skip: offset,
       });
     } catch (error) {
       throw new InternalServerErrorException(
