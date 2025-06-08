@@ -79,11 +79,8 @@ export class ChatController {
 
   @Post('conversation/:id/message')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  createMessage(
-    @Body() body: CreateMessageDto,
-    @Param('pocketId') pocketId: string,
-  ) {
-    return this.messageService.createMessage(body, pocketId);
+  createMessage(@Body() body: CreateMessageDto, @Param('id') id: string) {
+    return this.messageService.createMessage(body, id);
   }
 
   @Get('message/:id')

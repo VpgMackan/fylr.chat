@@ -9,12 +9,16 @@ import { Repository } from 'typeorm';
 import { Message } from './message.entity';
 import { CreateMessageDto } from './create-message.dto';
 import { UpdateMessageDto } from './update-message.dto';
+import { AiService } from 'src/aiService/ai.service';
+import { SourceService } from 'src/source/source.service';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
+    private aiService: AiService,
+    private sourceService: SourceService,
   ) {}
 
   async getMessages(id: string) {
@@ -35,7 +39,7 @@ export class MessageService {
   }
 
   async createMessage(body: CreateMessageDto, id: string) {
-    // Store message in database
+    let newMessage;
     try {
       if (typeof body.metadata === 'string') {
         try {
@@ -47,31 +51,48 @@ export class MessageService {
         }
       }
 
-      const newMessage = this.messageRepository.create({
+      newMessage = this.messageRepository.create({
         conversationId: id,
         role: body.role,
         content: body.content,
         metadata: body.metadata,
       });
       await this.messageRepository.save(newMessage);
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      return newMessage;
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to store messages in database for conversation ${id}`,
       );
     }
-    // Ask llm for rag question based on chat and context
-    // Get the sources
-    // Send all of the information to a LLM
-    // Send resonse to user / Stream if possible
+
+    const searchQueryEmbedding = await this.aiService.vector.search(
+      body.content,
+      'jina-clip-v2',
+      {},
+    );
+
+    const relevantChunks = await this.sourceService.findByVector(
+      searchQueryEmbedding,
+      'f3d4fff4-8099-431c-978c-38b0ac1fa2c3',
+    );
+    const context = relevantChunks
+      .map((chunk) => chunk.content)
+      .join('\n---\n');
+
+    const prompt = `Based on the following context, answer the user's question.
+                Context: ${context}
+                Question: ${body.content}`;
+
+    const aiResponseContent = await this.aiService.llm.generate(prompt);
+
+    const assistantMessage = this.messageRepository.create({
+      conversationId: id,
+      role: 'assistant',
+      content: aiResponseContent,
+      metadata: {},
+    });
+    await this.messageRepository.save(assistantMessage);
+
+    return [newMessage, assistantMessage];
   }
 
   async getMessage(id: string) {

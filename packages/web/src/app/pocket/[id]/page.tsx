@@ -76,6 +76,7 @@ export default function PocketIdPage({
       data.tags = pocketTags;
     }
 
+    if (Object.keys(data).length === 0) return;
     axios.patch(`pocket/${id}`, data);
   };
 

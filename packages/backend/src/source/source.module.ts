@@ -38,5 +38,6 @@ import { AiModule } from 'src/aiService/aiService.module';
   ],
   controllers: [SourceController],
   providers: [SourceService, SourceProcessor, S3Service],
+  exports: [SourceService],
 })
 export class SourceModule {}
