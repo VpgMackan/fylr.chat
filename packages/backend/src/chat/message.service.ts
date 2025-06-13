@@ -5,73 +5,122 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Server } from 'socket.io';
 
 import { Message } from './message.entity';
 import { CreateMessageDto } from './create-message.dto';
 import { UpdateMessageDto } from './update-message.dto';
+import { AiService } from 'src/aiService/ai.service';
+import { SourceService } from 'src/source/source.service';
+import { Conversation } from './conversation.entity';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectRepository(Message)
     private messageRepository: Repository<Message>,
+    @InjectRepository(Conversation)
+    private conversationRepository: Repository<Conversation>,
+    private aiService: AiService,
+    private sourceService: SourceService,
   ) {}
 
-  async getMessages(id: string) {
+  async getMessages(conversationId: string): Promise<Message[]> {
     try {
       return await this.messageRepository.find({
-        where: {
-          conversationId: id,
-        },
-        order: {
-          createdAt: 'DESC',
-        },
+        where: { conversationId },
+        order: { createdAt: 'ASC' },
       });
     } catch (error) {
       throw new InternalServerErrorException(
-        `Failed to retrieve messages for conversation ${id}`,
+        `Failed to retrieve messages for conversation ${conversationId}`,
       );
     }
   }
 
-  async createMessage(body: CreateMessageDto, id: string) {
-    // Store message in database
+  async createMessage(
+    body: CreateMessageDto,
+    conversationId: string,
+  ): Promise<Message> {
     try {
       if (typeof body.metadata === 'string') {
-        try {
-          body.metadata = JSON.parse(body.metadata);
-        } catch (parseError) {
-          throw new InternalServerErrorException(
-            'Invalid JSON format in metadata',
-          );
-        }
+        body.metadata = JSON.parse(body.metadata);
       }
+    } catch (e) {
+      throw new InternalServerErrorException('Invalid JSON format in metadata');
+    }
 
-      const newMessage = this.messageRepository.create({
-        conversationId: id,
-        role: body.role,
-        content: body.content,
-        metadata: body.metadata,
-      });
-      await this.messageRepository.save(newMessage);
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      return newMessage;
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-      // DELETE LATER WHEN ADDING LLM
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to store messages in database for conversation ${id}`,
+    const newMessage = this.messageRepository.create({
+      conversationId,
+      ...body,
+    });
+    return await this.messageRepository.save(newMessage);
+  }
+
+  async generateAndStreamAiResponse(
+    userMessage: Message,
+    server: Server,
+  ): Promise<void> {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: userMessage.conversationId },
+    });
+    if (!conversation) {
+      throw new NotFoundException(
+        `Conversation with ID "${userMessage.conversationId}" not found.`,
       );
     }
-    // Ask llm for rag question based on chat and context
-    // Get the sources
-    // Send all of the information to a LLM
-    // Send resonse to user / Stream if possible
+
+    const searchQueryEmbedding = await this.aiService.vector.search(
+      userMessage.content,
+      'jina-clip-v2',
+      {},
+    );
+
+    const relevantChunks = await this.sourceService.findByVector(
+      searchQueryEmbedding,
+      conversation.pocketId,
+    );
+    const context = relevantChunks
+      .map((chunk) => chunk.content)
+      .join('\n---\n');
+
+    const prompt = `Based on the following context, answer the user's question.\nContext: ${context}\nQuestion: ${userMessage.content}`;
+
+    const stream = this.aiService.llm.generateStream(prompt);
+    let fullResponse = '';
+
+    for await (const chunk of stream) {
+      fullResponse += chunk;
+      server.to(userMessage.conversationId).emit('conversationAction', {
+        action: 'messageChunk',
+        conversationId: userMessage.conversationId,
+        data: { content: chunk },
+      });
+    }
+
+    if (fullResponse) {
+      const assistantMessage = await this.createMessage(
+        {
+          role: 'assistant',
+          content: fullResponse,
+          metadata: {
+            relatedSources: relevantChunks.map((c) => c.source.id),
+          },
+        },
+        userMessage.conversationId,
+      );
+      server.to(userMessage.conversationId).emit('conversationAction', {
+        action: 'messageEnd',
+        conversationId: userMessage.conversationId,
+        data: assistantMessage,
+      });
+    } else {
+      server.to(userMessage.conversationId).emit('conversationAction', {
+        action: 'streamError',
+        conversationId: userMessage.conversationId,
+        data: { message: 'Failed to get a response from the AI.' },
+      });
+    }
   }
 
   async getMessage(id: string) {

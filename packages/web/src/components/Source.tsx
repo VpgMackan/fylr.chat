@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 
 import { useRouter } from "next/navigation";
 
-export default function Pocket({
+export default function Source({
   title,
   summery,
   size,

@@ -13,4 +13,8 @@ export class UpdatePocketDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  title: string;
 }

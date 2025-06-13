@@ -15,7 +15,7 @@ export default function SummariePage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const router = useRouter();
-  const summarieT = useTranslations("pages.summariesList");
+  const t = useTranslations("pages.summariesList");
   const commonT = useTranslations("common");
 
   useEffect(() => {
@@ -23,19 +23,19 @@ export default function SummariePage({
   }, [params]);
 
   const dropdownOptions: DropdownOption[] = [
-    { value: 1, label: "Most recent" },
-    { value: 2, label: "Title" },
-    { value: 3, label: "Most sources" },
+    { value: 1, label: t("mostRecent") },
+    { value: 2, label: t("title") },
+    { value: 3, label: t("created") },
   ];
 
   return (
     <ListPageLayout
-      title={summarieT("yourSummaries", { pocketName: "Lorem" })}
+      title={t("yourSummaries", { pocketName: "Lorem" })}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}
-      searchLabel={summarieT("searchLabel")}
-      clearSearchLabel={summarieT("clearSearchLabel")}
+      searchLabel={t("searchLabel")}
+      clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
     >
       <Summarie

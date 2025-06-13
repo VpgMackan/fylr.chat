@@ -1,4 +1,5 @@
 import {
+  Req,
   Body,
   Controller,
   Delete,
@@ -9,9 +10,13 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 import { ConversationService } from './conversation.service';
 import { MessageService } from './message.service';
 
@@ -29,10 +34,31 @@ export class ChatController {
     private messageService: MessageService,
   ) {}
 
+  @Post('conversation/:id/ws-token')
+  getWebSocketToken(
+    @Req() req: RequestWithUser,
+    @Param('id') conversationId: string,
+  ) {
+    return this.conversationService.generateWebSocketToken(
+      req.user,
+      conversationId,
+    );
+  }
+
   // === CONVERSATIONS ===
+  @Get('user/all')
+  getConversationsByUser(@Req() req: RequestWithUser) {
+    const userId = req.user.id;
+    return this.conversationService.getConversationsByUserId(userId);
+  }
+
   @Get(':pocketId/conversations')
-  getConversations(@Param('pocketId') pocketId: string) {
-    return this.conversationService.getConversations(pocketId);
+  getConversations(
+    @Param('pocketId') pocketId: string,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ) {
+    return this.conversationService.getConversations(pocketId, take, offset);
   }
 
   @Post(':pocketId/conversation')
@@ -71,11 +97,8 @@ export class ChatController {
 
   @Post('conversation/:id/message')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  createMessage(
-    @Body() body: CreateMessageDto,
-    @Param('pocketId') pocketId: string,
-  ) {
-    return this.messageService.createMessage(body, pocketId);
+  createMessage(@Body() body: CreateMessageDto, @Param('id') id: string) {
+    return this.messageService.createMessage(body, id);
   }
 
   @Get('message/:id')

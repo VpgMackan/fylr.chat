@@ -25,7 +25,7 @@ export default function PodcastIdPage({
   const router = useRouter();
 
   const commonT = useTranslations("common");
-  const podcastT = useTranslations("pages.podcast");
+  const t = useTranslations("pages.podcast");
 
   useEffect(() => {
     params.then((res) => {
@@ -50,10 +50,10 @@ export default function PodcastIdPage({
       infrontTitle={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      rightSideContent={<Button text="Edit" />}
+      rightSideContent={<Button text={t("editButton")} />}
       sidebarContent={
         <>
-          <p className="text-xl">Podcast Episodes</p>
+          <p className="text-xl">{t("podcastEpisodes")}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
@@ -74,8 +74,8 @@ export default function PodcastIdPage({
         <div className="flex text-2xl items-center justify-between">
           <p className="font-bold">1. Episode one</p>
           <div className="flex">
-            <Button text="Share" className="mr-2" />
-            <Button text="Download" className="mr-2" />
+            <Button text={t("share")} className="mr-2" />
+            <Button text={t("download")} className="mr-2" />
             <Button
               text={<Icon icon="ph:gear-fill" width="20" height="20" />}
             />

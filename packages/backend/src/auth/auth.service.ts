@@ -10,6 +10,7 @@ import { User } from 'src/users/users.entity';
 
 import { CreateUserDto } from 'src/users/create-user.dto';
 import { UpdateUserDto } from 'src/users/update-user.dto';
+import { UserPayload } from './interfaces/request-with-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -33,10 +34,27 @@ export class AuthService {
 
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = { id: user.id, name: user.name, email: user.email };
+    const payload: UserPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
+  }
+
+  async generateChatToken(
+    payload: UserPayload,
+    conversationId: string,
+  ): Promise<string> {
+    const chatPayload: Omit<UserPayload & { conversationId: string }, 'exp'> = {
+      id: payload.id,
+      name: payload.name,
+      email: payload.email,
+      conversationId,
+    };
+    return this.jwtService.signAsync(chatPayload);
   }
 
   async signUp(data: CreateUserDto): Promise<Omit<User, 'password'>> {

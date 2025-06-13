@@ -45,14 +45,48 @@
   },
 
   "pages": {
+    "auth": {
+      "withAuth": {
+        "checking": "Checking your authentication...",
+        "redirecting": "Redirecting to login..."
+      },
+      "signup": {
+        "createAccount": "Create your account",
+        "signupSubtitle": "Enter your details to get started",
+        "name": "Name",
+        "namePlaceholder": "Enter your name",
+        "email": "Email Address",
+        "emailPlaceholder": "Enter your email",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "buttonSignUp": "Sign Up",
+        "buttonSigningUp": "Signing up…",
+        "haveAccount": "Already have an account? <login>Sign in</login>"
+      },
+      "login": {
+        "welcome": "Welcome back!",
+        "signin": "Sign in to your account",
+        "email": "Email Address",
+        "emailPlaceholder": "Enter your email",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "buttonSignIn": "Sign In",
+        "buttonSigningIn": "Signing in...",
+        "noAccount": "Don't have an account? <signup>Sign up</signup>"
+      }
+    },
     "home": {
       "welcome": "What's up, {name}!",
       "mostRecentChat": "Most recent chats",
       "pinnedPodcasts": "Pinned podcasts"
     },
     "pocketList": {
+      "yourPockets": "Your pockets",
       "searchLabel": "Search Pockets",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
     },
     "newPocket": {
       "title": "Create New Pocket",
@@ -69,22 +103,57 @@
     "podcastList": {
       "yourPodcasts": "Your podcasts in {pocketName}",
       "searchLabel": "Search through podcasts",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
+    },
+    "podcast": {
+      "editButton": "Edit",
+      "podcastEpisodes": "Podcast Episodes",
+      "share": "Share",
+      "download": "Download"
     },
     "summariesList": {
       "yourSummaries": "Your summaries in {pocketName}",
       "searchLabel": "Search through summaries",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
+    },
+    "summaries": {
+      "editButton": "Edit",
+      "summaryEpisodes": "Summary Episodes"
     },
     "chatsList": {
       "yourChats": "Your chats in {pocketName}",
       "searchLabel": "Search through chats",
-      "clearSearchLabel": "Clear search"
+      "clearSearchLabel": "Clear search",
+      "mostRecent": "Most recent",
+      "title": "Title",
+      "created": "Created"
     },
-    "podcast": {}
+    "chatDetail": {
+      "editButton": "Edit",
+      "yourSources": "Your sources"
+    }
   },
 
   "podcasts": {
     "goToPodcast": "Go to podcast"
+  },
+
+  "features": {
+    "chat": {
+      "userMessage": "User message",
+      "assistantMessage": "Assistant message",
+      "inputPlaceholder": "Ask anything",
+      "upload": "Upload a file",
+      "webSearch": "Web search",
+      "more": "More",
+      "record": "Record message with microphone",
+      "send": "Send"
+    }
   }
 }

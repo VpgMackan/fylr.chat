@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,21 +12,63 @@ import { Conversation } from './conversation.entity';
 import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
 
+import { AuthService } from 'src/auth/auth.service';
+import { UserPayload } from 'src/auth/interfaces/request-with-user.interface';
+
 @Injectable()
 export class ConversationService {
   constructor(
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
+    private authService: AuthService,
   ) {}
 
-  async getConversations(pocketId: string) {
+  async generateWebSocketToken(
+    user: UserPayload,
+    conversationId: string,
+  ): Promise<{ token: string }> {
+    const conversation = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.pocket', 'pocket')
+      .where('conversation.id = :conversationId', { conversationId })
+      .andWhere('pocket.userId = :userId', { userId: user.id })
+      .getOne();
+
+    if (!conversation) {
+      throw new ForbiddenException('Access to this conversation is denied.');
+    }
+
+    const token = await this.authService.generateChatToken(
+      user,
+      conversationId,
+    );
+    return { token };
+  }
+
+  async getConversations(pocketId: string, take = 10, offset = 0) {
     try {
-      return await this.conversationRepository.findBy({
-        pocketId,
+      return await this.conversationRepository.find({
+        where: { pocketId },
+        take,
+        skip: offset,
       });
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve conversations for pocket ${pocketId}`,
+      );
+    }
+  }
+
+  async getConversationsByUserId(userId: string): Promise<Conversation[]> {
+    try {
+      return await this.conversationRepository
+        .createQueryBuilder('conversation')
+        .innerJoinAndSelect('conversation.pocket', 'pocket')
+        .where('pocket.userId = :userId', { userId })
+        .getMany();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to retrieve conversations for user ${userId}: ${error.message}`,
       );
     }
   }

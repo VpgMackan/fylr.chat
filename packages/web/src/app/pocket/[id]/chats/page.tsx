@@ -3,10 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "@/utils/axios";
+
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
 import Chat from "@/components/Chat";
+import ChatSkeleton from "@/components/loading/Chat";
 
 export default function ChatsPage({
   params,
@@ -15,7 +18,7 @@ export default function ChatsPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const router = useRouter();
-  const chatsT = useTranslations("pages.chatsList");
+  const t = useTranslations("pages.chatsList");
   const commonT = useTranslations("common");
 
   useEffect(() => {
@@ -23,26 +26,35 @@ export default function ChatsPage({
   }, [params]);
 
   const dropdownOptions: DropdownOption[] = [
-    { value: 1, label: "Most recent" },
-    { value: 2, label: "Title" },
-    { value: 3, label: "Most sources" },
+    { value: 1, label: t("mostRecent") },
+    { value: 2, label: t("title") },
+    { value: 3, label: t("created") },
   ];
+
+  const renderItems = (pockets: any[]) =>
+    pockets.map(({ id, title }) => <Chat key={id} title={title} id={id} />);
+
+  const dataLoader = id
+    ? ({ take, offset }: { take: number; offset: number }) =>
+        axios
+          .get(`chat/${id}/conversations`, { params: { take, offset } })
+          .then((r) => r.data)
+    : undefined;
 
   return (
     <ListPageLayout
-      title={chatsT("yourChats", { pocketName: "Lorem" })}
+      title={t("yourChats", { pocketName: "Lorem" })}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}
-      searchLabel={chatsT("searchLabel")}
-      clearSearchLabel={chatsT("clearSearchLabel")}
+      searchLabel={t("searchLabel")}
+      clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
-    >
-      <Chat
-        title="🧠 Lorem"
-        pocket="Lorem"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit..."
-      />
-    </ListPageLayout>
+      dataLoader={dataLoader}
+      take={10}
+      skeleton={<ChatSkeleton />}
+      skeletonCount={6}
+      renderItems={renderItems}
+    />
   );
 }

@@ -5,6 +5,7 @@ import { DeleteResult, Repository } from 'typeorm';
 import { Pocket } from './pocket.entity';
 import { CreatePocketDto } from './create-pocket.dto';
 import { UpdatePocketDto } from './update-pocket.dto';
+import { Conversation } from 'src/chat/conversation.entity';
 
 @Injectable()
 export class PocketService {
@@ -25,17 +26,21 @@ export class PocketService {
     take = 10,
     offset = 0,
   ): Promise<Pocket[]> {
-    const pocket = await this.pocketRepository.find({
-      where: { userId: id },
-      take,
-      skip: offset,
-    });
-    if (!pocket)
+    const pockets = await this.pocketRepository
+      .createQueryBuilder('pocket')
+      .leftJoinAndSelect('pocket.source', 'source')
+      .where('pocket.userId = :id', { id })
+      .orderBy('pocket.createdAt', 'DESC')
+      .take(take)
+      .offset(offset)
+      .getMany();
+
+    if (!pockets || pockets.length === 0)
       throw new NotFoundException(
         `Pockets owned by user ID "${id}" could not be located in database`,
       );
 
-    return pocket;
+    return pockets;
   }
 
   /**
@@ -43,14 +48,22 @@ export class PocketService {
    * @param id The id for the pocket to be retrived
    * @returns A promise resolving a pocket
    */
-  async findOneById(id: string): Promise<Pocket> {
-    const pocket = await this.pocketRepository.findOneBy({ id });
+  async findOneById(
+    id: string,
+  ): Promise<
+    Omit<Pocket, 'conversation'> & { recentActivity: Conversation[] }
+  > {
+    const pocket = await this.pocketRepository.findOne({
+      where: { id },
+      relations: ['conversation', 'source'],
+    });
     if (!pocket)
       throw new NotFoundException(
         `Pocket with the ID "${id}" could not be located in database`,
       );
 
-    return pocket;
+    const { conversation, ...pocketData } = pocket;
+    return { ...pocketData, recentActivity: conversation };
   }
 
   /**

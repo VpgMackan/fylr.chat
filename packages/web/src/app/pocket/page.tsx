@@ -1,44 +1,55 @@
 "use client";
-
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "@/utils/axios";
+
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
-import PinnedPod from "@/components/PodcastListItem";
+import Pocket from "@/components/Pocket";
+import PocketSkeleton from "@/components/loading/Pocket";
 
-export default function PodcastsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const [id, setId] = useState<string>();
+export default function PocketPage() {
   const router = useRouter();
-  const t = useTranslations("pages.podcastList");
+  const t = useTranslations("pages.pocketList");
   const commonT = useTranslations("common");
 
-  useEffect(() => {
-    params.then((r) => setId(r.id));
-  }, [params]);
-
   const dropdownOptions: DropdownOption[] = [
-    { value: 1, label: "Most recent" },
-    { value: 2, label: "Title" },
-    { value: 3, label: "Most sources" },
+    { value: 1, label: t("mostRecent") },
+    { value: 2, label: t("title") },
+    { value: 3, label: t("created") },
   ];
+
+  const renderItems = (pockets: any[]) =>
+    pockets.map(({ id, title, icon, description, source, createdAt }) => (
+      <Pocket
+        key={id}
+        id={id}
+        title={title}
+        icon={icon}
+        description={description}
+        sources={source.length}
+        created={createdAt}
+      />
+    ));
+
+  const dataLoader = ({ take, offset }) =>
+    axios.get("pocket", { params: { take, offset } }).then((r) => r.data);
 
   return (
     <ListPageLayout
-      title={t("yourPodcasts", { pocketName: "Lorem" })}
+      title={t("yourPockets")}
       onBack={() => router.back()}
       onCreate={() => router.push("/pocket/new")}
       createText={commonT("buttons.create")}
       searchLabel={t("searchLabel")}
       clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
-    >
-      <PinnedPod title="🧠 Lorem" pocket="Lorem" />
-    </ListPageLayout>
+      dataLoader={dataLoader}
+      take={10}
+      skeleton={<PocketSkeleton />}
+      skeletonCount={6}
+      renderItems={renderItems}
+    />
   );
 }
