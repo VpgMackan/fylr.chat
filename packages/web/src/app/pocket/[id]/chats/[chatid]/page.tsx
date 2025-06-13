@@ -34,8 +34,17 @@ export default function ChatPage({
   const [sources, setSources] = useState([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     params.then((res) => {
@@ -176,6 +185,7 @@ export default function ChatPage({
         {messages.map((m) => (
           <Chat key={m.id} user={m.role === "user"} text={m.content} />
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <ChatInput onSend={handleSend} />
