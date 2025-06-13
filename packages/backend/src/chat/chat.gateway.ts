@@ -49,9 +49,9 @@ export class ChatGateway
           return next(new Error('Unauthorized: Invalid chat token'));
         }
         socket.user = payload;
-        next();
+        return next();
       } catch (err) {
-        next(new Error(`Unauthorized: ${err.message}`));
+        return next(new Error(`Unauthorized: ${err.message}`));
       }
     });
   }

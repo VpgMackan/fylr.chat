@@ -29,6 +29,13 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     adjustHeight();
   }, [value]);
 
+  const handleSend = () => {
+    const text = value.trim();
+    if (!text) return;
+    onSend(text);
+    setValue("");
+  };
+
   return (
     <div className="flex flex-col p-2 bg-blue-200 rounded-2xl">
       <textarea
@@ -78,12 +85,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           </button>
           <button
             className="p-2 bg-blue-500 rounded-full hover:bg-blue-700"
-            onClick={() => {
-              const text = value.trim();
-              if (!text) return;
-              onSend(text);
-              setValue("");
-            }}
+            onClick={handleSend}
           >
             <Icon
               icon="mdi:arrow-up"

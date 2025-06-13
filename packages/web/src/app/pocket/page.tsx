@@ -20,6 +20,22 @@ export default function PocketPage() {
     { value: 3, label: t("created") },
   ];
 
+  const renderItems = (pockets: any[]) =>
+    pockets.map(({ id, title, icon, description, source, createdAt }) => (
+      <Pocket
+        key={id}
+        id={id}
+        title={title}
+        icon={icon}
+        description={description}
+        sources={source.length}
+        created={createdAt}
+      />
+    ));
+
+  const dataLoader = ({ take, offset }) =>
+    axios.get("pocket", { params: { take, offset } }).then((r) => r.data);
+
   return (
     <ListPageLayout
       title={t("yourPockets")}
@@ -29,25 +45,11 @@ export default function PocketPage() {
       searchLabel={t("searchLabel")}
       clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
-      dataLoader={({ take, offset }) =>
-        axios.get("pocket", { params: { take, offset } }).then((r) => r.data)
-      }
+      dataLoader={dataLoader}
       take={10}
       skeleton={<PocketSkeleton />}
       skeletonCount={6}
-      renderItems={(pockets: any[]) =>
-        pockets.map(({ id, title, icon, description, source, createdAt }) => (
-          <Pocket
-            key={id}
-            id={id}
-            title={title}
-            icon={icon}
-            description={description}
-            sources={source.length}
-            created={createdAt}
-          />
-        ))
-      }
+      renderItems={renderItems}
     />
   );
 }

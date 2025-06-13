@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -17,6 +17,10 @@ export default function Chat({
   const router = useRouter();
   const pathname = usePathname();
 
+  const handleClick = useCallback(() => {
+    router.push(pathname + "/" + id);
+  }, [router, pathname, id]);
+
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), 50);
     return () => clearTimeout(timer);
@@ -27,7 +31,7 @@ export default function Chat({
       className={`border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
         visible ? "opacity-100" : "opacity-0"
       }`}
-      onClick={() => router.push(pathname + "/" + id)}
+      onClick={handleClick}
     >
       <div className="flex justify-between">
         <p className="font-semibold">{title}</p>

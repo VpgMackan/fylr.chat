@@ -31,6 +31,16 @@ export default function ChatsPage({
     { value: 3, label: t("created") },
   ];
 
+  const renderItems = (pockets: any[]) =>
+    pockets.map(({ id, title }) => <Chat key={id} title={title} id={id} />);
+
+  const dataLoader = id
+    ? ({ take, offset }: { take: number; offset: number }) =>
+        axios
+          .get(`chat/${id}/conversations`, { params: { take, offset } })
+          .then((r) => r.data)
+    : undefined;
+
   return (
     <ListPageLayout
       title={t("yourChats", { pocketName: "Lorem" })}
@@ -40,20 +50,11 @@ export default function ChatsPage({
       searchLabel={t("searchLabel")}
       clearSearchLabel={t("clearSearchLabel")}
       dropdownOptions={dropdownOptions}
-      dataLoader={
-        id
-          ? ({ take, offset }) =>
-              axios
-                .get(`chat/${id}/conversations`, { params: { take, offset } })
-                .then((r) => r.data)
-          : undefined
-      }
+      dataLoader={dataLoader}
       take={10}
       skeleton={<ChatSkeleton />}
       skeletonCount={6}
-      renderItems={(pockets: any[]) =>
-        pockets.map(({ id, title }) => <Chat key={id} title={title} id={id} />)
-      }
+      renderItems={renderItems}
     />
   );
 }

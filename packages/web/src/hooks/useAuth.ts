@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "@/utils/axios";
+import { isAxiosError } from "axios";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -14,8 +15,8 @@ export function useAuth() {
       try {
         await axios.get("auth/profile");
         setIsAuthenticated(true);
-      } catch (error: any) {
-        if (error.response?.status === 401) {
+      } catch (error: unknown) {
+        if (isAxiosError(error) && error.response?.status === 401) {
           setIsAuthenticated(false);
           router.push("/auth/login");
         }

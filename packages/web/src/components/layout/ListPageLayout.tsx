@@ -8,7 +8,7 @@ import Heading from "@/components/layout/Heading";
 
 export type DropdownOption = { value: string | number; label: string };
 
-interface ListPageLayoutProps<T> {
+interface ListPageLayoutProps<T extends { id: string | number }> {
   title: string;
   onBack?: () => void;
   onCreate: () => void;
@@ -34,7 +34,7 @@ interface ListPageLayoutProps<T> {
   children?: ReactNode;
 }
 
-export default function ListPageLayout<T>({
+export default function ListPageLayout<T extends { id: string | number }>({
   title,
   onBack,
   onCreate,
@@ -64,6 +64,30 @@ export default function ListPageLayout<T>({
   const [loadingMore, setLoadingMore] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
   const hasFetched = useRef(false);
+
+  const loadMore = async () => {
+    if (!dataLoader) return;
+    setLoadingMore(true);
+    try {
+      const data = await dataLoader({
+        take,
+        offset,
+        searchTerm,
+        dropdownValue,
+      });
+      setItems((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id));
+        const newItems = data.filter((item) => !existingIds.has(item.id));
+        return [...prev, ...newItems];
+      });
+      setOffset((o) => o + data.length);
+      if (data.length < take) setHasMore(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (!dataLoader || hasFetched.current) return;
@@ -99,30 +123,6 @@ export default function ListPageLayout<T>({
     obs.observe(loaderRef.current);
     return () => obs.disconnect();
   }, [dataLoader, hasMore, loadingMore]);
-
-  const loadMore = async () => {
-    if (!dataLoader) return;
-    setLoadingMore(true);
-    try {
-      const data = await dataLoader({
-        take,
-        offset,
-        searchTerm,
-        dropdownValue,
-      });
-      setItems((prev) => {
-        const existingIds = new Set(prev.map((item: any) => item.id));
-        const newItems = data.filter((item: any) => !existingIds.has(item.id));
-        return [...prev, ...newItems];
-      });
-      setOffset((o) => o + data.length);
-      if (data.length < take) setHasMore(false);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchTerm(e.target.value);
@@ -162,7 +162,7 @@ export default function ListPageLayout<T>({
         <div className={`grid ${gridClassName} gap-4`}>
           {dataLoader
             ? loading
-              ? Array.from({ length: skeletonCount }).map((_, i) => (
+              ? Array.from({ length: skeletonCount }).map((_) => (
                   <>{skeleton}</>
                 ))
               : renderItems?.(items)

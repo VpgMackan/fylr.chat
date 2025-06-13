@@ -28,10 +28,10 @@ export default function ChatPage({
 }) {
   const t = useTranslations("pages.chatDetail");
 
-  const [pocketId, setPocketId] = useState<string | null>(null);
+  const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
 
-  const [sources, setSources] = useState([]);
+  // const [sources, setSources] = useState([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,12 +156,14 @@ export default function ChatPage({
     });
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <ContentLayout
       title="What is nine plus ten?"
-      infrontTitle={
-        <Icon icon="weui:back-outlined" onClick={() => router.back()} />
-      }
+      infrontTitle={<Icon icon="weui:back-outlined" onClick={handleBack} />}
       rightSideContent={<Button text={t("editButton")} className="mr-2" />}
       sidebarContent={
         <>

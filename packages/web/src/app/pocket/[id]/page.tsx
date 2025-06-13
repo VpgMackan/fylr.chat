@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "@/utils/axios";
 
@@ -148,8 +148,8 @@ export default function PocketIdPage({
           pocketId={id || ""}
         />
         <PinnedPod title="Lorem ipsum" pocket="Lorem" />
-        <Chat title="Lorem ipsum" pocket="Lorem" />
-        <Chat title="Lorem ipsum" pocket="Lorem" />
+        <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />
+        <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />
       </Section>
 
       <Section title={t("pocketDetail.shortcuts")} cols="grid-cols-3">
