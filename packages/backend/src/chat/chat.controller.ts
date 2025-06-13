@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 import { ConversationService } from './conversation.service';
 import { MessageService } from './message.service';
 
@@ -24,7 +25,6 @@ import { UpdateConversationDto } from './update-conversation.dto';
 
 import { CreateMessageDto } from './create-message.dto';
 import { UpdateMessageDto } from './update-message.dto';
-import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 @UseGuards(AuthGuard)
 @Controller('chat')

@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatController } from './chat.controller';
 import { ConversationService } from './conversation.service';
 import { MessageService } from './message.service';
+import { ChatGateway } from './chat.gateway';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { AiModule } from 'src/aiService/aiService.module';
@@ -20,7 +21,7 @@ import { Message } from './message.entity';
     SourceModule,
   ],
   controllers: [ChatController],
-  providers: [ConversationService, MessageService],
+  providers: [ConversationService, MessageService, ChatGateway],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ChatModule {}
