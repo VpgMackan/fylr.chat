@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
 
 import { Pocket } from './pocket.entity';
-import { CreatePocketDto } from './create-pocket.dto';
-import { UpdatePocketDto } from './update-pocket.dto';
+import { CreatePocketDto, UpdatePocketDto } from '@fylr/types';
 import { Conversation } from 'src/chat/conversation.entity';
 
 @Injectable()

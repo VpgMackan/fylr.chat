@@ -19,8 +19,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 import { PocketService } from './pocket.service';
-import { CreatePocketDtoApiRequest } from './create-pocket-api-request.dto';
-import { UpdatePocketDto } from './update-pocket.dto';
+import { UpdatePocketDto, CreatePocketDtoApiRequest } from '@fylr/types';
 
 @UseGuards(AuthGuard)
 @Controller('pocket')

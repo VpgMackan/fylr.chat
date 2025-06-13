@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 
 import { User } from './users.entity';
 
-import { CreateUserDto } from './create-user.dto';
-import { UpdateUserDto } from './update-user.dto';
+import { CreateUserDto, UpdateUserDto } from '@fylr/types';
 
 @Injectable()
 export class UsersService {

@@ -8,8 +8,7 @@ import { Repository } from 'typeorm';
 import { Server } from 'socket.io';
 
 import { Message } from './message.entity';
-import { CreateMessageDto } from './create-message.dto';
-import { UpdateMessageDto } from './update-message.dto';
+import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 import { AiService } from 'src/aiService/ai.service';
 import { SourceService } from 'src/source/source.service';
 import { Conversation } from './conversation.entity';
