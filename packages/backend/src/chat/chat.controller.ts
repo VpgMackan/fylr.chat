@@ -34,6 +34,17 @@ export class ChatController {
     private messageService: MessageService,
   ) {}
 
+  @Post('conversation/:id/ws-token')
+  getWebSocketToken(
+    @Req() req: RequestWithUser,
+    @Param('id') conversationId: string,
+  ) {
+    return this.conversationService.generateWebSocketToken(
+      req.user,
+      conversationId,
+    );
+  }
+
   // === CONVERSATIONS ===
   @Get('user/all')
   getConversationsByUser(@Req() req: RequestWithUser) {

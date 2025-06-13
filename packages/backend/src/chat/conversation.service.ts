@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,12 +12,38 @@ import { Conversation } from './conversation.entity';
 import { CreateConversationDto } from './create-conversation.dto';
 import { UpdateConversationDto } from './update-conversation.dto';
 
+import { AuthService } from 'src/auth/auth.service';
+import { UserPayload } from 'src/auth/interfaces/request-with-user.interface';
+
 @Injectable()
 export class ConversationService {
   constructor(
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
+    private authService: AuthService,
   ) {}
+
+  async generateWebSocketToken(
+    user: UserPayload,
+    conversationId: string,
+  ): Promise<{ token: string }> {
+    const conversation = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.pocket', 'pocket')
+      .where('conversation.id = :conversationId', { conversationId })
+      .andWhere('pocket.userId = :userId', { userId: user.id })
+      .getOne();
+
+    if (!conversation) {
+      throw new ForbiddenException('Access to this conversation is denied.');
+    }
+
+    const token = await this.authService.generateChatToken(
+      user,
+      conversationId,
+    );
+    return { token };
+  }
 
   async getConversations(pocketId: string, take = 10, offset = 0) {
     try {
