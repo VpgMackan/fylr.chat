@@ -48,9 +48,13 @@ export class AuthService {
     payload: UserPayload,
     conversationId: string,
   ): Promise<string> {
-    const chatPayload = { ...payload, conversationId };
-    const { exp, ...cleanPayload } = chatPayload as any;
-    return this.jwtService.signAsync(cleanPayload);
+    const chatPayload: Omit<UserPayload & { conversationId: string }, 'exp'> = {
+      id: payload.id,
+      name: payload.name,
+      email: payload.email,
+      conversationId,
+    };
+    return this.jwtService.signAsync(chatPayload);
   }
 
   async signUp(data: CreateUserDto): Promise<Omit<User, 'password'>> {

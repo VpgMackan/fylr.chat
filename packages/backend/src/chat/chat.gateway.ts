@@ -13,7 +13,6 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserPayload } from 'src/auth/interfaces/request-with-user.interface';
-import { ConversationService } from './conversation.service';
 import { MessageService } from './message.service';
 
 interface ChatTokenPayload extends UserPayload {
@@ -36,12 +35,11 @@ export class ChatGateway
 
   constructor(
     private readonly jwtService: JwtService,
-    private readonly conversationService: ConversationService,
     private readonly messageService: MessageService,
   ) {}
 
   afterInit(server: Server) {
-    server.use(async (socket: SocketWithChatUser, next) => {
+    server.use((socket: SocketWithChatUser, next) => {
       try {
         const token = socket.handshake.auth?.token;
         if (!token) throw new Error('No token provided');
@@ -53,7 +51,7 @@ export class ChatGateway
         socket.user = payload;
         next();
       } catch (err) {
-        next(new Error('Unauthorized: ' + err.message));
+        next(new Error(`Unauthorized: ${err.message}`));
       }
     });
   }

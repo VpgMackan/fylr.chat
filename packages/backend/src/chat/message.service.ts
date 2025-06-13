@@ -51,7 +51,7 @@ export class MessageService {
     }
 
     const newMessage = this.messageRepository.create({
-      conversationId: conversationId,
+      conversationId,
       ...body,
     });
     return await this.messageRepository.save(newMessage);
