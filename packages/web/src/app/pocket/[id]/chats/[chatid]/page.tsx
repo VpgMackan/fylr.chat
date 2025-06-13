@@ -174,9 +174,7 @@ export default function ChatPage({
     >
       <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4">
         {messages.map((m) => (
-          <Chat key={m.id} user={m.role === "user"}>
-            {m.content}
-          </Chat>
+          <Chat key={m.id} user={m.role === "user"} text={m.content} />
         ))}
       </div>
 
