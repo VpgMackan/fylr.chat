@@ -8,6 +8,7 @@ import ListPageLayout, {
 } from "@/components/layout/ListPageLayout";
 import Pocket from "@/components/Pocket";
 import PocketSkeleton from "@/components/loading/Pocket";
+import { PocketApiResponse } from "@fylr/types";
 
 export default function PocketPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function PocketPage() {
     { value: 3, label: t("created") },
   ];
 
-  const renderItems = (pockets: any[]) =>
+  const renderItems = (pockets: PocketApiResponse[]) =>
     pockets.map(({ id, title, icon, description, source, createdAt }) => (
       <Pocket
         key={id}
@@ -33,7 +34,13 @@ export default function PocketPage() {
       />
     ));
 
-  const dataLoader = ({ take, offset }) =>
+  const dataLoader = ({
+    take,
+    offset,
+  }: {
+    take: number;
+    offset: number;
+  }): Promise<PocketApiResponse[]> =>
     axios.get("pocket", { params: { take, offset } }).then((r) => r.data);
 
   return (

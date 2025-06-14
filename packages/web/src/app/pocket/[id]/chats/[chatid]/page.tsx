@@ -15,14 +15,6 @@ import axios from "@/utils/axios";
 
 import { WsServerEventPayload, MessageApiResponse } from "@fylr/types";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  createdAt: string;
-  metadata: object;
-}
-
 export default function ChatPage({
   params,
 }: {
@@ -34,7 +26,7 @@ export default function ChatPage({
   const [chatId, setChatId] = useState<string | null>(null);
 
   // const [sources, setSources] = useState([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageApiResponse[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +96,7 @@ export default function ChatPage({
                     ...prev,
                     {
                       id: "streaming-assistant-msg",
+                      conversationId: chatId!,
                       role: "assistant",
                       content: data.content,
                       createdAt: new Date().toISOString(),

@@ -15,6 +15,7 @@ import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
 import ChatSkeleton from "@/components/loading/Chat";
+import { ConversationApiResponse, PocketApiResponse } from "@fylr/types";
 
 function HomePage() {
   const hasFetched = useRef(false);
@@ -24,8 +25,8 @@ function HomePage() {
   const t = useTranslations("pages.home");
   const router = useRouter();
 
-  const [pockets, setPockets] = useState<any[]>([]);
-  const [recentChats, setRecentChats] = useState<any[]>([]);
+  const [pockets, setPockets] = useState<PocketApiResponse[]>([]);
+  const [recentChats, setRecentChats] = useState<ConversationApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,10 +35,12 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
-        const { data: pocketsData } = await axios.get("pocket");
+        const { data: pocketsData } =
+          await axios.get<PocketApiResponse[]>("pocket");
         setPockets(pocketsData);
 
-        const { data: chatsData } = await axios.get("chat/user/all");
+        const { data: chatsData } =
+          await axios.get<ConversationApiResponse[]>("chat/user/all");
         setRecentChats(chatsData);
 
         setLoading(false);
@@ -76,7 +79,14 @@ function HomePage() {
               (_, index) => <PocketSkeleton key={index} />
             )
           : pockets.map(
-              ({ id, description, createdAt, title, icon, source }) => (
+              ({
+                id,
+                description,
+                createdAt,
+                title,
+                icon,
+                source,
+              }: PocketApiResponse) => (
                 <Pocket
                   key={id}
                   title={title}
@@ -97,7 +107,7 @@ function HomePage() {
               (_, index) => <ChatSkeleton key={index} />
             )
           : recentChats.map(({ id, title, pocket }) => (
-              <Chat key={id} title={title} pocket={pocket.title} />
+              <Chat key={id} title={title} pocket={pocket.title} id={id} />
             ))}
       </Section>
 
