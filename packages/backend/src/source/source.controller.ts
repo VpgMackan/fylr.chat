@@ -19,12 +19,7 @@ import { SourceService } from './source.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AiService } from 'src/aiService/ai.service';
 
-import { IsNotEmpty, IsString } from 'class-validator';
-class CreateSourceDto {
-  @IsNotEmpty()
-  @IsString()
-  pocketId: string;
-}
+import { CreateSourceDto } from '@fylr/types';
 
 const allowedMimeTypes = ['application/pdf', 'text/plain', 'text/markdown'];
 
