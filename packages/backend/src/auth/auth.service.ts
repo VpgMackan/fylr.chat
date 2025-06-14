@@ -6,10 +6,13 @@ import {
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
-import { User } from 'src/users/users.entity';
 
-import { UserApiResponse, UserPayload } from '@fylr/types';
-import { CreateUserDto, UpdateUserDto } from '@fylr/types';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserApiResponse,
+  UserPayload,
+} from '@fylr/types';
 
 @Injectable()
 export class AuthService {

@@ -65,7 +65,7 @@ export class SourceController {
       type: file.mimetype,
       url: file.path,
       size: file.size,
-      jobKey: jobKey,
+      jobKey,
       status: 'QUEUED',
     };
 
@@ -74,7 +74,7 @@ export class SourceController {
 
     return {
       message: 'File uploaded successfully and queued for processing.',
-      jobKey: jobKey,
+      jobKey,
       database: entry,
     };
   }

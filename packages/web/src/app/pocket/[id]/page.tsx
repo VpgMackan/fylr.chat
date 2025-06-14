@@ -65,7 +65,7 @@ export default function PocketIdPage({
     });
   }, [params]);
 
-  const handleSavePocket = () => {
+  const handleSavePocket = async () => {
     const data: Record<string, string> = {};
     if (pocketName !== originalPocket.title) {
       data.title = pocketName;
@@ -78,7 +78,19 @@ export default function PocketIdPage({
     }
 
     if (Object.keys(data).length === 0) return;
-    if (id) updatePocket(id, data);
+    if (id) {
+      try {
+        await updatePocket(id, data);
+
+        setOriginalPocket({
+          title: pocketName,
+          description: pocketDescription,
+          tags: pocketTags,
+        });
+      } catch (error) {
+        console.error("Failed to update pocket:", error);
+      }
+    }
   };
 
   return (

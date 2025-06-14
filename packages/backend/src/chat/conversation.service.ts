@@ -9,10 +9,13 @@ import { Repository } from 'typeorm';
 
 import { Conversation } from './conversation.entity';
 
-import { CreateConversationDto, UpdateConversationDto } from '@fylr/types';
+import {
+  CreateConversationDto,
+  UpdateConversationDto,
+  UserPayload,
+} from '@fylr/types';
 
 import { AuthService } from 'src/auth/auth.service';
-import { UserPayload } from '@fylr/types';
 
 @Injectable()
 export class ConversationService {

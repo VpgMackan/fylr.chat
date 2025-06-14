@@ -93,7 +93,7 @@ export default function ChatPage({
                     ...prev,
                     {
                       id: "streaming-assistant-msg",
-                      conversationId: chatId!,
+                      conversationId: chatId,
                       role: "assistant",
                       content: data.content,
                       createdAt: new Date().toISOString(),
@@ -113,6 +113,8 @@ export default function ChatPage({
 
             case "streamError":
               console.error("AI Stream Error:", data.message);
+              break;
+            default:
               break;
           }
         });
