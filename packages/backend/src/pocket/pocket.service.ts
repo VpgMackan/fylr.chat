@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeleteResult, Repository } from 'typeorm';
 
 import { Pocket } from './pocket.entity';
-import { CreatePocketDto, UpdatePocketDto } from '@fylr/types';
+import {
+  CreatePocketDto,
+  PocketApiResponse,
+  UpdatePocketDto,
+} from '@fylr/types';
 import { Conversation } from 'src/chat/conversation.entity';
 
 @Injectable()
@@ -24,7 +28,7 @@ export class PocketService {
     id: string,
     take = 10,
     offset = 0,
-  ): Promise<Pocket[]> {
+  ): Promise<PocketApiResponse[]> {
     const pockets = await this.pocketRepository
       .createQueryBuilder('pocket')
       .leftJoinAndSelect('pocket.source', 'source')
@@ -39,7 +43,17 @@ export class PocketService {
         `Pockets owned by user ID "${id}" could not be located in database`,
       );
 
-    return pockets;
+    return pockets.map((p) => {
+      const { createdAt, source, ...rest } = p;
+      return {
+        ...rest,
+        createdAt: createdAt.toISOString(),
+        source: source.map((s) => ({
+          ...s,
+          uploadTime: s.uploadTime.toISOString(),
+        })),
+      };
+    });
   }
 
   /**
