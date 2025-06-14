@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
 import { User } from 'src/users/users.entity';
 
-import { UserPayload } from './interfaces/request-with-user.interface';
+import { UserPayload } from '@fylr/types';
 import { CreateUserDto, UpdateUserDto } from '@fylr/types';
 
 @Injectable()

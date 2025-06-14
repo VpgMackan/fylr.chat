@@ -1,10 +1,5 @@
 import { Request } from 'express';
-
-export interface UserPayload {
-  id: string;
-  name: string;
-  email: string;
-}
+import { UserPayload } from '@fylr/types';
 
 export interface RequestWithUser extends Request {
   user: UserPayload;

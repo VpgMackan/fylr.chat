@@ -12,12 +12,8 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserPayload } from 'src/auth/interfaces/request-with-user.interface';
+import { ChatTokenPayload } from '@fylr/types';
 import { MessageService } from './message.service';
-
-interface ChatTokenPayload extends UserPayload {
-  conversationId: string;
-}
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;

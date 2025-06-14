@@ -12,7 +12,7 @@ import { Conversation } from './conversation.entity';
 import { CreateConversationDto, UpdateConversationDto } from '@fylr/types';
 
 import { AuthService } from 'src/auth/auth.service';
-import { UserPayload } from 'src/auth/interfaces/request-with-user.interface';
+import { UserPayload } from '@fylr/types';
 
 @Injectable()
 export class ConversationService {
