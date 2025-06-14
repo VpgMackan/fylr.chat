@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
 import { User } from 'src/users/users.entity';
 
-import { UserPayload } from '@fylr/types';
+import { UserApiResponse, UserPayload } from '@fylr/types';
 import { CreateUserDto, UpdateUserDto } from '@fylr/types';
 
 @Injectable()
@@ -56,7 +56,7 @@ export class AuthService {
     return this.jwtService.signAsync(chatPayload);
   }
 
-  async signUp(data: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async signUp(data: CreateUserDto): Promise<UserApiResponse> {
     const saltRounds = 10;
     const hashedPassword = await hash(data.password, saltRounds);
     const user = await this.usersService.createUser({
@@ -69,7 +69,7 @@ export class AuthService {
   async updateProfile(
     userId: string,
     updateData: UpdateUserDto,
-  ): Promise<Omit<User, 'password'>> {
+  ): Promise<UserApiResponse> {
     const dataToUpdate = { ...updateData };
 
     if (dataToUpdate.password) {

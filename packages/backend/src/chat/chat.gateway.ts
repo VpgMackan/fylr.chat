@@ -12,7 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ChatTokenPayload } from '@fylr/types';
+import { ChatTokenPayload, WsClientActionPayload } from '@fylr/types';
 import { MessageService } from './message.service';
 
 interface SocketWithChatUser extends Socket {
@@ -69,12 +69,7 @@ export class ChatGateway
   @SubscribeMessage('conversationAction')
   async handleConversationAction(
     @ConnectedSocket() client: SocketWithChatUser,
-    @MessageBody()
-    data: {
-      conversationId: string;
-      action: 'join' | 'sendMessage';
-      content?: string;
-    },
+    @MessageBody() data: WsClientActionPayload,
   ) {
     const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
     const { conversationId, action, content } = parsedData;
