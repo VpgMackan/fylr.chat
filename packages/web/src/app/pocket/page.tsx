@@ -1,7 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import axios from "@/utils/axios";
 
 import ListPageLayout, {
   DropdownOption,
@@ -9,6 +8,7 @@ import ListPageLayout, {
 import Pocket from "@/components/Pocket";
 import PocketSkeleton from "@/components/loading/Pocket";
 import { PocketApiResponse } from "@fylr/types";
+import { getPockets } from "@/services/api/pocket.api";
 
 export default function PocketPage() {
   const router = useRouter();
@@ -40,8 +40,9 @@ export default function PocketPage() {
   }: {
     take: number;
     offset: number;
-  }): Promise<PocketApiResponse[]> =>
-    axios.get("pocket", { params: { take, offset } }).then((r) => r.data);
+  }): Promise<PocketApiResponse[]> => {
+    return getPockets({ take, offset });
+  };
 
   return (
     <ListPageLayout

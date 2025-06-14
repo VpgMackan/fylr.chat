@@ -11,9 +11,9 @@ import ChatInput from "@/components/features/chat/ChatInput";
 import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
 import Chat from "@/components/features/chat/Chat";
 import ContentLayout from "@/components/layout/ContentLayout";
-import axios from "@/utils/axios";
 
 import { WsServerEventPayload, MessageApiResponse } from "@fylr/types";
+import { getConversationsTokenById } from "@/services/api/chat.api";
 
 export default function ChatPage({
   params,
@@ -52,10 +52,7 @@ export default function ChatPage({
 
     const connectSocket = async () => {
       try {
-        const { data } = await axios.post(
-          `/chat/conversation/${chatId}/ws-token`
-        );
-        const token = data.token;
+        const token = (await getConversationsTokenById(chatId)).token;
 
         const socket = io("http://localhost:3001/chat", {
           auth: { token },

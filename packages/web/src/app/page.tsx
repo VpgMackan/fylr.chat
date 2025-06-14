@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import axios from "@/utils/axios";
 
 import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
@@ -16,6 +15,8 @@ import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
 import ChatSkeleton from "@/components/loading/Chat";
 import { ConversationApiResponse, PocketApiResponse } from "@fylr/types";
+import { getPockets } from "@/services/api/pocket.api";
+import { getConversations } from "@/services/api/chat.api";
 
 function HomePage() {
   const hasFetched = useRef(false);
@@ -35,13 +36,19 @@ function HomePage() {
 
     const fetchData = async () => {
       try {
-        const { data: pocketsData } =
-          await axios.get<PocketApiResponse[]>("pocket");
-        setPockets(pocketsData);
+        setPockets(
+          await getPockets({
+            take: 10,
+            offset: 0,
+          })
+        );
 
-        const { data: chatsData } =
-          await axios.get<ConversationApiResponse[]>("chat/user/all");
-        setRecentChats(chatsData);
+        setRecentChats(
+          await getConversations({
+            take: 10,
+            offset: 0,
+          })
+        );
 
         setLoading(false);
       } catch (err: any) {
