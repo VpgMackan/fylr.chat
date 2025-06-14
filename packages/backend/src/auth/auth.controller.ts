@@ -17,11 +17,9 @@ import { Response as ExpressResponse } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
-import { LoginDto } from './login.dto';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
 
-import { CreateUserDto } from 'src/users/create-user.dto';
-import { UpdateUserDto } from 'src/users/update-user.dto';
+import { CreateUserDto, UpdateUserDto, LoginDto } from '@fylr/types';
 
 @Controller('auth')
 export class AuthController {

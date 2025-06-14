@@ -11,15 +11,9 @@ import ChatInput from "@/components/features/chat/ChatInput";
 import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
 import Chat from "@/components/features/chat/Chat";
 import ContentLayout from "@/components/layout/ContentLayout";
-import axios from "@/utils/axios";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  createdAt: string;
-  metadata: object;
-}
+import { WsServerEventPayload, MessageApiResponse } from "@fylr/types";
+import { getConversationsTokenById } from "@/services/api/chat.api";
 
 export default function ChatPage({
   params,
@@ -32,7 +26,7 @@ export default function ChatPage({
   const [chatId, setChatId] = useState<string | null>(null);
 
   // const [sources, setSources] = useState([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageApiResponse[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -58,10 +52,7 @@ export default function ChatPage({
 
     const connectSocket = async () => {
       try {
-        const { data } = await axios.post(
-          `/chat/conversation/${chatId}/ws-token`
-        );
-        const token = data.token;
+        const token = (await getConversationsTokenById(chatId)).token;
 
         const socket = io("http://localhost:3001/chat", {
           auth: { token },
@@ -76,57 +67,57 @@ export default function ChatPage({
           });
         });
 
-        socket.on("conversationHistory", (history: Message[]) => {
+        socket.on("conversationHistory", (history: MessageApiResponse[]) => {
           setMessages(history);
         });
 
-        socket.on(
-          "conversationAction",
-          (event: { action: string; data: any }) => {
-            const { action, data } = event;
+        socket.on("conversationAction", (event: WsServerEventPayload) => {
+          const { action, data } = event;
 
-            switch (action) {
-              case "newMessage":
-                setMessages((prev) => [...prev, data]);
-                break;
+          switch (action) {
+            case "newMessage":
+              setMessages((prev) => [...prev, data]);
+              break;
 
-              case "messageChunk":
-                setMessages((prev) => {
-                  const lastMsg = prev[prev.length - 1];
-                  if (lastMsg?.id === "streaming-assistant-msg") {
-                    const updatedMsg = {
-                      ...lastMsg,
-                      content: lastMsg.content + data.content,
-                    };
-                    return [...prev.slice(0, -1), updatedMsg];
-                  } else {
-                    return [
-                      ...prev,
-                      {
-                        id: "streaming-assistant-msg",
-                        role: "assistant",
-                        content: data.content,
-                        createdAt: new Date().toISOString(),
-                        metadata: {},
-                      },
-                    ];
-                  }
-                });
-                break;
+            case "messageChunk":
+              setMessages((prev) => {
+                const lastMsg = prev[prev.length - 1];
+                if (lastMsg?.id === "streaming-assistant-msg") {
+                  const updatedMsg = {
+                    ...lastMsg,
+                    content: lastMsg.content + data.content,
+                  };
+                  return [...prev.slice(0, -1), updatedMsg];
+                } else {
+                  return [
+                    ...prev,
+                    {
+                      id: "streaming-assistant-msg",
+                      conversationId: chatId,
+                      role: "assistant",
+                      content: data.content,
+                      createdAt: new Date().toISOString(),
+                      metadata: {},
+                    },
+                  ];
+                }
+              });
+              break;
 
-              case "messageEnd":
-                setMessages((prev) => [
-                  ...prev.filter((m) => m.id !== "streaming-assistant-msg"),
-                  data,
-                ]);
-                break;
+            case "messageEnd":
+              setMessages((prev) => [
+                ...prev.filter((m) => m.id !== "streaming-assistant-msg"),
+                data,
+              ]);
+              break;
 
-              case "streamError":
-                console.error("AI Stream Error:", data.message);
-                break;
-            }
+            case "streamError":
+              console.error("AI Stream Error:", data.message);
+              break;
+            default:
+              break;
           }
-        );
+        });
 
         socket.on("disconnect", () => {
           console.log("Socket.IO disconnected.");

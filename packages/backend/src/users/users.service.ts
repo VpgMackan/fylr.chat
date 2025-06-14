@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 
 import { User } from './users.entity';
 
-import { CreateUserDto } from './create-user.dto';
-import { UpdateUserDto } from './update-user.dto';
+import { CreateUserDto, UpdateUserDto, UserApiResponse } from '@fylr/types';
 
 @Injectable()
 export class UsersService {
@@ -29,7 +28,7 @@ export class UsersService {
     return user;
   }
 
-  async createUser(userData: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async createUser(userData: CreateUserDto): Promise<UserApiResponse> {
     const newUser = this.usersRepository.create(userData);
     await this.usersRepository.save(newUser);
     const { password: _password, ...result } = newUser;
@@ -39,7 +38,7 @@ export class UsersService {
   async updateUser(
     id: string,
     updateData: UpdateUserDto,
-  ): Promise<Omit<User, 'password'>> {
+  ): Promise<UserApiResponse> {
     const userToUpdate = await this.usersRepository.preload({
       id: id,
       ...updateData,

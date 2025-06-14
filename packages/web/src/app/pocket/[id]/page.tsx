@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "@/utils/axios";
 
 import Button from "@/components/common/Button";
 import Source from "@/components/Source";
@@ -14,6 +13,8 @@ import EditPocketDialog from "@/components/EditPocketDialog";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import SourceSkeleton from "@/components/loading/Source";
+import { getPocketById, updatePocket } from "@/services/api/pocket.api";
+import { SourceApiResponse } from "@fylr/types";
 
 export default function PocketIdPage({
   params,
@@ -31,7 +32,7 @@ export default function PocketIdPage({
     tags: "",
   });
 
-  const [sources, setSources] = useState([]);
+  const [sources, setSources] = useState<SourceApiResponse[] | null>(null);
 
   const router = useRouter();
 
@@ -45,16 +46,16 @@ export default function PocketIdPage({
     params.then(async (res) => {
       setId(res.id);
       try {
-        const { data: pocketData } = await axios.get(`pocket/${res.id}`);
+        const pocketData = await getPocketById(res.id);
         setPocketName(pocketData.title);
         setPocketDescription(pocketData.description);
-        setPocketTags(pocketData.tags);
+        setPocketTags(pocketData.tags.join(","));
         setSources(pocketData.source);
 
         setOriginalPocket({
           title: pocketData.title,
           description: pocketData.description,
-          tags: pocketData.tags,
+          tags: pocketData.tags.join(","),
         });
 
         setLoading(false);
@@ -77,7 +78,19 @@ export default function PocketIdPage({
     }
 
     if (Object.keys(data).length === 0) return;
-    axios.patch(`pocket/${id}`, data);
+    if (id) {
+      updatePocket(id, data)
+        .then(() => {
+          setOriginalPocket({
+            title: pocketName,
+            description: pocketDescription,
+            tags: pocketTags,
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to update pocket:", error);
+        });
+    }
   };
 
   return (
@@ -122,12 +135,12 @@ export default function PocketIdPage({
               { length: Math.floor(Math.random() * 6) + 1 },
               (_, index) => <SourceSkeleton key={index} />
             )
-          : sources.map(({ id, name, size, pocketId }) => (
+          : sources?.map(({ id, name, size, pocketId }) => (
               <Source
                 key={id}
                 title={name}
                 summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                size={size}
+                size={size as unknown as string}
                 imported="2025/04/13"
                 id={id}
                 pocketId={pocketId}

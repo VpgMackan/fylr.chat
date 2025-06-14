@@ -3,13 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "@/utils/axios";
 
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
 import Chat from "@/components/Chat";
 import ChatSkeleton from "@/components/loading/Chat";
+import { getConversationsById } from "@/services/api/chat.api";
 
 export default function ChatsPage({
   params,
@@ -36,9 +36,7 @@ export default function ChatsPage({
 
   const dataLoader = id
     ? ({ take, offset }: { take: number; offset: number }) =>
-        axios
-          .get(`chat/${id}/conversations`, { params: { take, offset } })
-          .then((r) => r.data)
+        getConversationsById(id, { take, offset })
     : undefined;
 
   return (

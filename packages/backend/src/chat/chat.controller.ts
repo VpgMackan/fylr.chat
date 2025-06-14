@@ -20,11 +20,12 @@ import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface
 import { ConversationService } from './conversation.service';
 import { MessageService } from './message.service';
 
-import { CreateConversationDto } from './create-conversation.dto';
-import { UpdateConversationDto } from './update-conversation.dto';
-
-import { CreateMessageDto } from './create-message.dto';
-import { UpdateMessageDto } from './update-message.dto';
+import {
+  CreateMessageDto,
+  UpdateMessageDto,
+  CreateConversationDto,
+  UpdateConversationDto,
+} from '@fylr/types';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
