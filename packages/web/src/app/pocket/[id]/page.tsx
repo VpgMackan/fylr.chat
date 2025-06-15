@@ -59,7 +59,7 @@ export default function PocketIdPage({
         });
 
         setLoading(false);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
       }
     });

@@ -25,7 +25,7 @@ export default function SignupPage() {
         password,
       });
       router.push("/auth/login");
-    } catch (error: any) {
+    } catch (error: unknown) {
       // you can surface e.g. toast(error.response?.data?.message || error.message)
     } finally {
       setIsLoading(false);
@@ -37,13 +37,18 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="bg-white shadow-lg rounded-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">{t("createAccount")}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {t("createAccount")}
+            </h1>
             <p className="text-gray-600 mt-2">{t("signupSubtitle")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 {t("name")}
               </label>
               <input
@@ -58,7 +63,10 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 {t("email")}
               </label>
               <input
@@ -73,7 +81,10 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 {t("password")}
               </label>
               <input

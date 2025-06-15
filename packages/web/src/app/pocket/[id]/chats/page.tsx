@@ -10,6 +10,7 @@ import ListPageLayout, {
 import Chat from "@/components/Chat";
 import ChatSkeleton from "@/components/loading/Chat";
 import { getConversationsById } from "@/services/api/chat.api";
+import { ConversationApiResponse } from "@fylr/types";
 
 export default function ChatsPage({
   params,
@@ -31,8 +32,8 @@ export default function ChatsPage({
     { value: 3, label: t("created") },
   ];
 
-  const renderItems = (pockets: any[]) =>
-    pockets.map(({ id, title }) => <Chat key={id} title={title} id={id} />);
+  const renderItems = (chats: ConversationApiResponse[]) =>
+    chats.map(({ id, title }) => <Chat key={id} title={title} id={id} />);
 
   const dataLoader = id
     ? ({ take, offset }: { take: number; offset: number }) =>

@@ -23,7 +23,7 @@ export default function LoginPage() {
         password,
       });
       router.back();
-    } catch (error: any) {
+    } catch (error: unknown) {
     } finally {
       setIsLoading(false);
     }
