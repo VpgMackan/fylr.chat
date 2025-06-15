@@ -133,7 +133,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
   return (
     <Heading
       title={title}
-      infrontTitle={
+      leadingTitleAccessory={
         onBack && <Icon icon="weui:back-outlined" onClick={onBack} />
       }
     >

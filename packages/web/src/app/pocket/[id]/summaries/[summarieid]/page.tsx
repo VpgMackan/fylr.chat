@@ -31,10 +31,10 @@ export default function ChatPage({
   return (
     <ContentLayout
       title="What is nine plus ten?"
-      infrontTitle={
+      leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      rightSideContent={<Button text={t("editButton")} />}
+      trailingHeaderActions={<Button text={t("editButton")} />}
       sidebarContent={
         <>
           <p className="text-xl">{t("summaryEpisodes")}</p>

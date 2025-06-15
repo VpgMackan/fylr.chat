@@ -47,8 +47,10 @@ export default function ChatPage({
   return (
     <ContentLayout
       title="What is nine plus ten?"
-      infrontTitle={<Icon icon="weui:back-outlined" onClick={handleBack} />}
-      rightSideContent={<Button text={t("editButton")} className="mr-2" />}
+      leadingTitleAccessory={
+        <Icon icon="weui:back-outlined" onClick={handleBack} />
+      }
+      trailingHeaderActions={<Button text={t("editButton")} className="mr-2" />}
       sidebarContent={
         <>
           <p className="text-xl">{t("yourSources")}</p>

@@ -96,10 +96,10 @@ export default function PocketIdPage({
   return (
     <Heading
       title={pocketName}
-      infrontTitle={
+      leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      rightSideContent={
+      trailingHeaderActions={
         <Button
           text={t("pocketDetail.editPocket")}
           className="mr-2"

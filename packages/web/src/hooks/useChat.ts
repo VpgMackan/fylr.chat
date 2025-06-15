@@ -8,6 +8,8 @@ export function useChat(chatId: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
+  const STREAMING_ASSISTANT_ID = "streaming-assistant-msg";
+
   useEffect(() => {
     if (!chatId) return;
 
@@ -42,7 +44,7 @@ export function useChat(chatId: string | null) {
             case "messageChunk":
               setMessages((prev) => {
                 const lastMsg = prev[prev.length - 1];
-                if (lastMsg?.id === "streaming-assistant-msg") {
+                if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
                   const updatedMsg = {
                     ...lastMsg,
                     content: lastMsg.content + data.content,
@@ -52,7 +54,7 @@ export function useChat(chatId: string | null) {
                   return [
                     ...prev,
                     {
-                      id: "streaming-assistant-msg",
+                      id: STREAMING_ASSISTANT_ID,
                       conversationId: chatId,
                       role: "assistant",
                       content: data.content,
@@ -66,7 +68,7 @@ export function useChat(chatId: string | null) {
 
             case "messageEnd":
               setMessages((prev) => [
-                ...prev.filter((m) => m.id !== "streaming-assistant-msg"),
+                ...prev.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
                 data,
               ]);
               break;

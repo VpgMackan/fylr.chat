@@ -17,9 +17,9 @@ export class SourceService {
   ) {}
 
   async createSourceDatabaseEntry(data) {
-    const newSoruce = this.sourceRepository.create(data);
-    await this.sourceRepository.save(newSoruce);
-    return newSoruce;
+    const newSource = this.sourceRepository.create(data);
+    await this.sourceRepository.save(newSource);
+    return newSource;
   }
 
   async findByVector(vector, pocketId) {
