@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { io, Socket } from "socket.io-client";
 
 import Button from "@/components/common/Button";
 import ChatInput from "@/components/features/chat/ChatInput";
@@ -12,8 +11,7 @@ import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
 import Chat from "@/components/features/chat/Chat";
 import ContentLayout from "@/components/layout/ContentLayout";
 
-import { WsServerEventPayload, MessageApiResponse } from "@fylr/types";
-import { getConversationsTokenById } from "@/services/api/chat.api";
+import { useChat } from "@/hooks/useChat";
 
 export default function ChatPage({
   params,
@@ -24,20 +22,15 @@ export default function ChatPage({
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  const { messages, sendMessage, isConnected } = useChat(chatId);
 
   // const [sources, setSources] = useState([]);
-  const [messages, setMessages] = useState<MessageApiResponse[]>([]);
-  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
@@ -46,106 +39,6 @@ export default function ChatPage({
       setChatId(res.chatid);
     });
   }, [params]);
-
-  useEffect(() => {
-    if (!chatId) return;
-
-    const connectSocket = async () => {
-      try {
-        const token = (await getConversationsTokenById(chatId)).token;
-
-        const socket = io("http://localhost:3001/chat", {
-          auth: { token },
-        });
-        socketRef.current = socket;
-
-        socket.on("connect", () => {
-          console.log("Socket.IO connected successfully.");
-          socket.emit("conversationAction", {
-            action: "join",
-            conversationId: chatId,
-          });
-        });
-
-        socket.on("conversationHistory", (history: MessageApiResponse[]) => {
-          setMessages(history);
-        });
-
-        socket.on("conversationAction", (event: WsServerEventPayload) => {
-          const { action, data } = event;
-
-          switch (action) {
-            case "newMessage":
-              setMessages((prev) => [...prev, data]);
-              break;
-
-            case "messageChunk":
-              setMessages((prev) => {
-                const lastMsg = prev[prev.length - 1];
-                if (lastMsg?.id === "streaming-assistant-msg") {
-                  const updatedMsg = {
-                    ...lastMsg,
-                    content: lastMsg.content + data.content,
-                  };
-                  return [...prev.slice(0, -1), updatedMsg];
-                } else {
-                  return [
-                    ...prev,
-                    {
-                      id: "streaming-assistant-msg",
-                      conversationId: chatId,
-                      role: "assistant",
-                      content: data.content,
-                      createdAt: new Date().toISOString(),
-                      metadata: {},
-                    },
-                  ];
-                }
-              });
-              break;
-
-            case "messageEnd":
-              setMessages((prev) => [
-                ...prev.filter((m) => m.id !== "streaming-assistant-msg"),
-                data,
-              ]);
-              break;
-
-            case "streamError":
-              console.error("AI Stream Error:", data.message);
-              break;
-            default:
-              break;
-          }
-        });
-
-        socket.on("disconnect", () => {
-          console.log("Socket.IO disconnected.");
-        });
-      } catch (error) {
-        console.error("Failed to establish WebSocket connection:", error);
-      }
-    };
-
-    connectSocket();
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, [chatId]);
-
-  const handleSend = async (content: string) => {
-    if (!socketRef.current || !chatId || !content.trim()) return;
-
-    socketRef.current.emit("conversationAction", {
-      action: "sendMessage",
-      conversationId: chatId,
-      content,
-    });
-  };
 
   const handleBack = () => {
     router.back();
@@ -181,7 +74,7 @@ export default function ChatPage({
         <div ref={messagesEndRef} />
       </div>
 
-      <ChatInput onSend={handleSend} />
+      <ChatInput onSend={sendMessage} />
     </ContentLayout>
   );
 }
