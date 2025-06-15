@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import Button from "@/components/common/Button";
 import Pocket from "@/components/Pocket";
 import PocketSkeleton from "@/components/loading/Pocket";
-import Chat from "@/components/Chat";
+import Chat from "@/components/ChatListItem";
 import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";

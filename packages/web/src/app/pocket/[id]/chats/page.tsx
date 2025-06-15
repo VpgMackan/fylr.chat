@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
-import Chat from "@/components/Chat";
+import Chat from "@/components/ChatListItem";
 import ChatSkeleton from "@/components/loading/Chat";
 import { getConversationsById } from "@/services/api/chat.api";
 import { ConversationApiResponse } from "@fylr/types";

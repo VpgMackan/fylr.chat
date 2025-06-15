@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import ChatInput from "@/components/features/chat/ChatInput";
 import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
-import Chat from "@/components/features/chat/Chat";
+import Chat from "@/components/features/chat/ChatBubble";
 import ContentLayout from "@/components/layout/ContentLayout";
 
 import { useChat } from "@/hooks/useChat";
