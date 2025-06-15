@@ -7,24 +7,24 @@ import { useRouter } from "next/navigation";
 
 import Button from "@/components/common/Button";
 import ContentLayout from "@/components/layout/ContentLayout";
-import SummarieCard from "@/components/features/summaries/SummarieCard";
+import SummaryCard from "@/components/features/summaries/SummaryCard";
 import MarkdownComponent from "@/components/MarkdownComponents";
 
 export default function ChatPage({
   params,
 }: {
-  params: Promise<{ id: string; summarieid: string }>;
+  params: Promise<{ id: string; summaryid: string }>;
 }) {
   const t = useTranslations("pages.summaries");
   const [id, setId] = useState<string | null>(null);
-  const [summarieId, setSummarieId] = useState<string | null>(null);
+  const [summaryid, setSummaryid] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
     params.then((res) => {
       setId(res.id);
-      setSummarieId(res.summarieid);
+      setSummaryid(res.summaryid);
     });
   }, [params]);
 
@@ -41,12 +41,12 @@ export default function ChatPage({
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
-            <SummarieCard
+            <SummaryCard
               fileName="What's ai's impact on the world?"
               fileType="pdf"
               selected={true}
             />
-            <SummarieCard
+            <SummaryCard
               fileName="What's ai's impact on the world?"
               fileType="web"
             />
