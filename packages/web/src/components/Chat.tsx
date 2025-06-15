@@ -27,15 +27,15 @@ export default function Chat({
   }, []);
 
   return (
-    <div
-      className={`border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
+    <button
+      className={`w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClick}
     >
       <div className="flex justify-between">
         <p className="font-semibold">{title}</p>
-        {pocket == undefined ? (
+        {pocket === undefined ? (
           <></>
         ) : (
           <p className="font-semibold">
@@ -43,6 +43,6 @@ export default function Chat({
           </p>
         )}
       </div>
-    </div>
+    </button>
   );
 }

@@ -28,7 +28,7 @@ export default function Dropdown({
   return (
     <div className={`relative inline-block ${className || ""}`}>
       <Select
-        className={`appearance-none border border-gray-300 rounded-lg py-2 px-4 pr-8 text-2xl hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full`}
+        className="appearance-none border border-gray-300 rounded-lg py-2 px-4 pr-8 text-2xl hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
         value={selectedValue ?? ""}
         onChange={onChange}
         disabled={disabled}

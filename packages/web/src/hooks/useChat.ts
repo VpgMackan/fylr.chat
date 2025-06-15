@@ -83,7 +83,7 @@ export function useChat(chatId: string | null) {
       }
     };
 
-    connectSocket();
+    void connectSocket();
 
     return () => {
       socketRef.current?.disconnect();

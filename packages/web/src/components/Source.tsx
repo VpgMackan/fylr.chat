@@ -26,8 +26,8 @@ export default function Source({
   };
 
   return (
-    <div
-      className="border border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
+    <button
+      className="-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
       onClick={handleClick}
     >
       <div>
@@ -44,6 +44,6 @@ export default function Source({
           {common("metadata.imported", { date: imported })}
         </p>
       </div>
-    </div>
+    </button>
   );
 }

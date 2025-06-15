@@ -7,18 +7,26 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function MarkdownComponent({ text }: { text: string }) {
   const components: Components = {
-    h1: ({ node, ...props }) => (
-      <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />
+    h1: ({ node, children, ...props }) => (
+      <h1 className="text-2xl font-bold mt-6 mb-4" {...props}>
+        {children || "Untitled Heading"}
+      </h1>
     ),
-    h2: ({ node, ...props }) => (
-      <h2 className="text-xl font-bold mt-5 mb-3" {...props} />
+    h2: ({ node, children, ...props }) => (
+      <h2 className="text-xl font-bold mt-5 mb-3" {...props}>
+        {children || "Untitled Heading"}
+      </h2>
     ),
-    h3: ({ node, ...props }) => (
-      <h3 className="text-lg font-bold mt-4 mb-2" {...props} />
+    h3: ({ node, children, ...props }) => (
+      <h3 className="text-lg font-bold mt-4 mb-2" {...props}>
+        {children || "Untitled Heading"}
+      </h3>
     ),
     p: ({ node, ...props }) => <p className="my-3" {...props} />,
-    a: ({ node, ...props }) => (
-      <a className="text-blue-600 hover:underline" {...props} />
+    a: ({ node, children, ...props }) => (
+      <a className="text-blue-600 hover:underline" {...props}>
+        {children || "Untitled Anchor"}
+      </a>
     ),
     ul: ({ node, ...props }) => (
       <ul className="list-disc ml-5 my-3" {...props} />

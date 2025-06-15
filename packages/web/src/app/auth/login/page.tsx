@@ -24,6 +24,7 @@ export default function LoginPage() {
       });
       router.back();
     } catch (error: unknown) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }

@@ -33,8 +33,8 @@ export default function Pocket({
   }, []);
 
   return (
-    <div
-      className={`border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
+    <button
+      className={`w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClick}
@@ -52,6 +52,6 @@ export default function Pocket({
         <p className="text-xs mt-2">{common("sources", { amount: sources })}</p>
         <p className="text-xs">{common("created", { date: created })}</p>
       </div>
-    </div>
+    </button>
   );
 }
