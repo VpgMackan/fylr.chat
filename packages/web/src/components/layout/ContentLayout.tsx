@@ -6,22 +6,22 @@ import Heading from "@/components/layout/Heading";
 
 export default function ContentLayout({
   title,
-  infrontTitle,
-  rightSideContent,
+  leadingTitleAccessory,
+  trailingHeaderActions,
   sidebarContent,
   children,
 }: {
   title: string;
-  infrontTitle: React.ReactNode;
-  rightSideContent: React.ReactNode;
+  leadingTitleAccessory: React.ReactNode;
+  trailingHeaderActions: React.ReactNode;
   sidebarContent: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <Heading
       title={title}
-      infrontTitle={infrontTitle}
-      rightSideContent={rightSideContent}
+      leadingTitleAccessory={leadingTitleAccessory}
+      trailingHeaderActions={trailingHeaderActions}
     >
       <div
         className="grid grid-cols-6 gap-4 h-full overflow-y-hidden pb-4 pt-8"

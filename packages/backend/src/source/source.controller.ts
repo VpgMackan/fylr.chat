@@ -32,7 +32,7 @@ export class SourceController {
     private readonly aiService: AiService,
   ) {}
 
-  @Post('create')
+  @Post('')
   @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -77,15 +77,5 @@ export class SourceController {
       jobKey,
       database: entry,
     };
-  }
-
-  @Post('search')
-  async test(@Body() body) {
-    const searchVector = await this.aiService.vector.search(
-      body.query,
-      'jina-clip-v2',
-      {},
-    );
-    return await this.sourceService.findByVector(searchVector, body.pocketId);
   }
 }

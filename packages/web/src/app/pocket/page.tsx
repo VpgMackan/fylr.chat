@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
-import Pocket from "@/components/Pocket";
-import PocketSkeleton from "@/components/loading/Pocket";
+import Pocket from "@/components/PocketListItem";
+import PocketSkeleton from "@/components/loading/PocketListItemSkeleton";
 import { PocketApiResponse } from "@fylr/types";
 import { getPockets } from "@/services/api/pocket.api";
 

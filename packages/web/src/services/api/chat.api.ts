@@ -11,7 +11,7 @@ export const getConversations = async (params: {
   return data;
 };
 
-export const getConversationsById = async (
+export const getConversationsByPocketId = async (
   id: string,
   params: {
     take: number;
@@ -25,7 +25,7 @@ export const getConversationsById = async (
   return data;
 };
 
-export const getConversationsTokenById = async (
+export const getConversationWsToken = async (
   id: string
 ): Promise<{
   token: string;

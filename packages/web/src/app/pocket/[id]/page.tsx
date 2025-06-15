@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Button from "@/components/common/Button";
-import Source from "@/components/Source";
+import Source from "@/components/SourceListItem";
 import PinnedPod from "@/components/PodcastListItem";
 import Chat from "@/components/ChatListItem";
 import EditPocketDialog from "@/components/EditPocketDialog";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
-import SourceSkeleton from "@/components/loading/Source";
+import SourceSkeleton from "@/components/loading/SourceListItemSkeleton";
 import { getPocketById, updatePocket } from "@/services/api/pocket.api";
 import { SourceApiResponse } from "@fylr/types";
 

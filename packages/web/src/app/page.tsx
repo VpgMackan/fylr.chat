@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import Button from "@/components/common/Button";
-import Pocket from "@/components/Pocket";
-import PocketSkeleton from "@/components/loading/Pocket";
+import Pocket from "@/components/PocketListItem";
+import PocketSkeleton from "@/components/loading/PocketListItemSkeleton";
 import Chat from "@/components/ChatListItem";
 import PinnedPod from "@/components/PodcastListItem";
 import Heading from "@/components/layout/Heading";
 import Section from "@/components/layout/Section";
 import { withAuth } from "@/components/auth/withAuth";
-import ChatSkeleton from "@/components/loading/Chat";
+import ChatSkeleton from "@/components/loading/ChatListItemSkeleton";
 import { ConversationApiResponse, PocketApiResponse } from "@fylr/types";
 import { getPockets } from "@/services/api/pocket.api";
 import { getConversations } from "@/services/api/chat.api";

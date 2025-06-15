@@ -47,7 +47,7 @@ export class ChatController {
   }
 
   // === CONVERSATIONS ===
-  @Get('user/all')
+  @Get('conversations')
   getConversationsByUser(@Req() req: RequestWithUser) {
     const userId = req.user.id;
     return this.conversationService.getConversationsByUserId(userId);

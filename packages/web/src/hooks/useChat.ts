@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { getConversationsTokenById } from "@/services/api/chat.api";
+import { getConversationWsToken } from "@/services/api/chat.api";
 import { MessageApiResponse, WsServerEventPayload } from "@fylr/types";
 
 export function useChat(chatId: string | null) {
@@ -13,7 +13,7 @@ export function useChat(chatId: string | null) {
 
     const connectSocket = async () => {
       try {
-        const { token } = await getConversationsTokenById(chatId);
+        const { token } = await getConversationWsToken(chatId);
         const socket = io("http://localhost:3001/chat", { auth: { token } });
         socketRef.current = socket;
 

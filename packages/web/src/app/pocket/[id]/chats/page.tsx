@@ -8,8 +8,8 @@ import ListPageLayout, {
   DropdownOption,
 } from "@/components/layout/ListPageLayout";
 import Chat from "@/components/ChatListItem";
-import ChatSkeleton from "@/components/loading/Chat";
-import { getConversationsById } from "@/services/api/chat.api";
+import ChatSkeleton from "@/components/loading/ChatListItemSkeleton";
+import { getConversationsByPocketId } from "@/services/api/chat.api";
 import { ConversationApiResponse } from "@fylr/types";
 
 export default function ChatsPage({
@@ -37,7 +37,7 @@ export default function ChatsPage({
 
   const dataLoader = id
     ? ({ take, offset }: { take: number; offset: number }) =>
-        getConversationsById(id, { take, offset })
+        getConversationsByPocketId(id, { take, offset })
     : undefined;
 
   return (
