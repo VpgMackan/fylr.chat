@@ -155,5 +155,15 @@
       "record": "Record message with microphone",
       "send": "Send"
     }
+  },
+
+  "modals": {
+    "createConversation": {
+      "title": "Create New Conversation",
+      "nameLabel": "Conversation Name",
+      "namePlaceholder": "Enter a name for your conversation",
+      "creating": "Creating...",
+      "error": "Failed to create conversation. Please try again."
+    }
   }
 }

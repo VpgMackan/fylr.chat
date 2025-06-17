@@ -1,13 +1,16 @@
 import axios from "@/utils/axios";
-import { ConversationApiResponse } from "@fylr/types";
+import { ConversationApiResponse, CreateConversationDto } from "@fylr/types";
 
 export const getConversations = async (params: {
   take: number;
   offset: number;
 }): Promise<ConversationApiResponse[]> => {
-  const { data } = await axios.get<ConversationApiResponse[]>("chat/user/all", {
-    params,
-  });
+  const { data } = await axios.get<ConversationApiResponse[]>(
+    "chat/conversations",
+    {
+      params,
+    }
+  );
   return data;
 };
 
@@ -23,6 +26,14 @@ export const getConversationsByPocketId = async (
     { params }
   );
   return data;
+};
+
+export const createConversation = async (
+  pocketId: string,
+  data: CreateConversationDto
+): Promise<ConversationApiResponse> => {
+  const response = await axios.post(`/chat/${pocketId}/conversation`, data);
+  return response.data;
 };
 
 export const getConversationWsToken = async (

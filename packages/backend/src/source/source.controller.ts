@@ -21,7 +21,12 @@ import { AiService } from 'src/aiService/ai.service';
 
 import { CreateSourceDto } from '@fylr/types';
 
-const allowedMimeTypes = ['application/pdf', 'text/plain', 'text/markdown'];
+const allowedMimeTypes = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'application/octet-stream',
+];
 
 @UseGuards(AuthGuard)
 @Controller('source')

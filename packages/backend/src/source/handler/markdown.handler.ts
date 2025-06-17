@@ -19,7 +19,11 @@ interface ChunkOptions {
 
 @Injectable()
 export class MarkdownHandler implements ContentHandler {
-  readonly supportedMimeTypes = ['text/plain', 'text/markdown'];
+  readonly supportedMimeTypes = [
+    'text/plain',
+    'text/markdown',
+    'application/octet-stream',
+  ];
   private readonly logger = new Logger(MarkdownHandler.name);
 
   constructor(

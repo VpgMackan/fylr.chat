@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 
 export default function Source({
   title,
-  summery,
+  summary,
   size,
   imported,
   id,
   pocketId,
 }: {
   title: string;
-  summery: string;
+  summary: string;
   size: string;
   imported: string;
   id: string;
@@ -32,7 +32,7 @@ export default function Source({
     >
       <div>
         <p className="font-semibold">{title}</p>
-        <p className="text-sm text-gray-500 mb-2">{summery}</p>
+        <p className="text-sm text-gray-500 mb-2">{summary}</p>
       </div>
 
       <div>
