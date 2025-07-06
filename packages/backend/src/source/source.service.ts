@@ -46,6 +46,7 @@ export class SourceService {
         'vector.content',
         'source.id',
         'source.pocketId',
+        'source.name',
       ])
       .getMany();
   }

@@ -73,10 +73,17 @@ export interface WsMessageUpdatedEvent {
   data: MessageApiResponse;
 }
 
+export interface WsStatusUpdateEvent {
+  action: "statusUpdate";
+  conversationId: string;
+  data: { stage: string; message: string };
+}
+
 export type WsServerEventPayload =
   | WsNewMessageEvent
   | WsMessageChunkEvent
   | WsMessageEndEvent
   | WsStreamErrorEvent
   | WsMessageDeletedEvent
-  | WsMessageUpdatedEvent;
+  | WsMessageUpdatedEvent
+  | WsStatusUpdateEvent;

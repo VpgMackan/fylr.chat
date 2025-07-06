@@ -17,30 +17,55 @@ export class LLMService {
     private readonly httpService: HttpService,
   ) {}
 
-  async *generateStream(prompt: string): AsyncGenerator<string> {
+  private validateApiKey(): string {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
       throw new InternalServerErrorException(
         'OpenAI API key is not configured',
       );
     }
+    return apiKey;
+  }
 
+  private createRequestConfig(prompt: string, stream: boolean) {
+    return {
+      url: 'https://litellm.katt.gdn/v1/chat/completions',
+      data: {
+        model: 'groq/llama3-70b-8192',
+        messages: [{ role: 'user', content: prompt }],
+        stream,
+      },
+      headers: {
+        Authorization: `Bearer ${this.validateApiKey()}`,
+      },
+      ...(stream && { responseType: 'stream' as const }),
+    };
+  }
+
+  async generate(prompt: string): Promise<string> {
     try {
+      const config = this.createRequestConfig(prompt, false);
       const response = await lastValueFrom(
-        this.httpService.post(
-          'https://litellm.katt.gdn/v1/chat/completions',
-          {
-            model: 'groq/llama3-70b-8192',
-            messages: [{ role: 'user', content: prompt }],
-            stream: true,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-            },
-            responseType: 'stream',
-          },
-        ),
+        this.httpService.post(config.url, config.data, {
+          headers: config.headers,
+        }),
+      );
+
+      return response.data.choices[0]?.message?.content || '';
+    } catch (error) {
+      this.logger.error('Failed to generate AI response', error);
+      throw new InternalServerErrorException('Failed to generate AI response');
+    }
+  }
+
+  async *generateStream(prompt: string): AsyncGenerator<string> {
+    try {
+      const config = this.createRequestConfig(prompt, true);
+      const response = await lastValueFrom(
+        this.httpService.post(config.url, config.data, {
+          headers: config.headers,
+          responseType: config.responseType,
+        }),
       );
 
       const stream = response.data as NodeJS.ReadableStream;
@@ -50,11 +75,13 @@ export class LLMService {
           .toString('utf8')
           .split('\n')
           .filter((line: string) => line.trim().startsWith('data: '));
+
         for (const line of lines) {
           const message = line.replace(/^data: /, '');
           if (message === '[DONE]') {
             return;
           }
+
           try {
             const parsed = JSON.parse(message);
             const content = parsed.choices[0]?.delta?.content;

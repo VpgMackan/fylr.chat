@@ -6,6 +6,10 @@ import { MessageApiResponse, WsServerEventPayload } from "@fylr/types";
 export function useChat(chatId: string | null) {
   const [messages, setMessages] = useState<MessageApiResponse[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [status, setStatus] = useState<{
+    stage: string;
+    message: string;
+  } | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   const STREAMING_ASSISTANT_ID = "streaming-assistant-msg";
@@ -41,6 +45,10 @@ export function useChat(chatId: string | null) {
             if (eventConvId !== chatId) return;
 
             switch (action) {
+              case "statusUpdate":
+                setStatus(data);
+                break;
+
               case "newMessage":
                 setMessages((prev) => [...prev, data]);
                 break;
@@ -71,6 +79,7 @@ export function useChat(chatId: string | null) {
                 break;
 
               case "messageEnd":
+                setStatus(null);
                 setMessages((prev) => [
                   ...prev.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
                   data,
@@ -78,6 +87,7 @@ export function useChat(chatId: string | null) {
                 break;
 
               case "streamError":
+                setStatus(null);
                 console.error("AI Stream Error:", data.message);
                 break;
 
@@ -170,5 +180,6 @@ export function useChat(chatId: string | null) {
     updateMessage,
     regenerateMessage,
     isConnected,
+    status,
   };
 }

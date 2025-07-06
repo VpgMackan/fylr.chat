@@ -22,7 +22,7 @@ export default function ChatPage({
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
-  const { messages, sendMessage, isConnected } = useChat(chatId);
+  const { messages, sendMessage, isConnected, status } = useChat(chatId);
 
   // const [sources, setSources] = useState([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,10 +71,21 @@ export default function ChatPage({
     >
       <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4">
         {messages.map((m) => (
-          <Chat key={m.id} user={m.role === "user"} text={m.content} />
+          <Chat
+            key={m.id}
+            user={m.role === "user"}
+            text={m.content}
+            metadata={m.metadata}
+          />
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      {status && (
+        <div className="text-center text-sm text-gray-500 mb-2 animate-pulse">
+          {status.message}
+        </div>
+      )}
 
       <ChatInput onSend={sendMessage} />
     </ContentLayout>
