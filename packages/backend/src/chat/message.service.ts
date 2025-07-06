@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 
 import { Message } from './message.entity';
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
+import { createHydePrompt, createFinalRagPrompt } from '@fylr/prompts';
 import { AiService } from 'src/aiService/ai.service';
 import { SourceService } from 'src/source/source.service';
 import { Conversation } from './conversation.entity';
@@ -92,17 +93,9 @@ export class MessageService {
       .join('\n');
 
     emitStatus('searchQuery', 'Formulating search query...');
-    const hydePrompt = `Based on the chat history and the user's latest query, generate a hypothetical, concise paragraph that contains the most likely answer. This will be used to find relevant documents.
----
-CHAT HISTORY:
-${chatHistory}
----
-USER QUERY:
-"${userQuery}"
----
-HYPOTHETICAL ANSWER:`;
-
-    const hypotheticalAnswer = await this.aiService.llm.generate(hydePrompt);
+    const hypotheticalAnswer = await this.aiService.llm.generate(
+      createHydePrompt(chatHistory, userQuery),
+    );
 
     emitStatus('retrieval', 'Searching relevant sources...');
     const searchQueryEmbedding = await this.aiService.vector.search(
@@ -125,28 +118,10 @@ HYPOTHETICAL ANSWER:`;
       .join('\n---\n');
 
     emitStatus('generation', 'Generating response...');
-    const finalPrompt = `You are Fylr, a helpful AI assistant. Your goal is to answer the user's query based on the provided context and conversation history.
 
-RULES:
-- Use the provided context to answer the query.
-- If the context does not contain the answer, state that you couldn't find the information in the provided documents. Do not use external knowledge.
-- Keep your answers concise and to the point.
-- When you use information from a source, cite it at the end of the sentence like this: [${relevantChunks[0]?.source.id}].
-- You can cite multiple sources like this: [${relevantChunks[0]?.source.id}, ${relevantChunks[1]?.source.id}].
-
----
-CONTEXT:
-${context || 'No context was found.'}
----
-CHAT HISTORY:
-${chatHistory}
----
-USER QUERY:
-"${userQuery}"
----
-ASSISTANT RESPONSE:`;
-
-    const stream = this.aiService.llm.generateStream(finalPrompt);
+    const stream = this.aiService.llm.generateStream(
+      createFinalRagPrompt(context, chatHistory, userQuery, relevantChunks),
+    );
     let fullResponse = '';
 
     for await (const chunk of stream) {
@@ -209,7 +184,7 @@ ASSISTANT RESPONSE:`;
     }
 
     await this.messageRepository.delete(assistantMessageId);
-    
+
     await this.generateAndStreamAiResponse(userMessage, server);
   }
 
