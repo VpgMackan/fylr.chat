@@ -12,7 +12,11 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ChatTokenPayload, WsClientActionPayload } from '@fylr/types';
+import {
+  ChatTokenPayload,
+  UpdateMessageDto,
+  WsClientActionPayload,
+} from '@fylr/types';
 import { MessageService } from './message.service';
 
 interface SocketWithChatUser extends Socket {
@@ -70,47 +74,88 @@ export class ChatGateway
   async handleConversationAction(
     @ConnectedSocket() client: SocketWithChatUser,
     @MessageBody() data: WsClientActionPayload,
-  ) {
-    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-    const { conversationId, action, content } = parsedData;
+  ): Promise<void> {
+    const { action, conversationId, ...payload } =
+      typeof data === 'string' ? JSON.parse(data) : data;
 
     if (!conversationId) {
       throw new WsException('conversationId is required');
     }
-
     if (client.user.conversationId !== conversationId) {
       throw new WsException('Forbidden: Mismatched conversation ID');
     }
 
-    if (action === 'join') {
-      client.join(conversationId);
-      this.logger.log(`Client ${client.id} joined room ${conversationId}`);
+    switch (action) {
+      case 'join':
+        client.join(conversationId);
+        this.logger.log(`Client ${client.id} joined room ${conversationId}`);
+        const messages = await this.messageService.getMessages(conversationId);
+        client.emit('conversationHistory', messages);
+        break;
 
-      const messages = await this.messageService.getMessages(conversationId);
-      client.emit('conversationHistory', messages);
-    } else if (action === 'sendMessage') {
-      if (!content) {
-        throw new WsException('content is required for sendMessage action');
-      }
+      case 'sendMessage':
+        const { content } = payload as { content: string };
+        if (!content) {
+          throw new WsException('content is required for sendMessage action');
+        }
+        const userMessage = await this.messageService.createMessage(
+          { role: 'user', content, metadata: {} },
+          conversationId,
+        );
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'newMessage',
+          conversationId,
+          data: userMessage,
+        });
+        this.messageService.generateAndStreamAiResponse(
+          userMessage,
+          this.server,
+        );
+        break;
 
-      const userMessage = await this.messageService.createMessage(
-        {
-          role: 'user',
-          content,
-          metadata: {},
-        },
-        conversationId,
-      );
+      case 'deleteMessage':
+        const { messageId: messageIdToDelete } = payload as {
+          messageId: string;
+        };
+        await this.messageService.deleteMessage(messageIdToDelete);
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'messageDeleted',
+          conversationId,
+          data: { messageId: messageIdToDelete },
+        });
+        break;
 
-      this.server.to(conversationId).emit('conversationAction', {
-        action: 'newMessage',
-        conversationId,
-        data: userMessage,
-      });
+      case 'updateMessage':
+        const { messageId: messageIdToUpdate, content: newContent } =
+          payload as { messageId: string; content: string };
+        const updatedMessage = await this.messageService.updateMessage(
+          { content: newContent },
+          messageIdToUpdate,
+        );
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'messageUpdated',
+          conversationId,
+          data: updatedMessage,
+        });
+        break;
 
-      this.messageService.generateAndStreamAiResponse(userMessage, this.server);
-    } else {
-      throw new WsException('Invalid action. Must be "join" or "sendMessage"');
+      case 'regenerateMessage':
+        const { messageId: messageIdToRegenerate } = payload as {
+          messageId: string;
+        };
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'messageDeleted',
+          conversationId,
+          data: { messageId: messageIdToRegenerate },
+        });
+        await this.messageService.regenerateAndStreamAiResponse(
+          messageIdToRegenerate,
+          this.server,
+        );
+        break;
+
+      default:
+        throw new WsException(`Invalid action: ${action}`);
     }
   }
 }

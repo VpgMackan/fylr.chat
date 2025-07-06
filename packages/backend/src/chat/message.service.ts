@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { Server } from 'socket.io';
 
 import { Message } from './message.entity';
@@ -122,6 +122,36 @@ export class MessageService {
     }
   }
 
+  async regenerateAndStreamAiResponse(
+    assistantMessageId: string,
+    server: Server,
+  ) {
+    const assistantMessage = await this.messageRepository.findOneBy({
+      id: assistantMessageId,
+    });
+    if (!assistantMessage || assistantMessage.role !== 'assistant') {
+      throw new NotFoundException('Assistant message to regenerate not found.');
+    }
+
+    const userMessage = await this.messageRepository.findOne({
+      where: {
+        conversationId: assistantMessage.conversationId,
+        createdAt: LessThan(assistantMessage.createdAt),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!userMessage || userMessage.role !== 'user') {
+      throw new NotFoundException(
+        'Could not find the original user prompt for regeneration.',
+      );
+    }
+
+    await this.messageRepository.delete(assistantMessageId);
+
+    await this.generateAndStreamAiResponse(userMessage, server);
+  }
+
   async getMessage(id: string) {
     try {
       return await this.messageRepository.findOne({
@@ -167,9 +197,5 @@ export class MessageService {
     } catch (error) {
       throw new InternalServerErrorException(`Failed to delete message ${id}`);
     }
-  }
-
-  async processMessage(id: string) {
-    this.messageRepository.findBy({ id });
   }
 }

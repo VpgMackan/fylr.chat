@@ -33,53 +33,71 @@ export function useChat(chatId: string | null) {
           setMessages(history);
         });
 
-        socket.on("conversationAction", (event: WsServerEventPayload) => {
-          const { action, data } = event;
+        socket.on(
+          "conversationAction",
+          (event: WsServerEventPayload & { data: any }) => {
+            const { action, data, conversationId: eventConvId } = event;
 
-          switch (action) {
-            case "newMessage":
-              setMessages((prev) => [...prev, data]);
-              break;
+            if (eventConvId !== chatId) return;
 
-            case "messageChunk":
-              setMessages((prev) => {
-                const lastMsg = prev[prev.length - 1];
-                if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
-                  const updatedMsg = {
-                    ...lastMsg,
-                    content: lastMsg.content + data.content,
-                  };
-                  return [...prev.slice(0, -1), updatedMsg];
-                } else {
-                  return [
-                    ...prev,
-                    {
-                      id: STREAMING_ASSISTANT_ID,
-                      conversationId: chatId,
-                      role: "assistant",
-                      content: data.content,
-                      createdAt: new Date().toISOString(),
-                      metadata: {},
-                    },
-                  ];
-                }
-              });
-              break;
+            switch (action) {
+              case "newMessage":
+                setMessages((prev) => [...prev, data]);
+                break;
 
-            case "messageEnd":
-              setMessages((prev) => [
-                ...prev.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
-                data,
-              ]);
-              break;
+              case "messageChunk":
+                setMessages((prev) => {
+                  const lastMsg = prev[prev.length - 1];
+                  if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
+                    const updatedMsg = {
+                      ...lastMsg,
+                      content: lastMsg.content + data.content,
+                    };
+                    return [...prev.slice(0, -1), updatedMsg];
+                  } else {
+                    return [
+                      ...prev,
+                      {
+                        id: STREAMING_ASSISTANT_ID,
+                        conversationId: chatId,
+                        role: "assistant",
+                        content: data.content,
+                        createdAt: new Date().toISOString(),
+                        metadata: {},
+                      },
+                    ];
+                  }
+                });
+                break;
 
-            case "streamError":
-              console.error("AI Stream Error:", data.message);
-              break;
-            default:
-              break;
+              case "messageEnd":
+                setMessages((prev) => [
+                  ...prev.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
+                  data,
+                ]);
+                break;
+
+              case "streamError":
+                console.error("AI Stream Error:", data.message);
+                break;
+
+              case "messageDeleted":
+                setMessages((prev) =>
+                  prev.filter((m) => m.id !== data.messageId)
+                );
+                break;
+
+              case "messageUpdated":
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === data.id ? data : m))
+                );
+                break;
+
+              default:
+                break;
+            }
           }
-        });
+        );
       } catch (error) {
         console.error("Failed to establish WebSocket connection:", error);
       }
@@ -105,5 +123,52 @@ export function useChat(chatId: string | null) {
     [chatId]
   );
 
-  return { messages, sendMessage, isConnected };
+  const deleteMessage = useCallback(
+    (messageId: string) => {
+      if (socketRef.current && chatId) {
+        socketRef.current.emit("conversationAction", {
+          action: "deleteMessage",
+          conversationId: chatId,
+          messageId,
+        });
+      }
+    },
+    [chatId]
+  );
+
+  const updateMessage = useCallback(
+    (messageId: string, content: string) => {
+      if (socketRef.current && chatId && content.trim()) {
+        socketRef.current.emit("conversationAction", {
+          action: "updateMessage",
+          conversationId: chatId,
+          messageId,
+          content,
+        });
+      }
+    },
+    [chatId]
+  );
+
+  const regenerateMessage = useCallback(
+    (messageId: string) => {
+      if (socketRef.current && chatId) {
+        socketRef.current.emit("conversationAction", {
+          action: "regenerateMessage",
+          conversationId: chatId,
+          messageId,
+        });
+      }
+    },
+    [chatId]
+  );
+
+  return {
+    messages,
+    sendMessage,
+    deleteMessage,
+    updateMessage,
+    regenerateMessage,
+    isConnected,
+  };
 }
