@@ -83,4 +83,9 @@ export class SourceController {
       database: entry,
     };
   }
+
+  @Get('pocket/:pocketId')
+  async getSourcesByPocketId(@Param('pocketId') pocketId: string) {
+    return this.sourceService.getSourcesByPocketId(pocketId);
+  }
 }

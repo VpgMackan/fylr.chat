@@ -62,6 +62,7 @@ export class MessageService {
   ): Promise<void> {
     const conversation = await this.conversationRepository.findOne({
       where: { id: userMessage.conversationId },
+      relations: ['sources'],
     });
     if (!conversation) {
       throw new NotFoundException(
@@ -75,9 +76,10 @@ export class MessageService {
       {},
     );
 
+    const sourceIds = conversation.sources.map((s) => s.id);
     const relevantChunks = await this.sourceService.findByVector(
       searchQueryEmbedding,
-      conversation.pocketId,
+      sourceIds,
     );
     const context = relevantChunks
       .map((chunk) => chunk.content)

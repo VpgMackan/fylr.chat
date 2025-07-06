@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { createConversation } from "@/services/api/chat.api";
+import { getSourcesByPocketId } from "@/services/api/source.api";
+import { SourceApiResponse } from "@fylr/types";
 
 interface CreateConversationModalProps {
   isOpen: boolean;
@@ -20,8 +22,30 @@ export default function CreateConversationModal({
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sources, setSources] = useState<SourceApiResponse[]>([]);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const [isLoadingSources, setIsLoadingSources] = useState(false);
   const t = useTranslations("modals.createConversation");
   const commonT = useTranslations("common");
+
+  // Fetch sources when modal opens
+  useEffect(() => {
+    if (isOpen && pocketId) {
+      const fetchSources = async () => {
+        setIsLoadingSources(true);
+        try {
+          const fetchedSources = await getSourcesByPocketId(pocketId);
+          setSources(fetchedSources);
+        } catch (err) {
+          console.error("Failed to fetch sources:", err);
+        } finally {
+          setIsLoadingSources(false);
+        }
+      };
+
+      fetchSources();
+    }
+  }, [isOpen, pocketId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +58,10 @@ export default function CreateConversationModal({
       const response = await createConversation(pocketId, {
         title: name.trim(),
         metadata: {},
+        sourceIds: selectedSourceIds.length > 0 ? selectedSourceIds : undefined,
       });
       setName("");
+      setSelectedSourceIds([]);
       onClose();
       onSuccess?.(response.id);
     } catch (err) {
@@ -49,7 +75,24 @@ export default function CreateConversationModal({
   const handleClose = () => {
     setName("");
     setError("");
+    setSelectedSourceIds([]);
     onClose();
+  };
+
+  const handleSourceToggle = (sourceId: string) => {
+    setSelectedSourceIds((prev) =>
+      prev.includes(sourceId)
+        ? prev.filter((id) => id !== sourceId)
+        : [...prev, sourceId]
+    );
+  };
+
+  const handleSelectAllSources = () => {
+    if (selectedSourceIds.length === sources.length) {
+      setSelectedSourceIds([]);
+    } else {
+      setSelectedSourceIds(sources.map((source) => source.id));
+    }
   };
 
   if (!isOpen) return null;
@@ -77,6 +120,65 @@ export default function CreateConversationModal({
               disabled={isLoading}
               autoFocus
             />
+          </div>
+
+          {/* Source Selection */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("sourcesLabel")}
+              </label>
+              {sources.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSelectAllSources}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                  disabled={isLoading || isLoadingSources}
+                >
+                  {selectedSourceIds.length === sources.length
+                    ? t("deselectAll")
+                    : t("selectAll")}
+                </button>
+              )}
+            </div>
+
+            {isLoadingSources ? (
+              <div className="text-sm text-gray-500 py-2">
+                {t("loadingSources")}
+              </div>
+            ) : sources.length === 0 ? (
+              <div className="text-sm text-gray-500 py-2">{t("noSources")}</div>
+            ) : (
+              <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md">
+                {sources.map((source) => (
+                  <label
+                    key={source.id}
+                    className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSourceIds.includes(source.id)}
+                      onChange={() => handleSourceToggle(source.id)}
+                      disabled={isLoading}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <div className="ml-3 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {source.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {source.type} • {(source.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            {selectedSourceIds.length > 0 && (
+              <div className="text-xs text-gray-600 mt-1">
+                {t("selectedCount", { count: selectedSourceIds.length })}
+              </div>
+            )}
           </div>
 
           {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}

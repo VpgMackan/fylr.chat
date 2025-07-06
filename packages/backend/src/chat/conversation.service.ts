@@ -91,6 +91,7 @@ export class ConversationService {
         pocketId,
         title: body.title,
         metadata: body.metadata,
+        sources: body.sourceIds?.map((id) => ({ id })) || [],
       });
       await this.conversationRepository.save(newConversation);
       return newConversation;

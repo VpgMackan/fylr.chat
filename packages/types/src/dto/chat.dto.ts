@@ -1,5 +1,12 @@
 import { Transform } from "class-transformer";
-import { IsString, IsObject, IsOptional, IsNotEmpty } from "class-validator";
+import {
+  IsString,
+  IsObject,
+  IsOptional,
+  IsNotEmpty,
+  IsArray,
+  IsUUID,
+} from "class-validator";
 
 export class UpdateMessageDto {
   @IsString()
@@ -62,6 +69,11 @@ export class CreateConversationDto {
     return value;
   })
   metadata!: object;
+
+  @IsArray()
+  @IsUUID("all", { each: true })
+  @IsOptional()
+  sourceIds?: string[];
 }
 
 export class CreateMessageDto {

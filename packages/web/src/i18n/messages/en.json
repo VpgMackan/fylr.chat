@@ -162,6 +162,12 @@
       "title": "Create New Conversation",
       "nameLabel": "Conversation Name",
       "namePlaceholder": "Enter a name for your conversation",
+      "sourcesLabel": "Select Sources (Optional)",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "loadingSources": "Loading sources...",
+      "noSources": "No sources available in this pocket",
+      "selectedCount": "{count} source{count, plural, one {} other {s}} selected",
       "creating": "Creating...",
       "error": "Failed to create conversation. Please try again."
     }

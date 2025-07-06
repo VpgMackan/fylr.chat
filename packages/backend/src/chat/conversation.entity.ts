@@ -6,10 +6,13 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 
 import { Pocket } from 'src/pocket/pocket.entity';
 import { Message } from './message.entity';
+import { Source } from 'src/source/source.entity';
 
 @Entity('Conversations')
 export class Conversation {
@@ -34,4 +37,12 @@ export class Conversation {
 
   @OneToMany(() => Message, (message) => message.conversation)
   messages: Message[];
+
+  @ManyToMany(() => Source)
+  @JoinTable({
+    name: 'conversation_sources',
+    joinColumn: { name: 'conversation_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'source_id', referencedColumnName: 'id' },
+  })
+  sources: Source[];
 }

@@ -22,11 +22,21 @@ export class SourceService {
     return newSource;
   }
 
-  async findByVector(vector, pocketId) {
+  async getSourcesByPocketId(pocketId: string) {
+    return await this.sourceRepository.find({
+      where: { pocketId },
+      order: { uploadTime: 'DESC' },
+    });
+  }
+
+  async findByVector(vector: number[], sourceIds: string[]) {
+    if (sourceIds.length === 0) {
+      return [];
+    }
     return await this.vectorRepository
       .createQueryBuilder('vector')
       .innerJoinAndSelect('vector.source', 'source')
-      .where('source.pocketId = :pocketId', { pocketId })
+      .where('source.id IN (:...sourceIds)', { sourceIds })
       .orderBy('vector.embedding <-> :embedding')
       .setParameters({ embedding: toSql(vector) })
       .limit(5)

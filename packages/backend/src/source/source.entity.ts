@@ -6,10 +6,12 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   OneToMany,
+  ManyToMany,
 } from 'typeorm';
 
 import { Pocket } from 'src/pocket/pocket.entity';
 import { Vector } from './handler/vector.entity';
+import { Conversation } from 'src/chat/conversation.entity';
 
 @Entity('Sources')
 export class Source {
@@ -46,4 +48,7 @@ export class Source {
 
   @OneToMany(() => Vector, (vector) => vector.source)
   vectors: Vector[];
+
+  @ManyToMany(() => Conversation, (conversation) => conversation.sources)
+  conversations: Conversation[];
 }
