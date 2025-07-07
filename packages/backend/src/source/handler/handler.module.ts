@@ -6,6 +6,7 @@ import { MarkdownHandler } from './markdown.handler';
 
 import { ContentHandler } from './content-handler.interface';
 import { Vector } from './vector.entity';
+import { VectorSaver } from './vector-saver';
 import { AiModule } from 'src/aiService/aiService.module';
 
 @Module({
@@ -13,6 +14,7 @@ import { AiModule } from 'src/aiService/aiService.module';
   providers: [
     PdfHandler,
     MarkdownHandler,
+    VectorSaver,
     {
       provide: 'CONTENT_HANDLERS',
       useFactory: (pdf: PdfHandler, md: MarkdownHandler) => {
