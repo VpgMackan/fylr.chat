@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import Button from "@/components/common/Button";
-import ContentLayout from "@/components/layout/ContentLayout";
-import SummaryCard from "@/components/features/summaries/SummaryCard";
-import MarkdownComponent from "@/components/MarkdownComponents";
+import Button from '@/components/common/Button';
+import ContentLayout from '@/components/layout/ContentLayout';
+import SummaryCard from '@/components/features/summaries/SummaryCard';
+import MarkdownComponent from '@/components/MarkdownComponents';
 
 export default function ChatPage({
   params,
 }: {
   params: Promise<{ id: string; summaryid: string }>;
 }) {
-  const t = useTranslations("pages.summaries");
+  const t = useTranslations('pages.summaries');
   const [id, setId] = useState<string | null>(null);
   const [summaryid, setSummaryid] = useState<string | null>(null);
 
@@ -34,10 +34,10 @@ export default function ChatPage({
       leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      trailingHeaderActions={<Button text={t("editButton")} />}
+      trailingHeaderActions={<Button text={t('editButton')} />}
       sidebarContent={
         <>
-          <p className="text-xl">{t("summaryEpisodes")}</p>
+          <p className="text-xl">{t('summaryEpisodes')}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">

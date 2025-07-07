@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import axios from "@/utils/axios";
-import { isAxiosError } from "axios";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from '@/utils/axios';
+import { isAxiosError } from 'axios';
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -13,12 +13,12 @@ export function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await axios.get("auth/profile");
+        await axios.get('auth/profile');
         setIsAuthenticated(true);
       } catch (error: unknown) {
         if (isAxiosError(error) && error.response?.status === 401) {
           setIsAuthenticated(false);
-          router.push("/auth/login");
+          router.push('/auth/login');
         }
       } finally {
         setIsLoading(false);

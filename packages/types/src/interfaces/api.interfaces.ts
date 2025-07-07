@@ -40,7 +40,7 @@ export interface PocketWithRecentActivityApiResponse extends PocketApiResponse {
 export interface MessageApiResponse {
   id: string;
   conversationId: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   createdAt: string;
   metadata: object;

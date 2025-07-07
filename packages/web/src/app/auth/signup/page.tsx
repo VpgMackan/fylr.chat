@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import axios from "@/utils/axios";
-import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import axios from '@/utils/axios';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function SignupPage() {
-  const t = useTranslations("pages.auth.signup");
+  const t = useTranslations('pages.auth.signup');
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -19,12 +19,12 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await axios.post("auth/signup", {
+      await axios.post('auth/signup', {
         name,
         email,
         password,
       });
-      router.push("/auth/login");
+      router.push('/auth/login');
     } catch (error: unknown) {
       // you can surface e.g. toast(error.response?.data?.message || error.message)
     } finally {
@@ -38,9 +38,9 @@ export default function SignupPage() {
         <div className="bg-white shadow-lg rounded-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              {t("createAccount")}
+              {t('createAccount')}
             </h1>
-            <p className="text-gray-600 mt-2">{t("signupSubtitle")}</p>
+            <p className="text-gray-600 mt-2">{t('signupSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -49,7 +49,7 @@ export default function SignupPage() {
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                {t("name")}
+                {t('name')}
               </label>
               <input
                 id="name"
@@ -58,7 +58,7 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder={t("namePlaceholder")}
+                placeholder={t('namePlaceholder')}
               />
             </div>
 
@@ -67,7 +67,7 @@ export default function SignupPage() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                {t("email")}
+                {t('email')}
               </label>
               <input
                 id="email"
@@ -76,7 +76,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder={t("emailPlaceholder")}
+                placeholder={t('emailPlaceholder')}
               />
             </div>
 
@@ -85,7 +85,7 @@ export default function SignupPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                {t("password")}
+                {t('password')}
               </label>
               <input
                 id="password"
@@ -94,7 +94,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder={t("passwordPlaceholder")}
+                placeholder={t('passwordPlaceholder')}
               />
             </div>
 
@@ -103,13 +103,13 @@ export default function SignupPage() {
               disabled={isLoading}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? t("buttonSigningUp") : t("buttonSignUp")}
+              {isLoading ? t('buttonSigningUp') : t('buttonSignUp')}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              {t.rich("haveAccount", {
+              {t.rich('haveAccount', {
                 login: (children) => (
                   <a
                     href="/auth/login"

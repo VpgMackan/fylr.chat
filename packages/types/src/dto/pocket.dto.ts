@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsArray, IsOptional } from "class-validator";
+import { IsUUID, IsString, IsArray, IsOptional } from 'class-validator';
 
 export class UpdatePocketDto {
   @IsOptional()

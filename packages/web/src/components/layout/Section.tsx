@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 interface SectionProps {
   title: React.ReactNode;
@@ -10,7 +10,7 @@ interface SectionProps {
 export default function Section({
   title,
   actions,
-  cols = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  cols = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
   children,
 }: SectionProps) {
   return (

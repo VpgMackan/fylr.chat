@@ -14,7 +14,7 @@ interface RelevantChunk {
  */
 export function createHydePrompt(
   chatHistory: string,
-  userQuery: string
+  userQuery: string,
 ): string {
   return `Based on the chat history and the user's latest query, generate a hypothetical, concise paragraph that contains the most likely answer. This will be used to find relevant documents.
   ---
@@ -41,7 +41,7 @@ export function createFinalRagPrompt(
   context: string,
   chatHistory: string,
   userQuery: string,
-  relevantChunks: RelevantChunk[]
+  relevantChunks: RelevantChunk[],
 ): string {
   let citationExample = `[${relevantChunks[0]?.source.id}]`;
   if (relevantChunks.length > 1) {
@@ -59,7 +59,7 @@ export function createFinalRagPrompt(
   
   ---
   CONTEXT:
-  ${context || "No context was found."}
+  ${context || 'No context was found.'}
   ---
   CHAT HISTORY:
   ${chatHistory}

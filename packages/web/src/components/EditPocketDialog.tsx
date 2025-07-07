@@ -1,6 +1,6 @@
-import { Dialog, DialogBackdrop } from "@headlessui/react";
-import { useTranslations } from "next-intl";
-import Button from "@/components/common/Button";
+import { Dialog, DialogBackdrop } from '@headlessui/react';
+import { useTranslations } from 'next-intl';
+import Button from '@/components/common/Button';
 
 interface EditPocketDialogProps {
   isOpen: boolean;
@@ -25,10 +25,10 @@ export default function EditPocketDialog({
   setPocketTags,
   onSave,
 }: EditPocketDialogProps) {
-  const commonT = useTranslations("common");
-  const pocketsT = useTranslations("pockets");
-  const pocketDetailT = useTranslations("pages.pocketDetail");
-  const sourcesT = useTranslations("sources");
+  const commonT = useTranslations('common');
+  const pocketsT = useTranslations('pockets');
+  const pocketDetailT = useTranslations('pages.pocketDetail');
+  const sourcesT = useTranslations('sources');
 
   return (
     <Dialog
@@ -49,7 +49,7 @@ export default function EditPocketDialog({
             as="h3"
             className="text-lg font-medium leading-6 text-gray-900"
           >
-            {pocketDetailT("editPocket")}
+            {pocketDetailT('editPocket')}
           </Dialog.Title>
 
           <div className="mt-4 space-y-4">
@@ -58,7 +58,7 @@ export default function EditPocketDialog({
                 htmlFor="pocket-name"
                 className="block text-sm font-medium text-gray-700"
               >
-                {pocketsT("labels.nameField")}
+                {pocketsT('labels.nameField')}
               </label>
               <input
                 type="text"
@@ -66,7 +66,7 @@ export default function EditPocketDialog({
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                 value={pocketName}
                 onChange={(e) => setPocketName(e.target.value)}
-                placeholder={pocketsT("placeholders.nameField")}
+                placeholder={pocketsT('placeholders.nameField')}
               />
             </div>
 
@@ -75,7 +75,7 @@ export default function EditPocketDialog({
                 htmlFor="pocket-description"
                 className="block text-sm font-medium text-gray-700"
               >
-                {pocketsT("labels.descriptionField")}
+                {pocketsT('labels.descriptionField')}
               </label>
               <textarea
                 id="pocket-description"
@@ -83,7 +83,7 @@ export default function EditPocketDialog({
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                 value={pocketDescription}
                 onChange={(e) => setPocketDescription(e.target.value)}
-                placeholder={pocketsT("placeholders.descriptionField")}
+                placeholder={pocketsT('placeholders.descriptionField')}
               />
             </div>
 
@@ -92,7 +92,7 @@ export default function EditPocketDialog({
                 htmlFor="pocket-tags"
                 className="block text-sm font-medium text-gray-700"
               >
-                {pocketsT("labels.tagsField")}
+                {pocketsT('labels.tagsField')}
               </label>
               <input
                 type="text"
@@ -100,20 +100,20 @@ export default function EditPocketDialog({
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                 value={pocketTags}
                 onChange={(e) => setPocketTags(e.target.value)}
-                placeholder={pocketsT("placeholders.tagsField")}
+                placeholder={pocketsT('placeholders.tagsField')}
               />
               <p className="mt-1 text-sm text-gray-500">
-                {pocketsT("hints.tags")}
+                {pocketsT('hints.tags')}
               </p>
             </div>
           </div>
 
           <div className="mt-6 flex justify-between space-x-3">
-            <Button text={sourcesT("labels.modifySources")} onClick={onClose} />
+            <Button text={sourcesT('labels.modifySources')} onClick={onClose} />
             <div className="flex space-x-3">
-              <Button text={commonT("buttons.cancel")} onClick={onClose} />
+              <Button text={commonT('buttons.cancel')} onClick={onClose} />
               <Button
-                text={commonT("buttons.save")}
+                text={commonT('buttons.save')}
                 onClick={() => {
                   onSave();
                   onClose();

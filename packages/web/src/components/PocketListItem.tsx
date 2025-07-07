@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
+import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
 
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';
 
 export default function Pocket({
   title,
@@ -21,7 +21,7 @@ export default function Pocket({
 }) {
   const [visible, setVisible] = useState(false);
   const router = useRouter();
-  const common = useTranslations("common.metadata");
+  const common = useTranslations('common.metadata');
 
   const handleClick = () => {
     router.push(`/pocket/${id}`);
@@ -35,7 +35,7 @@ export default function Pocket({
   return (
     <button
       className={`w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
-        visible ? "opacity-100" : "opacity-0"
+        visible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={handleClick}
     >
@@ -49,8 +49,8 @@ export default function Pocket({
 
       <div>
         <hr />
-        <p className="text-xs mt-2">{common("sources", { amount: sources })}</p>
-        <p className="text-xs">{common("created", { date: created })}</p>
+        <p className="text-xs mt-2">{common('sources', { amount: sources })}</p>
+        <p className="text-xs">{common('created', { date: created })}</p>
       </div>
     </button>
   );

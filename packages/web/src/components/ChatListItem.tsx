@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Chat({
   title,
@@ -12,13 +12,13 @@ export default function Chat({
   pocket?: string;
 }) {
   const [visible, setVisible] = useState(false);
-  const common = useTranslations("pockets");
+  const common = useTranslations('pockets');
 
   const router = useRouter();
   const pathname = usePathname();
 
   const handleClick = useCallback(() => {
-    router.push(pathname + "/" + id);
+    router.push(pathname + '/' + id);
   }, [router, pathname, id]);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function Chat({
   return (
     <button
       className={`w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-all duration-500 ease-in-out flex flex-col justify-between ${
-        visible ? "opacity-100" : "opacity-0"
+        visible ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={handleClick}
     >
@@ -39,7 +39,7 @@ export default function Chat({
           <></>
         ) : (
           <p className="font-semibold">
-            {common("labels.pocketName", { pocketName: pocket })}
+            {common('labels.pocketName', { pocketName: pocket })}
           </p>
         )}
       </div>

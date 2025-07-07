@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
+import React from 'react';
 
-import Heading from "@/components/layout/Heading";
+import Heading from '@/components/layout/Heading';
 
 export default function ContentLayout({
   title,
@@ -25,7 +25,7 @@ export default function ContentLayout({
     >
       <div
         className="grid grid-cols-6 gap-4 h-full overflow-y-hidden pb-4 pt-8"
-        style={{ fontFamily: "Arial, sans-serif" }}
+        style={{ fontFamily: 'Arial, sans-serif' }}
       >
         <div className="bg-blue-100 rounded-2xl border-2 border-blue-300 p-4">
           {sidebarContent}

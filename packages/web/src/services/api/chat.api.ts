@@ -1,15 +1,15 @@
-import axios from "@/utils/axios";
-import { ConversationApiResponse, CreateConversationDto } from "@fylr/types";
+import axios from '@/utils/axios';
+import { ConversationApiResponse, CreateConversationDto } from '@fylr/types';
 
 export const getConversations = async (params: {
   take: number;
   offset: number;
 }): Promise<ConversationApiResponse[]> => {
   const { data } = await axios.get<ConversationApiResponse[]>(
-    "chat/conversations",
+    'chat/conversations',
     {
       params,
-    }
+    },
   );
   return data;
 };
@@ -19,25 +19,25 @@ export const getConversationsByPocketId = async (
   params: {
     take: number;
     offset: number;
-  }
+  },
 ): Promise<ConversationApiResponse[]> => {
   const { data } = await axios.get<ConversationApiResponse[]>(
     `chat/${id}/conversations`,
-    { params }
+    { params },
   );
   return data;
 };
 
 export const createConversation = async (
   pocketId: string,
-  data: CreateConversationDto
+  data: CreateConversationDto,
 ): Promise<ConversationApiResponse> => {
   const response = await axios.post(`/chat/${pocketId}/conversation`, data);
   return response.data;
 };
 
 export const getConversationWsToken = async (
-  id: string
+  id: string,
 ): Promise<{
   token: string;
 }> => {

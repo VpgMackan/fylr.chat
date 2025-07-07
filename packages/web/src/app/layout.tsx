@@ -1,19 +1,19 @@
-import type { Metadata } from "next";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale } from "next-intl/server";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale } from 'next-intl/server';
+import './globals.css';
 
-import { Montserrat } from "next/font/google";
+import { Montserrat } from 'next/font/google';
 
 const inter = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  weight: ["700"],
+  variable: '--font-montserrat',
+  subsets: ['latin'],
+  weight: ['700'],
 });
 
 export const metadata: Metadata = {
-  title: "Flyr.Chat",
-  description: "The ai chatbot for your files",
+  title: 'Flyr.Chat',
+  description: 'The ai chatbot for your files',
 };
 
 export default async function RootLayout({

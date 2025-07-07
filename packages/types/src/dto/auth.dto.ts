@@ -4,7 +4,7 @@ import {
   IsString,
   MinLength,
   IsOptional,
-} from "class-validator";
+} from 'class-validator';
 
 export class LoginDto {
   @IsNotEmpty()
@@ -40,11 +40,11 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(8, { message: "Password must be at least 8 characters long" })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password?: string;
 
   @IsOptional()
   @IsString()
-  @MinLength(3, { message: "Name must be at least 3 characters long" })
+  @MinLength(3, { message: 'Name must be at least 3 characters long' })
   name?: string;
 }

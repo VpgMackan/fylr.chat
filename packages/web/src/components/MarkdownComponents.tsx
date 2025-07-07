@@ -1,31 +1,31 @@
-import ReactMarkdown, { Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkDeflist from "remark-deflist";
-import remarkBreaks from "remark-breaks";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ReactMarkdown, { Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkDeflist from 'remark-deflist';
+import remarkBreaks from 'remark-breaks';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export default function MarkdownComponent({ text }: { text: string }) {
   const components: Components = {
     h1: ({ node, children, ...props }) => (
       <h1 className="text-2xl font-bold mt-6 mb-4" {...props}>
-        {children || "Untitled Heading"}
+        {children || 'Untitled Heading'}
       </h1>
     ),
     h2: ({ node, children, ...props }) => (
       <h2 className="text-xl font-bold mt-5 mb-3" {...props}>
-        {children || "Untitled Heading"}
+        {children || 'Untitled Heading'}
       </h2>
     ),
     h3: ({ node, children, ...props }) => (
       <h3 className="text-lg font-bold mt-4 mb-2" {...props}>
-        {children || "Untitled Heading"}
+        {children || 'Untitled Heading'}
       </h3>
     ),
     p: ({ node, ...props }) => <p className="my-3" {...props} />,
     a: ({ node, children, ...props }) => (
       <a className="text-blue-600 hover:underline" {...props}>
-        {children || "Untitled Anchor"}
+        {children || 'Untitled Anchor'}
       </a>
     ),
     ul: ({ node, ...props }) => (
@@ -60,7 +60,7 @@ export default function MarkdownComponent({ text }: { text: string }) {
     td: ({ node, ...props }) => <td className="py-2 px-3 border" {...props} />,
     code: (props) => {
       const { children, className, node, ...rest } = props;
-      const match = /language-(\w+)/.exec(className || "");
+      const match = /language-(\w+)/.exec(className || '');
       return match ? (
         <SyntaxHighlighter
           style={vscDarkPlus as { [key: string]: React.CSSProperties }}
@@ -68,19 +68,19 @@ export default function MarkdownComponent({ text }: { text: string }) {
           PreTag="div"
           className="rounded-2xl my-3"
         >
-          {String(children).replace(/\n$/, "")}
+          {String(children).replace(/\n$/, '')}
         </SyntaxHighlighter>
       ) : (
         <code
           {...rest}
-          className={`bg-gray-200 px-1 py-0.5 rounded text-sm ${className || ""}`}
+          className={`bg-gray-200 px-1 py-0.5 rounded text-sm ${className || ''}`}
         >
           {children}
         </code>
       );
     },
     input: ({ node, ...props }) =>
-      props.type === "checkbox" ? (
+      props.type === 'checkbox' ? (
         <input
           type="checkbox"
           className="mr-1 rounded"

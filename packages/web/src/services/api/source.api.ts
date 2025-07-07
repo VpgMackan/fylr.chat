@@ -1,11 +1,11 @@
-import axios from "@/utils/axios";
-import { SourceApiResponse } from "@fylr/types";
+import axios from '@/utils/axios';
+import { SourceApiResponse } from '@fylr/types';
 
 export const getSourcesByPocketId = async (
-  pocketId: string
+  pocketId: string,
 ): Promise<SourceApiResponse[]> => {
   const { data } = await axios.get<SourceApiResponse[]>(
-    `source/pocket/${pocketId}`
+    `source/pocket/${pocketId}`,
   );
   return data;
 };

@@ -1,10 +1,10 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { Icon } from "@iconify/react";
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { Icon } from '@iconify/react';
 
-import Button from "@/components/common/Button";
-import SearchBar from "@/components/SearchBar";
-import Dropdown from "@/components/common/Dropdown";
-import Heading from "@/components/layout/Heading";
+import Button from '@/components/common/Button';
+import SearchBar from '@/components/SearchBar';
+import Dropdown from '@/components/common/Dropdown';
+import Heading from '@/components/layout/Heading';
 
 export type DropdownOption = { value: string | number; label: string };
 
@@ -44,7 +44,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
   dropdownOptions,
   dropdownPlaceholder,
   dropdownAriaLabel,
-  gridClassName = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  gridClassName = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
 
   dataLoader,
   take = 10,
@@ -54,8 +54,8 @@ export default function ListPageLayout<T extends { id: string | number }>({
 
   children,
 }: ListPageLayoutProps<T>) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dropdownValue, setDropdownValue] = useState<string | number>("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownValue, setDropdownValue] = useState<string | number>('');
 
   const [items, setItems] = useState<T[]>([]);
   const [offset, setOffset] = useState(0);
@@ -118,7 +118,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
       (entries) => {
         if (entries[0].isIntersecting && !loadingMore) loadMore();
       },
-      { rootMargin: "200px" }
+      { rootMargin: '200px' },
     );
     obs.observe(loaderRef.current);
     return () => obs.disconnect();
@@ -126,7 +126,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchTerm(e.target.value);
-  const handleClear = () => setSearchTerm("");
+  const handleClear = () => setSearchTerm('');
   const handleDropdown = (e: React.ChangeEvent<HTMLSelectElement>) =>
     setDropdownValue(e.target.value);
 

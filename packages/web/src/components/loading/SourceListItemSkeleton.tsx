@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 
 export default function SourceSkeleton() {
   const [visible, setVisible] = useState(false);
@@ -11,7 +11,7 @@ export default function SourceSkeleton() {
   return (
     <div
       className={`border border-gray-600 rounded-lg p-4 flex flex-col justify-between animate-pulse transition-opacity duration-500 ease-in-out ${
-        visible ? "opacity-100" : "opacity-0"
+        visible ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div className="space-y-2">

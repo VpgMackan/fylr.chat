@@ -1,4 +1,4 @@
-import { Icon } from "@iconify/react";
+import { Icon } from '@iconify/react';
 
 export default function SummarieCard({
   fileName,
@@ -10,12 +10,12 @@ export default function SummarieCard({
   selected?: boolean;
 }) {
   const fileIcon: Record<string, string> = {
-    pdf: "proicons:pdf-2",
-    web: "mdi:web",
+    pdf: 'proicons:pdf-2',
+    web: 'mdi:web',
   };
   const color = selected
-    ? "bg-blue-400 hover:bg-blue-300"
-    : "bg-blue-200 hover:bg-blue-300";
+    ? 'bg-blue-400 hover:bg-blue-300'
+    : 'bg-blue-200 hover:bg-blue-300';
 
   return (
     <div

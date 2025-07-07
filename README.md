@@ -11,35 +11,40 @@ An alternative to NotebookLM for analyzing and querying large collections of doc
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (version 16 or higher)
 - npm or yarn
 
 ### Installation
 
 1. **Clone the repository**
-    ```bash
-    git clone https://github.com/VpgMackan/fylr.chat
-    cd fylr.chat
-    ```
+
+   ```bash
+   git clone https://github.com/VpgMackan/fylr.chat
+   cd fylr.chat
+   ```
 
 2. **Install dependencies**
-    ```bash
-    npm install
-    ```
+
+   ```bash
+   npm install
+   ```
 
 3. **Configure environment variables**
-    Create and configure the required `.env` files in both the `web` and `backend` package directories. Both files must be properly configured for the application to function.
+   Create and configure the required `.env` files in both the `web` and `backend` package directories. Both files must be properly configured for the application to function.
 
 4. **Start the application**
-    ```bash
-    npm run dev
-    ```
-    
-    Or run components separately:
-    ```bash
-    npm run dev:backend
-    npm run dev:web
-    ```
+
+   ```bash
+   npm run dev
+   ```
+
+   Or run components separately:
+
+   ```bash
+   npm run dev:backend
+   npm run dev:web
+   ```
 
 ## Usage
 

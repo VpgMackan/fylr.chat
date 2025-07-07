@@ -1,5 +1,5 @@
-import { Icon } from "@iconify/react";
-import { Checkbox } from "@headlessui/react";
+import { Icon } from '@iconify/react';
+import { Checkbox } from '@headlessui/react';
 
 export default function SourceCheckbox({
   fileName,
@@ -9,8 +9,8 @@ export default function SourceCheckbox({
   fileType: string;
 }) {
   const fileIcon: Record<string, string> = {
-    pdf: "proicons:pdf-2",
-    web: "mdi:web",
+    pdf: 'proicons:pdf-2',
+    web: 'mdi:web',
   };
 
   return (

@@ -1,7 +1,7 @@
-import React from "react";
-import { useTranslations } from "next-intl";
+import React from 'react';
+import { useTranslations } from 'next-intl';
 
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';
 
 export default function Source({
   title,
@@ -19,7 +19,7 @@ export default function Source({
   pocketId: string;
 }) {
   const router = useRouter();
-  const common = useTranslations("common");
+  const common = useTranslations('common');
 
   const handleClick = () => {
     router.push(`/pocket/${pocketId}/source/${id}`);
@@ -38,10 +38,10 @@ export default function Source({
       <div>
         <hr />
         <p className="text-xs mt-2">
-          {common("metadata.size", { size: size })}
+          {common('metadata.size', { size: size })}
         </p>
         <p className="text-xs">
-          {common("metadata.imported", { date: imported })}
+          {common('metadata.imported', { date: imported })}
         </p>
       </div>
     </button>

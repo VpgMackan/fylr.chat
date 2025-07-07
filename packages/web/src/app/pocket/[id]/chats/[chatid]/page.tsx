@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
-import Button from "@/components/common/Button";
-import ChatInput from "@/components/features/chat/ChatInput";
-import SourceCheckbox from "@/components/features/chat/SourceCheckbox";
-import Chat from "@/components/features/chat/ChatBubble";
-import ContentLayout from "@/components/layout/ContentLayout";
+import Button from '@/components/common/Button';
+import ChatInput from '@/components/features/chat/ChatInput';
+import SourceCheckbox from '@/components/features/chat/SourceCheckbox';
+import Chat from '@/components/features/chat/ChatBubble';
+import ContentLayout from '@/components/layout/ContentLayout';
 
-import { useChat } from "@/hooks/useChat";
+import { useChat } from '@/hooks/useChat';
 
 export default function ChatPage({
   params,
 }: {
   params: Promise<{ id: string; chatid: string }>;
 }) {
-  const t = useTranslations("pages.chatDetail");
+  const t = useTranslations('pages.chatDetail');
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function ChatPage({
   const router = useRouter();
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
@@ -50,10 +50,10 @@ export default function ChatPage({
       leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={handleBack} />
       }
-      trailingHeaderActions={<Button text={t("editButton")} className="mr-2" />}
+      trailingHeaderActions={<Button text={t('editButton')} className="mr-2" />}
       sidebarContent={
         <>
-          <p className="text-xl">{t("yourSources")}</p>
+          <p className="text-xl">{t('yourSources')}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
@@ -73,7 +73,7 @@ export default function ChatPage({
         {messages.map((m) => (
           <Chat
             key={m.id}
-            user={m.role === "user"}
+            user={m.role === 'user'}
             text={m.content}
             metadata={m.metadata}
           />

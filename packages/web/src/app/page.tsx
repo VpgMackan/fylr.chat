@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
-import Button from "@/components/common/Button";
-import Pocket from "@/components/PocketListItem";
-import PocketSkeleton from "@/components/loading/PocketListItemSkeleton";
-import Chat from "@/components/ChatListItem";
-import PinnedPod from "@/components/PodcastListItem";
-import Heading from "@/components/layout/Heading";
-import Section from "@/components/layout/Section";
-import { withAuth } from "@/components/auth/withAuth";
-import ChatSkeleton from "@/components/loading/ChatListItemSkeleton";
-import { ConversationApiResponse, PocketApiResponse } from "@fylr/types";
-import { getPockets } from "@/services/api/pocket.api";
-import { getConversations } from "@/services/api/chat.api";
+import Button from '@/components/common/Button';
+import Pocket from '@/components/PocketListItem';
+import PocketSkeleton from '@/components/loading/PocketListItemSkeleton';
+import Chat from '@/components/ChatListItem';
+import PinnedPod from '@/components/PodcastListItem';
+import Heading from '@/components/layout/Heading';
+import Section from '@/components/layout/Section';
+import { withAuth } from '@/components/auth/withAuth';
+import ChatSkeleton from '@/components/loading/ChatListItemSkeleton';
+import { ConversationApiResponse, PocketApiResponse } from '@fylr/types';
+import { getPockets } from '@/services/api/pocket.api';
+import { getConversations } from '@/services/api/chat.api';
 
 function HomePage() {
   const hasFetched = useRef(false);
 
-  const common = useTranslations("common.buttons");
-  const yourPockets = useTranslations("pockets.labels");
-  const t = useTranslations("pages.home");
+  const common = useTranslations('common.buttons');
+  const yourPockets = useTranslations('pockets.labels');
+  const t = useTranslations('pages.home');
   const router = useRouter();
 
   const [pockets, setPockets] = useState<PocketApiResponse[]>([]);
@@ -40,14 +40,14 @@ function HomePage() {
           await getPockets({
             take: 10,
             offset: 0,
-          })
+          }),
         );
 
         setRecentChats(
           await getConversations({
             take: 10,
             offset: 0,
-          })
+          }),
         );
 
         setLoading(false);
@@ -60,21 +60,21 @@ function HomePage() {
 
   return (
     <Heading
-      title={t("welcome", { name: "Markus" })}
+      title={t('welcome', { name: 'Markus' })}
       behindTitle={<Icon icon="twemoji:waving-hand" flip="horizontal" />}
     >
       <Section
-        title={yourPockets("yourPockets")}
+        title={yourPockets('yourPockets')}
         actions={
           <>
             <Button
-              text={common("viewAll")}
+              text={common('viewAll')}
               className="mr-2"
-              onClick={() => router.push("/pocket")}
+              onClick={() => router.push('/pocket')}
             />
             <Button
-              text={common("create")}
-              onClick={() => router.push("/pocket/new")}
+              text={common('create')}
+              onClick={() => router.push('/pocket/new')}
             />
           </>
         }
@@ -83,7 +83,7 @@ function HomePage() {
         {loading
           ? Array.from(
               { length: Math.floor(Math.random() * 6) + 1 },
-              (_, index) => <PocketSkeleton key={index} />
+              (_, index) => <PocketSkeleton key={index} />,
             )
           : pockets.map(
               ({
@@ -103,22 +103,22 @@ function HomePage() {
                   created={createdAt}
                   id={id}
                 />
-              )
+              ),
             )}
       </Section>
 
-      <Section title={t("mostRecentChat")}>
+      <Section title={t('mostRecentChat')}>
         {loading
           ? Array.from(
               { length: Math.floor(Math.random() * 3) + 1 },
-              (_, index) => <ChatSkeleton key={index} />
+              (_, index) => <ChatSkeleton key={index} />,
             )
           : recentChats.map(({ id, title, pocket }) => (
               <Chat key={id} title={title} pocket={pocket.title} id={id} />
             ))}
       </Section>
 
-      <Section title={t("pinnedPodcasts")}>
+      <Section title={t('pinnedPodcasts')}>
         <PinnedPod title="Lorem ipsum" pocket="Lorem" />
       </Section>
     </Heading>

@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
-import Button from "@/components/common/Button";
-import axios from "@/utils/axios";
+import Button from '@/components/common/Button';
+import axios from '@/utils/axios';
 
 interface SourceFile {
   file: File;
@@ -14,15 +14,15 @@ interface SourceFile {
 }
 
 export default function NewPocketPage() {
-  const t = useTranslations("pages.newPocket");
-  const pocketT = useTranslations("pockets");
-  const common = useTranslations("common");
-  const sourcesT = useTranslations("sources");
+  const t = useTranslations('pages.newPocket');
+  const pocketT = useTranslations('pockets');
+  const common = useTranslations('common');
+  const sourcesT = useTranslations('sources');
   const router = useRouter();
 
-  const [pocketName, setPocketName] = useState("");
-  const [pocketDescription, setPocketDescription] = useState("");
-  const [pocketTags, setPocketTags] = useState("");
+  const [pocketName, setPocketName] = useState('');
+  const [pocketDescription, setPocketDescription] = useState('');
+  const [pocketTags, setPocketTags] = useState('');
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,18 +54,18 @@ export default function NewPocketPage() {
     tags?: string[];
     icon?: string;
   }) => {
-    const response = await axios.post("/pocket", pocketData);
+    const response = await axios.post('/pocket', pocketData);
     return response.data;
   };
 
   const uploadSource = async (pocketId: string, file: File) => {
     const formData = new FormData();
-    formData.append("file", file);
-    formData.append("pocketId", pocketId);
+    formData.append('file', file);
+    formData.append('pocketId', pocketId);
 
-    const response = await axios.post("/source", formData, {
+    const response = await axios.post('/source', formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        'Content-Type': 'multipart/form-data',
       },
     });
 
@@ -82,10 +82,10 @@ export default function NewPocketPage() {
       const pocketData = {
         title: pocketName, // Changed from 'name' to 'title'
         description: pocketDescription || undefined,
-        icon: "mdi:folder", // Added required icon field
+        icon: 'mdi:folder', // Added required icon field
         tags: pocketTags
           ? pocketTags
-              .split(",")
+              .split(',')
               .map((tag) => tag.trim())
               .filter(Boolean)
           : [], // Changed from undefined to empty array
@@ -97,7 +97,7 @@ export default function NewPocketPage() {
       // Upload sources if any
       if (sourceFiles.length > 0) {
         const uploadPromises = sourceFiles.map((source) =>
-          uploadSource(pocket.id, source.file)
+          uploadSource(pocket.id, source.file),
         );
 
         await Promise.all(uploadPromises);
@@ -109,7 +109,7 @@ export default function NewPocketPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "An error occurred while creating the pocket"
+          : 'An error occurred while creating the pocket',
       );
     } finally {
       setIsCreating(false);
@@ -131,7 +131,7 @@ export default function NewPocketPage() {
             onClick={() => router.back()}
             className="cursor-pointer hover:text-gray-700"
           />
-          <p className="ml-8 font-bold">{t("title")}</p>
+          <p className="ml-8 font-bold">{t('title')}</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export default function NewPocketPage() {
               htmlFor="pocketName"
               className="block text-lg font-medium text-gray-700 mb-1"
             >
-              {pocketT("labels.nameField")}
+              {pocketT('labels.nameField')}
             </label>
             <input
               id="pocketName"
@@ -156,7 +156,7 @@ export default function NewPocketPage() {
               type="text"
               value={pocketName}
               onChange={(e) => setPocketName(e.target.value)}
-              placeholder={pocketT("placeholders.nameField")}
+              placeholder={pocketT('placeholders.nameField')}
               required
               disabled={isCreating}
               className="border border-gray-300 rounded-lg py-2 px-4 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full disabled:bg-gray-100"
@@ -167,12 +167,12 @@ export default function NewPocketPage() {
               htmlFor="sourceButton"
               className="block text-lg font-medium text-gray-700 mb-1"
             >
-              {sourcesT("labels.sourcesField")}
+              {sourcesT('labels.sourcesField')}
             </label>
             <Button
               id="sourceButton"
               type="button"
-              text={sourcesT("placeholders.sourcesField")}
+              text={sourcesT('placeholders.sourcesField')}
               onClick={handleSourceButtonClick}
               disabled={isCreating}
             />
@@ -228,7 +228,7 @@ export default function NewPocketPage() {
             htmlFor="pocketDescription"
             className="block text-lg font-medium text-gray-700 mb-1"
           >
-            {pocketT("labels.descriptionField")}
+            {pocketT('labels.descriptionField')}
           </label>
           <textarea
             id="pocketDescription"
@@ -236,7 +236,7 @@ export default function NewPocketPage() {
             rows={3}
             value={pocketDescription}
             onChange={(e) => setPocketDescription(e.target.value)}
-            placeholder={pocketT("placeholders.descriptionField")}
+            placeholder={pocketT('placeholders.descriptionField')}
             disabled={isCreating}
             className="border border-gray-300 rounded-lg py-2 px-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full disabled:bg-gray-100"
           />
@@ -246,7 +246,7 @@ export default function NewPocketPage() {
             htmlFor="pocketTags"
             className="block text-lg font-medium text-gray-700 mb-1"
           >
-            {pocketT("labels.tagsField")}
+            {pocketT('labels.tagsField')}
           </label>
           <input
             id="pocketTags"
@@ -254,11 +254,11 @@ export default function NewPocketPage() {
             type="text"
             value={pocketTags}
             onChange={(e) => setPocketTags(e.target.value)}
-            placeholder={pocketT("placeholders.tagsField")}
+            placeholder={pocketT('placeholders.tagsField')}
             disabled={isCreating}
             className="border border-gray-300 rounded-lg py-2 px-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full disabled:bg-gray-100"
           />
-          <p className="text-sm text-gray-500 mt-1">{pocketT("hints.tags")}</p>
+          <p className="text-sm text-gray-500 mt-1">{pocketT('hints.tags')}</p>
         </div>
 
         <hr />
@@ -266,12 +266,12 @@ export default function NewPocketPage() {
         <div className="flex justify-end gap-4">
           <Button
             type="submit"
-            text={isCreating ? "Creating..." : common("buttons.create")}
+            text={isCreating ? 'Creating...' : common('buttons.create')}
             disabled={isCreating || !pocketName.trim()}
           />
           <Button
             type="button"
-            text={common("buttons.cancel")}
+            text={common('buttons.cancel')}
             onClick={handleCancel}
             disabled={isCreating}
           />

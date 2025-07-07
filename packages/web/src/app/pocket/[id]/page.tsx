@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import Button from "@/components/common/Button";
-import Source from "@/components/SourceListItem";
-import PinnedPod from "@/components/PodcastListItem";
-import Chat from "@/components/ChatListItem";
-import EditPocketDialog from "@/components/EditPocketDialog";
-import Heading from "@/components/layout/Heading";
-import Section from "@/components/layout/Section";
-import SourceSkeleton from "@/components/loading/SourceListItemSkeleton";
-import { getPocketById, updatePocket } from "@/services/api/pocket.api";
-import { SourceApiResponse } from "@fylr/types";
+import Button from '@/components/common/Button';
+import Source from '@/components/SourceListItem';
+import PinnedPod from '@/components/PodcastListItem';
+import Chat from '@/components/ChatListItem';
+import EditPocketDialog from '@/components/EditPocketDialog';
+import Heading from '@/components/layout/Heading';
+import Section from '@/components/layout/Section';
+import SourceSkeleton from '@/components/loading/SourceListItemSkeleton';
+import { getPocketById, updatePocket } from '@/services/api/pocket.api';
+import { SourceApiResponse } from '@fylr/types';
 
 export default function PocketIdPage({
   params,
@@ -23,22 +23,22 @@ export default function PocketIdPage({
 }) {
   const [id, setId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [pocketName, setPocketName] = useState("");
-  const [pocketDescription, setPocketDescription] = useState("");
-  const [pocketTags, setPocketTags] = useState("");
+  const [pocketName, setPocketName] = useState('');
+  const [pocketDescription, setPocketDescription] = useState('');
+  const [pocketTags, setPocketTags] = useState('');
   const [originalPocket, setOriginalPocket] = useState({
-    title: "",
-    description: "",
-    tags: "",
+    title: '',
+    description: '',
+    tags: '',
   });
 
   const [sources, setSources] = useState<SourceApiResponse[] | null>(null);
 
   const router = useRouter();
 
-  const common = useTranslations("common");
-  const sourcesT = useTranslations("sources");
-  const t = useTranslations("pages");
+  const common = useTranslations('common');
+  const sourcesT = useTranslations('sources');
+  const t = useTranslations('pages');
 
   const [loading, setLoading] = useState(true);
 
@@ -49,13 +49,13 @@ export default function PocketIdPage({
         const pocketData = await getPocketById(res.id);
         setPocketName(pocketData.title);
         setPocketDescription(pocketData.description);
-        setPocketTags(pocketData.tags.join(","));
+        setPocketTags(pocketData.tags.join(','));
         setSources(pocketData.source);
 
         setOriginalPocket({
           title: pocketData.title,
           description: pocketData.description,
-          tags: pocketData.tags.join(","),
+          tags: pocketData.tags.join(','),
         });
 
         setLoading(false);
@@ -88,7 +88,7 @@ export default function PocketIdPage({
           });
         })
         .catch((error) => {
-          console.error("Failed to update pocket:", error);
+          console.error('Failed to update pocket:', error);
         });
     }
   };
@@ -101,7 +101,7 @@ export default function PocketIdPage({
       }
       trailingHeaderActions={
         <Button
-          text={t("pocketDetail.editPocket")}
+          text={t('pocketDetail.editPocket')}
           className="mr-2"
           onClick={() => setIsEditModalOpen(true)}
         />
@@ -120,12 +120,12 @@ export default function PocketIdPage({
       />
 
       <Section
-        title={sourcesT("labels.yourSources")}
+        title={sourcesT('labels.yourSources')}
         actions={
           <Button
-            text={common("buttons.viewAll")}
+            text={common('buttons.viewAll')}
             className="mr-2"
-            onClick={() => router.push("/pocket/" + id + "/sources")}
+            onClick={() => router.push('/pocket/' + id + '/sources')}
           />
         }
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
@@ -133,13 +133,13 @@ export default function PocketIdPage({
         {loading
           ? Array.from(
               { length: Math.floor(Math.random() * 6) + 1 },
-              (_, index) => <SourceSkeleton key={index} />
+              (_, index) => <SourceSkeleton key={index} />,
             )
           : sources?.map(({ id, name, size, pocketId }) => (
               <Source
                 key={id}
                 title={name}
-                summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                summary="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
                 size={size as unknown as string}
                 imported="2025/04/13"
                 id={id}
@@ -149,34 +149,34 @@ export default function PocketIdPage({
       </Section>
 
       <Section
-        title={t("pocketDetail.mostRecent")}
+        title={t('pocketDetail.mostRecent')}
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
         <Source
           title="🧠 Lorem"
-          summery="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+          summary="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
           size="2.4 KB"
           imported="2025/04/13"
           id="e57b8ddd-c118-43cf-a595-067579b62b97"
-          pocketId={id || ""}
+          pocketId={id || ''}
         />
         <PinnedPod title="Lorem ipsum" pocket="Lorem" />
         <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />
         <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />
       </Section>
 
-      <Section title={t("pocketDetail.shortcuts")} cols="grid-cols-3">
+      <Section title={t('pocketDetail.shortcuts')} cols="grid-cols-3">
         <Button
-          text={t("pocketDetail.viewChats")}
-          onClick={() => router.push("/pocket/" + id + "/chats")}
+          text={t('pocketDetail.viewChats')}
+          onClick={() => router.push('/pocket/' + id + '/chats')}
         />
         <Button
-          text={t("pocketDetail.viewSummaries")}
-          onClick={() => router.push("/pocket/" + id + "/summaries")}
+          text={t('pocketDetail.viewSummaries')}
+          onClick={() => router.push('/pocket/' + id + '/summaries')}
         />
         <Button
-          text={t("pocketDetail.viewPodcasts")}
-          onClick={() => router.push("/pocket/" + id + "/podcasts")}
+          text={t('pocketDetail.viewPodcasts')}
+          onClick={() => router.push('/pocket/' + id + '/podcasts')}
         />
       </Section>
     </Heading>

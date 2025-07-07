@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@iconify/react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
+import { Icon } from '@iconify/react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import Button from "@/components/common/Button";
+import Button from '@/components/common/Button';
 
-import PodcastEpisodes from "@/components/features/podcasts/PodcastEpisodes";
+import PodcastEpisodes from '@/components/features/podcasts/PodcastEpisodes';
 
-import ContentLayout from "@/components/layout/ContentLayout";
+import ContentLayout from '@/components/layout/ContentLayout';
 
 export default function PodcastIdPage({
   params,
@@ -24,8 +24,8 @@ export default function PodcastIdPage({
 
   const router = useRouter();
 
-  const commonT = useTranslations("common");
-  const t = useTranslations("pages.podcast");
+  const commonT = useTranslations('common');
+  const t = useTranslations('pages.podcast');
 
   useEffect(() => {
     params.then((res) => {
@@ -41,7 +41,7 @@ export default function PodcastIdPage({
   function formatTime(seconds: number): string {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   }
 
   return (
@@ -50,10 +50,10 @@ export default function PodcastIdPage({
       leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
-      trailingHeaderActions={<Button text={t("editButton")} />}
+      trailingHeaderActions={<Button text={t('editButton')} />}
       sidebarContent={
         <>
-          <p className="text-xl">{t("podcastEpisodes")}</p>
+          <p className="text-xl">{t('podcastEpisodes')}</p>
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
@@ -74,8 +74,8 @@ export default function PodcastIdPage({
         <div className="flex text-2xl items-center justify-between">
           <p className="font-bold">1. Episode one</p>
           <div className="flex">
-            <Button text={t("share")} className="mr-2" />
-            <Button text={t("download")} className="mr-2" />
+            <Button text={t('share')} className="mr-2" />
+            <Button text={t('download')} className="mr-2" />
             <Button
               text={<Icon icon="ph:gear-fill" width="20" height="20" />}
             />

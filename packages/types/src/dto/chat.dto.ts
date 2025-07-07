@@ -1,4 +1,4 @@
-import { Transform } from "class-transformer";
+import { Transform } from 'class-transformer';
 import {
   IsString,
   IsObject,
@@ -6,7 +6,7 @@ import {
   IsNotEmpty,
   IsArray,
   IsUUID,
-} from "class-validator";
+} from 'class-validator';
 
 export class UpdateMessageDto {
   @IsString()
@@ -20,11 +20,11 @@ export class UpdateMessageDto {
   @IsObject()
   @IsOptional()
   @Transform(({ value }) => {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       try {
         return JSON.parse(value);
       } catch {
-        throw new Error("Invalid JSON format for metadata");
+        throw new Error('Invalid JSON format for metadata');
       }
     }
     return value;
@@ -40,11 +40,11 @@ export class UpdateConversationDto {
   @IsObject()
   @IsOptional()
   @Transform(({ value }) => {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       try {
         return JSON.parse(value);
       } catch {
-        throw new Error("Invalid JSON format for metadata");
+        throw new Error('Invalid JSON format for metadata');
       }
     }
     return value;
@@ -59,11 +59,11 @@ export class CreateConversationDto {
 
   @IsObject()
   @Transform(({ value }) => {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       try {
         return JSON.parse(value);
       } catch {
-        throw new Error("Invalid JSON format for metadata");
+        throw new Error('Invalid JSON format for metadata');
       }
     }
     return value;
@@ -71,7 +71,7 @@ export class CreateConversationDto {
   metadata!: object;
 
   @IsArray()
-  @IsUUID("all", { each: true })
+  @IsUUID('all', { each: true })
   @IsOptional()
   sourceIds?: string[];
 }
@@ -87,11 +87,11 @@ export class CreateMessageDto {
 
   @IsObject()
   @Transform(({ value }) => {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       try {
         return JSON.parse(value);
       } catch {
-        throw new Error("Invalid JSON format for metadata");
+        throw new Error('Invalid JSON format for metadata');
       }
     }
     return value;

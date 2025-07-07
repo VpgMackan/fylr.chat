@@ -1,32 +1,32 @@
-import { MessageApiResponse } from "./api.interfaces";
+import { MessageApiResponse } from './api.interfaces';
 
 export interface WsSendMessagePayload {
-  action: "sendMessage";
+  action: 'sendMessage';
   conversationId: string;
   content: string;
 }
 
 export interface WsDeleteMessagePayload {
-  action: "deleteMessage";
+  action: 'deleteMessage';
   conversationId: string;
   messageId: string;
 }
 
 export interface WsUpdateMessagePayload {
-  action: "updateMessage";
+  action: 'updateMessage';
   conversationId: string;
   messageId: string;
   content: string;
 }
 
 export interface WsRegenerateMessagePayload {
-  action: "regenerateMessage";
+  action: 'regenerateMessage';
   conversationId: string;
   messageId: string;
 }
 
 export interface WsJoinConversationPayload {
-  action: "join";
+  action: 'join';
   conversationId: string;
 }
 
@@ -38,43 +38,43 @@ export type WsClientActionPayload =
   | WsRegenerateMessagePayload;
 
 export interface WsNewMessageEvent {
-  action: "newMessage";
+  action: 'newMessage';
   conversationId: string;
   data: MessageApiResponse;
 }
 
 export interface WsMessageChunkEvent {
-  action: "messageChunk";
+  action: 'messageChunk';
   conversationId: string;
   data: { content: string };
 }
 
 export interface WsMessageEndEvent {
-  action: "messageEnd";
+  action: 'messageEnd';
   conversationId: string;
   data: MessageApiResponse;
 }
 
 export interface WsStreamErrorEvent {
-  action: "streamError";
+  action: 'streamError';
   conversationId: string;
   data: { message: string };
 }
 
 export interface WsMessageDeletedEvent {
-  action: "messageDeleted";
+  action: 'messageDeleted';
   conversationId: string;
   data: { messageId: string };
 }
 
 export interface WsMessageUpdatedEvent {
-  action: "messageUpdated";
+  action: 'messageUpdated';
   conversationId: string;
   data: MessageApiResponse;
 }
 
 export interface WsStatusUpdateEvent {
-  action: "statusUpdate";
+  action: 'statusUpdate';
   conversationId: string;
   data: { stage: string; message: string };
 }
