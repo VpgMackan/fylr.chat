@@ -6,6 +6,8 @@ import { Repository } from 'typeorm';
 import { Source } from './source.entity';
 import { toSql } from 'pgvector';
 import { Vector } from './handler/vector.entity';
+import { S3Service } from './s3/s3.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SourceService {
@@ -14,6 +16,8 @@ export class SourceService {
     private sourceRepository: Repository<Source>,
     @InjectRepository(Vector)
     private vectorRepository: Repository<Vector>,
+    private readonly s3Service: S3Service,
+    private readonly configService: ConfigService,
   ) {}
 
   async createSourceDatabaseEntry(data) {
@@ -49,5 +53,25 @@ export class SourceService {
         'source.name',
       ])
       .getMany();
+  }
+
+  async getSourceURL(sourceId: string) {
+    return this.sourceRepository.findOneBy({
+      id: sourceId,
+    });
+  }
+
+  async getFileStreamById(fileId: string) {
+    // Find the source entry to get metadata
+    const source = await this.sourceRepository.findOneBy({ id: fileId });
+    if (!source) return null;
+    const bucket = this.configService.get<string>('S3_BUCKET_USER_FILE');
+    if (!bucket) throw new Error('S3_BUCKET_USER_FILE is not set in config');
+    const stream = await this.s3Service.getObject(bucket, fileId);
+    return {
+      stream,
+      contentType: source.type,
+      filename: source.name,
+    };
   }
 }

@@ -10,6 +10,7 @@ import {
   BadRequestException,
   Get,
   Param,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { v4 as uuidv4 } from 'uuid';
@@ -87,5 +88,24 @@ export class SourceController {
   @Get('pocket/:pocketId')
   async getSourcesByPocketId(@Param('pocketId') pocketId: string) {
     return this.sourceService.getSourcesByPocketId(pocketId);
+  }
+
+  @Post('access/:sourceId')
+  async getSourceURL(@Param('sourceId') sourceId: string) {
+    return this.sourceService.getSourceURL(sourceId);
+  }
+
+  @Get('file/:fileId')
+  async serveFile(@Param('fileId') fileId: string, @Res() res) {
+    const fileStreamData = await this.sourceService.getFileStreamById(fileId);
+    if (!fileStreamData) {
+      throw new BadRequestException('File not found.');
+    }
+    res.setHeader('Content-Type', fileStreamData.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${fileStreamData.filename}"`,
+    );
+    fileStreamData.stream.pipe(res);
   }
 }
