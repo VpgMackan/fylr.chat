@@ -93,7 +93,7 @@ export class SourceController {
     const entry = await this.sourceService.createSourceDatabaseEntry(data);
     await this.rabbitMQService.sendToQueue(
       'file-processing',
-      file.filename || file.originalname,
+      file.filename || file.originalname + ";" + file.mimetype,
     );
 
     return {

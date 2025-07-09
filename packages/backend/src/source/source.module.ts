@@ -10,7 +10,6 @@ import { S3Service } from './s3/s3.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
-import { SourceProcessor } from './source.processor';
 import { Source } from './source.entity';
 import { Vector } from './handler/vector.entity';
 
@@ -29,14 +28,13 @@ import { AiModule } from 'src/aiService/aiService.module';
       }),
       inject: [ConfigService],
     }),
-    // BullModule removed, using RabbitMQService instead
     AuthModule,
     EventsModule,
     ContentModule,
     AiModule,
   ],
   controllers: [SourceController],
-  providers: [SourceService, SourceProcessor, S3Service, RabbitMQService],
+  providers: [SourceService, S3Service, RabbitMQService],
   exports: [SourceService],
 })
 export class SourceModule {}

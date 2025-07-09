@@ -1,5 +1,6 @@
 import pika, sys, os, boto3
 from botocore.config import Config
+from handlers import manager
 
 
 def main():
@@ -17,12 +18,14 @@ def main():
     channel = connection.channel()
 
     def callback(ch, method, properties, body):
-        file_key = body.decode("utf-8").strip('"')
+        file_key, file_type = body.decode("utf-8").strip('"').split(";")
         print(f" [x] Processing file: {file_key}")
         try:
             obj = bucket.Object(file_key)
             print(f" [x] Attempting to fetch object with key: {file_key}")
-            file_content = obj.get()["Body"].read()
+            buffer = obj.get()["Body"].read()
+            print(f" [x] Fetched object with content type: {file_type}")
+            manager.process_data(file_type=file_type, buffer=buffer)
         except Exception as e:
             print(f" [!] Error processing file {file_key}: {e}")
 
