@@ -14,8 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { v4 as uuidv4 } from 'uuid';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { RabbitMQService } from '../utils/rabbitmq.service';
 import { SourceService } from './source.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AiService } from 'src/aiService/ai.service';
@@ -34,8 +33,8 @@ const allowedMimeTypes = [
 export class SourceController {
   constructor(
     private sourceService: SourceService,
-    @InjectQueue('file-processing') private readonly fileProcessingQueue: Queue,
     private readonly aiService: AiService,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   @Post('')
@@ -65,18 +64,37 @@ export class SourceController {
     }
 
     const jobKey = uuidv4();
+    const s3Bucket = this.sourceService['configService'].get(
+      'S3_BUCKET_USER_FILE',
+    );
+    if (!s3Bucket) {
+      throw new BadRequestException('S3 bucket not configured.');
+    }
+    const fs = await import('fs/promises');
+    const buffer = await fs.readFile(file.path);
+    await this.sourceService['s3Service'].upload(
+      s3Bucket,
+      file.filename || file.originalname,
+      buffer,
+      { 'Content-Type': file.mimetype },
+    );
+    await fs.unlink(file.path);
+
     const data = {
       pocketId: body.pocketId,
       name: file.originalname,
       type: file.mimetype,
-      url: file.path,
+      url: file.filename || file.originalname,
       size: file.size,
       jobKey,
       status: 'QUEUED',
     };
 
     const entry = await this.sourceService.createSourceDatabaseEntry(data);
-    await this.fileProcessingQueue.add('process-file', entry);
+    await this.rabbitMQService.sendToQueue(
+      'file-processing',
+      file.filename || file.originalname,
+    );
 
     return {
       message: 'File uploaded successfully and queued for processing.',
