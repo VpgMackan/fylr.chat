@@ -63,6 +63,7 @@ export class WebSocketGateway
     this.logger.log('Closing RabbitMQ connections...');
     await this.amqpConnection?.close();
   }
+  
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token;

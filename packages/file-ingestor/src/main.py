@@ -20,6 +20,12 @@ class FileIngestor:
         self.s3_bucket = None
         self.channel = None
 
+    def info(self, message: str, job_key: str = None, payload: object = None) -> None:
+        """Log info and send status update if job_key is provided."""
+        self.logger.info(message)
+        if job_key:
+            self.status_update(job_key, payload or {"message": message})
+
     def setup_s3_client(self) -> None:
         """Initialize S3 client and bucket."""
         s3 = boto3.resource(
@@ -49,14 +55,16 @@ class FileIngestor:
             source_id = message_data.get("sourceId")
             s3_key = message_data.get("s3Key")
             mime_type = message_data.get("mimeType")
+            job_key = message_data.get("jobKey")
 
-            if not all([source_id, s3_key, mime_type]):
+            if not all([source_id, s3_key, mime_type, job_key]):
                 missing_fields = [
                     field
                     for field, value in [
                         ("sourceId", source_id),
                         ("s3Key", s3_key),
                         ("mimeType", mime_type),
+                        ("jobKey", job_key),
                     ]
                     if not value
                 ]
@@ -64,7 +72,7 @@ class FileIngestor:
                     f"Missing required fields: {', '.join(missing_fields)}"
                 )
 
-            return source_id, s3_key, mime_type
+            return source_id, s3_key, mime_type, job_key
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON message format: {e}")
@@ -74,9 +82,10 @@ class FileIngestor:
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
         try:
-            source_id, file_key, file_type = self.parse_message_body(body)
-            self.logger.info(
-                f"Processing file: {file_key} (sourceId: {source_id}) with type: {file_type}"
+            source_id, file_key, file_type, job_key = self.parse_message_body(body)
+            self.info(
+                f"Processing file: {file_key} (sourceId: {source_id}) with type: {file_type}",
+                job_key=job_key,
             )
 
             obj = self.s3_bucket.Object(file_key)
@@ -84,8 +93,8 @@ class FileIngestor:
 
             chunks = manager.process_data(file_type=file_type, buffer=buffer)
             vectors = save_text_chunks_as_vectors(chunks, source_id)
-            logging.info(f"Successfully saved {len(vectors)} vectors")
-            self.logger.info(f"Successfully processed file: {file_key}")
+            self.info(f"Successfully saved {len(vectors)} vectors", job_key=job_key)
+            self.info(f"Successfully processed file: {file_key}", job_key=job_key)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
@@ -111,6 +120,18 @@ class FileIngestor:
         self.setup_s3_client()
         self.setup_rabbitmq_connection()
         self.start_consuming()
+
+    def status_update(self, job_key: str, payload: object) -> None:
+        """Send a status update to the "fylr-event" exchange."""
+        if not self.channel:
+            raise RuntimeError("RabbitMQ channel is not initialized.")
+        self.channel.basic_publish(
+            exchange="fylr-event",
+            routing_key=f"job.{job_key}.status",
+            body=json.dumps({"eventName": "jobStatusUpdate", "payload": payload}),
+            properties=pika.BasicProperties(delivery_mode=2),
+        )
+        self.logger.info(f"Status update sent for job {job_key}: {payload}")
 
 
 def main():

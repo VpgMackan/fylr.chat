@@ -95,6 +95,7 @@ export class SourceController {
       sourceId: entry.id,
       s3Key: file.filename || file.originalname,
       mimeType: file.mimetype,
+      jobKey,
     });
 
     return {
