@@ -1,4 +1,3 @@
-import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 supported_types = [
@@ -6,7 +5,6 @@ supported_types = [
     "text/markdown",
     "application/octet-stream",
 ]
-logger = logging.getLogger(__name__)
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=200,
@@ -16,16 +14,21 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 
 
-def handle(buffer: bytes) -> str:
+def handle(buffer: bytes, job_key: str, info_callback: callable):
+    info_callback("Decoding and preparing markdown text...", job_key)
+
     text = buffer.decode("utf-8")
     if not text:
-        logger.warning("Received empty buffer, returning empty string.")
-        return ""
+        info_callback("Buffer was empty, no text to process.", job_key)
+        raise ValueError("Empty buffer received")
 
     all_chunks = text_splitter.split_text(text)
     if not all_chunks:
-        logger.warning("No chunks were created from the text.")
-        return ""
+        info_callback("Text splitting resulted in zero chunks.", job_key)
+        raise ValueError("No chunks created from the text")
 
-    logger.info(f"Created {len(all_chunks)} chunks from the text.")
+    message = f"Successfully created {len(all_chunks)} chunks from the text."
+    info_callback(
+        message, job_key, {"chunk_count": len(all_chunks), "message": message}
+    )
     return all_chunks

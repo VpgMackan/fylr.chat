@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 import logging
 from typing import Tuple
 
@@ -81,6 +82,7 @@ class FileIngestor:
 
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
+        time.sleep(5)
         try:
             source_id, file_key, file_type, job_key = self.parse_message_body(body)
             self.info(
@@ -88,17 +90,31 @@ class FileIngestor:
                 job_key=job_key,
             )
 
+            self.info("Fetching file from S3...", job_key=job_key)
             obj = self.s3_bucket.Object(file_key)
             buffer = obj.get()["Body"].read()
 
-            chunks = manager.process_data(file_type=file_type, buffer=buffer)
-            vectors = save_text_chunks_as_vectors(chunks, source_id)
-            self.info(f"Successfully saved {len(vectors)} vectors", job_key=job_key)
+            self.info("Passing to handler for processing...", job_key=job_key)
+            chunks = manager.process_data(
+                file_type=file_type,
+                buffer=buffer,
+                job_key=job_key,
+                info_callback=self.info,
+            )
+            if not isinstance(chunks, list):
+                raise Exception(f"Handler failed to return chunks: {chunks}")
+
+            self.info("Passing chunks to vector saver...", job_key=job_key)
+            save_text_chunks_as_vectors(chunks, source_id, job_key, self.info)
+
             self.info(f"Successfully processed file: {file_key}", job_key=job_key)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
-            self.logger.error(f"Error processing message {body}: {e}")
+            error_message = f"Fatal error processing message {body}: {e}"
+            self.logger.error(error_message)
+            if job_key:
+                self.info(error_message, job_key)
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     def start_consuming(self) -> None:
@@ -126,7 +142,7 @@ class FileIngestor:
         if not self.channel:
             raise RuntimeError("RabbitMQ channel is not initialized.")
         self.channel.basic_publish(
-            exchange="fylr-event",
+            exchange="fylr-events",
             routing_key=f"job.{job_key}.status",
             body=json.dumps({"eventName": "jobStatusUpdate", "payload": payload}),
             properties=pika.BasicProperties(delivery_mode=2),

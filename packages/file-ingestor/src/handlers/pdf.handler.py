@@ -1,10 +1,8 @@
-import logging
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 import pymupdf
 
 supported_types = ["application/pdf"]
-logger = logging.getLogger(__name__)
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=200,
@@ -15,21 +13,24 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 
 # TODO: implement tools like docling for more accuret parsing
-def handle(buffer: bytes) -> str:
-    # Decode the pdf buffer
+def handle(buffer: bytes, job_key: str, info_callback: callable):
+    info_callback("Decoding and preparing pdf...", job_key)
     doc = pymupdf.open(stream=buffer)
     text = ""
     for page in doc:
         text += page.get_text()
 
     if not text:
-        logger.warning("Received empty buffer, returning empty string.")
-        return ""
+        info_callback("Buffer was empty, no text to process.", job_key)
+        raise ValueError("Empty buffer received")
 
     all_chunks = text_splitter.split_text(text)
     if not all_chunks:
-        logger.warning("No chunks were created from the text.")
-        return ""
+        info_callback("Text splitting resulted in zero chunks.", job_key)
+        raise ValueError("No chunks created from the text")
 
-    logger.info(f"Created {len(all_chunks)} chunks from the text.")
+    message = f"Successfully created {len(all_chunks)} chunks from the text."
+    info_callback(
+        message, job_key, {"chunk_count": len(all_chunks), "message": message}
+    )
     return all_chunks

@@ -55,9 +55,10 @@ def get_db_session() -> Generator[Session, None, None]:
 
 def fetch_embeddings_from_jina(
     chunks: List[str],
+    job_key: str,
+    info_callback: callable,
     model: str = "jina-clip-v2",
     jina_api_options: Optional[Dict[str, Any]] = None,
-    task: Optional[str] = None,
 ) -> List[List[float]]:
     """
     Fetch embeddings from Jina API for multiple text chunks.
@@ -69,8 +70,9 @@ def fetch_embeddings_from_jina(
     input_data = [{"text": chunk} for chunk in chunks]
     request_payload = {"model": model, "input": input_data, **jina_api_options}
 
-    if task:
-        request_payload["task"] = task
+    info_callback(
+        f"Requesting embeddings for {len(chunks)} chunks from Jina API...", job_key
+    )
 
     jina_api_key = os.getenv("JINA_API_KEY")
     jina_api_url = os.getenv("JINA_API_URL")
@@ -106,25 +108,37 @@ def fetch_embeddings_from_jina(
                 raise ValueError("Missing embedding in response data")
             embeddings.append(item["embedding"])
 
+        info_callback(f"Successfully received {len(embeddings)} embeddings.", job_key)
         return embeddings
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Jina API request failed: {str(e)}")
+        error_msg = f"Jina API request failed: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        logger.error(error_msg)
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during Jina API call: {str(e)}")
+        error_msg = f"Unexpected error during Jina API call: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        logger.error(error_msg)
         raise
 
 
-def vectorize_text(chunks: List[str]) -> List[List[float]]:
+def vectorize_text(
+    chunks: List[str], job_key: str, info_callback: callable
+) -> List[List[float]]:
     """Convert text chunks to embeddings."""
     if not chunks:
         raise ValueError("No chunks provided for vectorization")
 
-    return fetch_embeddings_from_jina(chunks, "jina-clip-v2", {})
+    info_callback("Starting vectorization process...", job_key)
+    return fetch_embeddings_from_jina(
+        chunks, job_key, info_callback, "jina-clip-v2", {}
+    )
 
 
-def save_text_chunks_as_vectors(chunks: List[str], file_id: str) -> List[Vector]:
+def save_text_chunks_as_vectors(
+    chunks: List[str], file_id: str, job_key: str, info_callback: callable
+) -> List[Vector]:
     """Save text chunks as vectors in the database."""
     if not chunks:
         raise ValueError("No chunks provided")
@@ -133,8 +147,9 @@ def save_text_chunks_as_vectors(chunks: List[str], file_id: str) -> List[Vector]
         raise ValueError("File ID is required")
 
     try:
-        embeddings = vectorize_text(chunks)
+        embeddings = vectorize_text(chunks, job_key, info_callback)
 
+        info_callback(f"Saving {len(embeddings)} vectors to the database...", job_key)
         with get_db_session() as session:
             vectors = []
             for chunk, embedding in zip(chunks, embeddings):
@@ -142,12 +157,20 @@ def save_text_chunks_as_vectors(chunks: List[str], file_id: str) -> List[Vector]
                 vectors.append(vector)
 
             session.add_all(vectors)
-            logger.info(f"Saved {len(vectors)} vectors for file {file_id}")
+            message = f"Successfully saved {len(vectors)} vectors for file {file_id}"
+            info_callback(
+                message, job_key, {"saved_vectors": len(vectors), "message": message}
+            )
+            logger.info(message)
             return vectors
 
     except SQLAlchemyError as e:
-        logger.error(f"Database error while saving vectors: {str(e)}")
+        error_msg = f"Database error while saving vectors: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        logger.error(error_msg)
         raise
     except Exception as e:
-        logger.error(f"Failed to save vectors: {str(e)}")
+        error_msg = f"Failed to save vectors: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        logger.error(error_msg)
         raise

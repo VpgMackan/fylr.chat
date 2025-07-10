@@ -65,18 +65,28 @@ class HandlerManager:
             except Exception as e:
                 logging.error(f"Error importing handler {file_path.name}: {e}")
 
-    def process_data(self, file_type: str, buffer: bytes):
+    def process_data(
+        self, file_type: str, buffer: bytes, job_key: str, info_callback: callable
+    ):
         """
-        Selects the correct handler and processes the buffer.
+        Selects the correct handler and processes the buffer, passing along context.
         """
         handler = self._handlers.get(file_type)
         if handler:
             try:
-                return handler(buffer)
+                return handler(buffer, job_key, info_callback)
             except Exception as e:
-                return f"Error executing handler for '{file_type}': {e}"
+                error_message = f"Error executing handler for '{file_type}': {e}"
+                info_callback(
+                    error_message, job_key, {"error": True, "message": error_message}
+                )
+                raise RuntimeError(error_message)
         else:
-            return f"Error: No handler found for file type '{file_type}'"
+            error_message = f"No handler found for file type '{file_type}'"
+            info_callback(
+                error_message, job_key, {"error": True, "message": error_message}
+            )
+            raise RuntimeError(error_message)
 
 
 _current_dir = Path(__file__).parent

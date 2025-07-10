@@ -202,7 +202,6 @@ export class WebSocketGateway
     if (!msg) return;
 
     try {
-      console.log(msg.content.toString());
       const messageContent = JSON.parse(msg.content.toString());
 
       const { eventName, payload } = messageContent;
