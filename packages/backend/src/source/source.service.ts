@@ -20,7 +20,7 @@ export class SourceService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createSourceDatabaseEntry(data) {
+  async createSourceDatabaseEntry(data: Partial<Source>): Promise<Source> {
     const newSource = this.sourceRepository.create(data);
     await this.sourceRepository.save(newSource);
     return newSource;

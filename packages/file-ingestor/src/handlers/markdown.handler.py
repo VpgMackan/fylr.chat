@@ -21,9 +21,11 @@ def handle(buffer: bytes) -> str:
     if not text:
         logger.warning("Received empty buffer, returning empty string.")
         return ""
+
     all_chunks = text_splitter.split_text(text)
     if not all_chunks:
         logger.warning("No chunks were created from the text.")
         return ""
+
     logger.info(f"Created {len(all_chunks)} chunks from the text.")
-    print(all_chunks)
+    return all_chunks

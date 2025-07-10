@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as pdf from 'pdf-parse';
-import { ContentHandler } from './content-handler.interface';
-import { VectorSaver } from './vector-saver';
-
 export type ChunkStrategy = 'fixed' | 'sentence';
 
 export interface ChunkOptions {
@@ -12,11 +9,11 @@ export interface ChunkOptions {
 }
 
 @Injectable()
-export class PdfHandler implements ContentHandler {
+export class PdfHandler {
   readonly supportedMimeTypes = ['application/pdf'];
   private readonly logger = new Logger(PdfHandler.name);
 
-  constructor(private readonly vectorSaver: VectorSaver) {}
+  constructor() {}
 
   segmentText(text: string, opts: ChunkOptions = {}): string[] {
     const { strategy = 'fixed', chunkSize = 1000, chunkOverlap = 0 } = opts;
@@ -60,7 +57,6 @@ export class PdfHandler implements ContentHandler {
 
       const chunks: string[] = this.segmentText(text);
       this.logger.log(`Split PDF into ${chunks.length} chunks`);
-      await this.vectorSaver.saveTextChunksAsVectors(chunks, fileId, jobKey);
     } catch (error) {
       this.logger.error(`Failed to parse PDF for job ${jobKey}:`, error);
       throw error;

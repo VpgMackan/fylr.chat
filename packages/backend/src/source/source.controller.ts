@@ -91,10 +91,11 @@ export class SourceController {
     };
 
     const entry = await this.sourceService.createSourceDatabaseEntry(data);
-    await this.rabbitMQService.sendToQueue(
-      'file-processing',
-      file.filename || file.originalname + ";" + file.mimetype,
-    );
+    await this.rabbitMQService.sendToQueue('file-processing', {
+      sourceId: entry.id,
+      s3Key: file.filename || file.originalname,
+      mimeType: file.mimetype,
+    });
 
     return {
       message: 'File uploaded successfully and queued for processing.',

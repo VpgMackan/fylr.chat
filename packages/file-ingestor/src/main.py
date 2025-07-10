@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 from typing import Tuple
 
@@ -9,6 +10,8 @@ from dotenv import load_dotenv
 from botocore.config import Config
 
 from handlers import manager
+
+from vector.saver import save_text_chunks_as_vectors
 
 
 class FileIngestor:
@@ -37,34 +40,64 @@ class FileIngestor:
         self.channel = connection.channel()
         self.channel.queue_declare("file-processing", durable=True)
 
-    def parse_message_body(self, body: bytes) -> Tuple[str, str]:
-        """Parse the message body to extract file key and type."""
-        decoded_body = body.decode("utf-8").strip('"')
-        if ";" not in decoded_body:
-            raise ValueError(f"Invalid message format: {decoded_body}")
-        return decoded_body.split(";", 1)
+    def parse_message_body(self, body: bytes) -> Tuple[str, str, str]:
+        """Parse the message body to extract source ID, file key and type."""
+        try:
+            decoded_body = body.decode("utf-8")
+            message_data = json.loads(decoded_body)
+
+            source_id = message_data.get("sourceId")
+            s3_key = message_data.get("s3Key")
+            mime_type = message_data.get("mimeType")
+
+            if not all([source_id, s3_key, mime_type]):
+                missing_fields = [
+                    field
+                    for field, value in [
+                        ("sourceId", source_id),
+                        ("s3Key", s3_key),
+                        ("mimeType", mime_type),
+                    ]
+                    if not value
+                ]
+                raise ValueError(
+                    f"Missing required fields: {', '.join(missing_fields)}"
+                )
+
+            return source_id, s3_key, mime_type
+
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON message format: {e}")
+        except Exception as e:
+            raise ValueError(f"Error parsing message: {e}")
 
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
         try:
-            file_key, file_type = self.parse_message_body(body)
-            self.logger.info(f"Processing file: {file_key} with type: {file_type}")
+            source_id, file_key, file_type = self.parse_message_body(body)
+            self.logger.info(
+                f"Processing file: {file_key} (sourceId: {source_id}) with type: {file_type}"
+            )
 
             obj = self.s3_bucket.Object(file_key)
             buffer = obj.get()["Body"].read()
 
-            manager.process_data(file_type=file_type, buffer=buffer)
+            chunks = manager.process_data(file_type=file_type, buffer=buffer)
+            vectors = save_text_chunks_as_vectors(chunks, source_id)
+            logging.info(f"Successfully saved {len(vectors)} vectors")
             self.logger.info(f"Successfully processed file: {file_key}")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
             self.logger.error(f"Error processing message {body}: {e}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     def start_consuming(self) -> None:
         """Start consuming messages from the queue."""
         self.channel.basic_consume(
             queue="file-processing",
             on_message_callback=self.process_file_message,
-            auto_ack=True,
+            auto_ack=False,
         )
 
         self.logger.info("Waiting for messages. To exit press CTRL+C")
