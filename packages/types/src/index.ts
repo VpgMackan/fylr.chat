@@ -6,3 +6,4 @@ export * from './dto/source.dto';
 export * from './interfaces/api.interfaces';
 export * from './interfaces/ws.interfaces';
 export * from './interfaces/auth.interfaces';
+export * from './interfaces/messaging.interfaces';
