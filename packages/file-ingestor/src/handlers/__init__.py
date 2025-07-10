@@ -1,5 +1,8 @@
+import logging
 import importlib.util
 from pathlib import Path
+
+logging = logging.getLogger(__name__)
 
 
 class HandlerManager:
@@ -20,7 +23,9 @@ class HandlerManager:
         Dynamically imports all valid handler modules from this package,
         supporting both 'name_handler.py' and 'name.handler.py' conventions.
         """
-        print("Discovering handlers...")
+        logging.info(
+            f"Discovering handlers in directory: {self._handler_dir.resolve()}"
+        )
 
         for file_path in self._handler_dir.glob("*.py"):
             if file_path.name.startswith("__") or not (
@@ -43,16 +48,22 @@ class HandlerManager:
                     if hasattr(module, "supported_types") and hasattr(module, "handle"):
                         for ftype in module.supported_types:
                             if ftype in self._handlers:
-                                print(
-                                    f"Warning: Handler for '{ftype}' is being overridden by {file_path.name}"
+                                logging.warning(
+                                    f"Handler for '{ftype}' already registered. "
+                                    "Overwriting with the latest handler."
                                 )
                             self._handlers[ftype] = module.handle
-                            print(f"  -> Registered '{ftype}' to {file_path.name}")
+                            logging.info(
+                                f"Registered handler for '{ftype}' from {file_path.name}"
+                            )
                 else:
-                    print(f"Warning: Could not create a loader for {file_path.name}")
+                    logging.warning(
+                        f"Could not create a loader for {file_path.name}. "
+                        "Ensure the file is a valid Python module."
+                    )
 
             except Exception as e:
-                print(f"Error importing handler {file_path.name}: {e}")
+                logging.error(f"Error importing handler {file_path.name}: {e}")
 
     def process_data(self, file_type: str, buffer: bytes):
         """
