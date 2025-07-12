@@ -1,18 +1,98 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getConversationWsToken } from '@/services/api/chat.api';
 import { MessageApiResponse, WsServerEventPayload } from '@fylr/types';
 
-export function useChat(chatId: string | null) {
-  const [messages, setMessages] = useState<MessageApiResponse[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState<{
-    stage: string;
-    message: string;
-  } | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
-  const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
+interface ChatState {
+  messages: MessageApiResponse[];
+  isConnected: boolean;
+  status: { stage: string; message: string } | null;
+}
+
+type ChatAction =
+  | { type: 'SET_CONNECTED'; payload: boolean }
+  | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
+  | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
+  | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
+  | {
+      type: 'APPEND_CHUNK';
+      payload: { content: string; conversationId: string };
+    }
+  | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
+  | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
+  | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse };
+
+const initialState: ChatState = {
+  messages: [],
+  isConnected: false,
+  status: null,
+};
+
+function chatReducer(state: ChatState, action: ChatAction): ChatState {
+  switch (action.type) {
+    case 'SET_CONNECTED':
+      return { ...state, isConnected: action.payload };
+    case 'SET_HISTORY':
+      return { ...state, messages: action.payload };
+    case 'SET_STATUS':
+      return { ...state, status: action.payload };
+    case 'ADD_MESSAGE':
+      return { ...state, messages: [...state.messages, action.payload] };
+    case 'APPEND_CHUNK':
+      const lastMsg = state.messages[state.messages.length - 1];
+      if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
+        const updatedMsg = {
+          ...lastMsg,
+          content: lastMsg.content + action.payload.content,
+        };
+        return {
+          ...state,
+          messages: [...state.messages.slice(0, -1), updatedMsg],
+        };
+      } else {
+        const newStreamingMsg: MessageApiResponse = {
+          id: STREAMING_ASSISTANT_ID,
+          conversationId: action.payload.conversationId,
+          role: 'assistant',
+          content: action.payload.content,
+          createdAt: new Date().toISOString(),
+          metadata: {},
+        };
+        return { ...state, messages: [...state.messages, newStreamingMsg] };
+      }
+    case 'FINALIZE_ASSISTANT_MESSAGE':
+      return {
+        ...state,
+        status: null,
+        messages: [
+          ...state.messages.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
+          action.payload,
+        ],
+      };
+    case 'DELETE_MESSAGE':
+      return {
+        ...state,
+        messages: state.messages.filter(
+          (m) => m.id !== action.payload.messageId,
+        ),
+      };
+    case 'UPDATE_MESSAGE':
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.id === action.payload.id ? action.payload : m,
+        ),
+      };
+    default:
+      return state;
+  }
+}
+
+export function useChat(chatId: string | null) {
+  const [state, dispatch] = useReducer(chatReducer, initialState);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!chatId) return;
@@ -24,83 +104,55 @@ export function useChat(chatId: string | null) {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          setIsConnected(true);
+          dispatch({ type: 'SET_CONNECTED', payload: true });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
           });
         });
 
-        socket.on('disconnect', () => setIsConnected(false));
-
+        socket.on('disconnect', () =>
+          dispatch({ type: 'SET_CONNECTED', payload: false }),
+        );
         socket.on('conversationHistory', (history: MessageApiResponse[]) => {
-          setMessages(history);
+          dispatch({ type: 'SET_HISTORY', payload: history });
         });
 
         socket.on(
           'conversationAction',
           (event: WsServerEventPayload & { data: any }) => {
             const { action, data, conversationId: eventConvId } = event;
-
             if (eventConvId !== chatId) return;
 
             switch (action) {
               case 'statusUpdate':
-                setStatus(data);
+                dispatch({ type: 'SET_STATUS', payload: data });
                 break;
-
               case 'newMessage':
-                setMessages((prev) => [...prev, data]);
+                dispatch({ type: 'ADD_MESSAGE', payload: data });
                 break;
-
               case 'messageChunk':
-                setMessages((prev) => {
-                  const lastMsg = prev[prev.length - 1];
-                  if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
-                    const updatedMsg = {
-                      ...lastMsg,
-                      content: lastMsg.content + data.content,
-                    };
-                    return [...prev.slice(0, -1), updatedMsg];
-                  } else {
-                    return [
-                      ...prev,
-                      {
-                        id: STREAMING_ASSISTANT_ID,
-                        conversationId: chatId,
-                        role: 'assistant',
-                        content: data.content,
-                        createdAt: new Date().toISOString(),
-                        metadata: {},
-                      },
-                    ];
-                  }
+                dispatch({
+                  type: 'APPEND_CHUNK',
+                  payload: { ...data, conversationId: chatId },
                 });
                 break;
 
               case 'messageEnd':
-                setStatus(null);
-                setMessages((prev) => [
-                  ...prev.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
-                  data,
-                ]);
+                dispatch({ type: 'FINALIZE_ASSISTANT_MESSAGE', payload: data });
                 break;
 
               case 'streamError':
-                setStatus(null);
+                dispatch({ type: 'SET_STATUS', payload: null });
                 console.error('AI Stream Error:', data.message);
                 break;
 
               case 'messageDeleted':
-                setMessages((prev) =>
-                  prev.filter((m) => m.id !== data.messageId),
-                );
+                dispatch({ type: 'DELETE_MESSAGE', payload: data });
                 break;
 
               case 'messageUpdated':
-                setMessages((prev) =>
-                  prev.map((m) => (m.id === data.id ? data : m)),
-                );
+                dispatch({ type: 'UPDATE_MESSAGE', payload: data });
                 break;
 
               default:
@@ -174,12 +226,12 @@ export function useChat(chatId: string | null) {
   );
 
   return {
-    messages,
+    messages: state.messages,
+    isConnected: state.isConnected,
+    status: state.status,
     sendMessage,
     deleteMessage,
     updateMessage,
     regenerateMessage,
-    isConnected,
-    status,
   };
 }

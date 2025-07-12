@@ -10,22 +10,13 @@ import ContentLayout from '@/components/layout/ContentLayout';
 import SummaryCard from '@/components/features/summaries/SummaryCard';
 import MarkdownComponent from '@/components/MarkdownComponents';
 
-import { useEvents } from '@/hooks/useEvents';
+import { useSubscription } from '@/hooks/useEvents';
 
-// Renamed component for clarity
 export default function SummaryPage({
   params,
 }: {
   params: Promise<{ id: string; summaryid: string }>;
 }) {
-  const {
-    isConnected,
-    subscribe,
-    unsubscribe,
-    addGlobalCallback,
-    removeGlobalCallback,
-  } = useEvents();
-
   const t = useTranslations('pages.summaries');
   const [_id, setId] = useState<string | null>(null);
   const [summaryid, setSummaryid] = useState<string | null>(null);
@@ -40,40 +31,17 @@ export default function SummaryPage({
     });
   }, [params]);
 
-  useEffect(() => {
-    if (!summaryid) return;
+  const routingKey = summaryid ? `summary.${summaryid}.status` : null;
 
-    const routingKey = `summary.${summaryid}.status`;
-
-    const handleSummaryUpdate = (key: string, data: any) => {
-      if (key === routingKey) {
-        console.log('Received summary update:', data);
-        if (data?.payload?.summary) {
-          setSummaryContent((prev) => prev + data.payload.summary);
-        }
-        if (data?.payload?.message) {
-          console.log('Status:', data.payload.message);
-        }
-      } else {
-        console.log(key, data);
-      }
-    };
-
-    subscribe(routingKey);
-    addGlobalCallback(handleSummaryUpdate);
-
-    return () => {
-      unsubscribe(routingKey);
-      removeGlobalCallback(handleSummaryUpdate);
-    };
-  }, [
-    summaryid,
-    subscribe,
-    unsubscribe,
-    addGlobalCallback,
-    removeGlobalCallback,
-    isConnected,
-  ]);
+  useSubscription(routingKey, (data: any) => {
+    console.log('Received summary update:', data);
+    if (data?.payload?.summary) {
+      setSummaryContent((prev) => prev + data.payload.summary);
+    }
+    if (data?.payload?.message) {
+      console.log('Status:', data.payload.message);
+    }
+  });
 
   return (
     <ContentLayout

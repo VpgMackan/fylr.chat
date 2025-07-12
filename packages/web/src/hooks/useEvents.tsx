@@ -16,8 +16,8 @@ import { getEventsWsToken } from '@/services/api/auth.api';
 
 interface EventsContextType {
   isConnected: boolean;
-  subscribe: (routingKey: string) => void;
-  unsubscribe: (routingKey: string) => void;
+  subscribe: (routingKey: string, callback: EventListener) => void;
+  unsubscribe: (routingKey: string, callback: EventListener) => void;
   addGlobalCallback: (
     callback: (routingKey: string, payload: any) => void,
   ) => void;
@@ -65,11 +65,13 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
           });
 
           socket.onAny((routingKey, payload) => {
-            console.log(routingKey, payload);
-            const listeners = listenersRef.current.get(routingKey);
-            if (listeners) {
-              listeners.forEach((callback) => callback(payload));
+            console.log(`[Event Received] Key: ${routingKey}`, payload);
+
+            const specificListeners = listenersRef.current.get(routingKey);
+            if (specificListeners) {
+              specificListeners.forEach((callback) => callback(payload));
             }
+
             globalListenersRef.current.forEach((callback) =>
               callback(routingKey, payload),
             );
@@ -95,17 +97,32 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isAuthenticated]);
 
-  const subscribe = useCallback((routingKey: string) => {
-    if (!listenersRef.current.has(routingKey)) {
-      listenersRef.current.set(routingKey, new Set());
-    }
-    socketRef.current?.emit('subscribe', routingKey);
-  }, []);
+  const subscribe = useCallback(
+    (routingKey: string, callback: EventListener) => {
+      if (!socketRef.current) return;
 
-  const unsubscribe = useCallback((routingKey: string) => {
-    listenersRef.current.delete(routingKey);
-    socketRef.current?.emit('unsubscribe', routingKey);
-  }, []);
+      if (!listenersRef.current.has(routingKey)) {
+        listenersRef.current.set(routingKey, new Set());
+        socketRef.current.emit('subscribe', routingKey);
+      }
+      listenersRef.current.get(routingKey)?.add(callback);
+    },
+    [],
+  );
+
+  const unsubscribe = useCallback(
+    (routingKey: string, callback: EventListener) => {
+      const listeners = listenersRef.current.get(routingKey);
+      if (listeners) {
+        listeners.delete(callback);
+        if (listeners.size === 0) {
+          listenersRef.current.delete(routingKey);
+          socketRef.current?.emit('unsubscribe', routingKey);
+        }
+      }
+    },
+    [],
+  );
 
   const addGlobalCallback = useCallback((callback: GlobalEventListener) => {
     globalListenersRef.current.add(callback);
@@ -134,4 +151,23 @@ export const useEvents = (): EventsContextType => {
     throw new Error('useEvents must be used within an EventsProvider');
   }
   return context;
+};
+
+export const useSubscription = (
+  routingKey: string | null,
+  callback: (payload: any) => void,
+) => {
+  const { subscribe, unsubscribe, isConnected } = useEvents();
+
+  const memoizedCallback = useCallback(callback, [callback]);
+
+  useEffect(() => {
+    if (routingKey && isConnected) {
+      subscribe(routingKey, memoizedCallback);
+
+      return () => {
+        unsubscribe(routingKey, memoizedCallback);
+      };
+    }
+  }, [routingKey, memoizedCallback, subscribe, unsubscribe, isConnected]);
 };
