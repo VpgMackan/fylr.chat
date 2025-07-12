@@ -35,12 +35,6 @@ class EnvironmentVariables {
   DB_NAME: string;
 
   @IsString()
-  REDIS_URL: string;
-
-  @IsNumber()
-  REDIS_PORT: number;
-
-  @IsString()
   S3_ENDPOINT: string;
 
   @IsNumber()
@@ -67,14 +61,14 @@ class EnvironmentVariables {
   @IsString()
   TEMP_FILE_DIR: string;
 
-  @IsString()
-  JINA_API_URL: string;
-
-  @IsString()
-  JINA_API_KEY: string;
-
   @IsNumber()
   PORT: number;
+
+  @IsString()
+  AI_GATEWAY_URL: string;
+
+  @IsString()
+  RABBITMQ_URL: string;
 }
 
 export function validate(config: Record<string, unknown>) {

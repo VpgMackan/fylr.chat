@@ -111,6 +111,22 @@ async def create_chat_completion(request: ChatCompletionRequest):
             response_data = provider.generate_text(
                 messages=messages_dict, model=request.model, options=request.options
             )
+
+            if "usage" in response_data:
+                usage = response_data["usage"]
+                response_data["usage"] = {
+                    "completion_tokens_details": int(
+                        usage.get("completion_tokens_details") or 0
+                    ),
+                    "prompt_tokens_details": int(
+                        usage.get("prompt_tokens_details") or 0
+                    ),
+                    "queue_time": int(float(usage.get("queue_time") or 0)),
+                    "prompt_time": int(float(usage.get("prompt_time") or 0)),
+                    "completion_time": int(float(usage.get("completion_time") or 0)),
+                    "total_time": int(float(usage.get("total_time") or 0)),
+                }
+
             return ChatCompletionResponse(**response_data)
 
         except APIStatusError as e:

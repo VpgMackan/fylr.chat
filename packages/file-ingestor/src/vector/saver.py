@@ -53,45 +53,39 @@ def get_db_session() -> Generator[Session, None, None]:
         session.close()
 
 
-def fetch_embeddings_from_jina(
+def fetch_embeddings_from_ai_gateway(
     chunks: List[str],
     job_key: str,
     info_callback: callable,
     model: str = "jina-clip-v2",
-    jina_api_options: Optional[Dict[str, Any]] = None,
+    options: Optional[Dict[str, Any]] = None,
 ) -> List[List[float]]:
     """
-    Fetch embeddings from Jina API for multiple text chunks.
+    Fetch embeddings from AI Gateway for multiple text chunks.
     """
     if not chunks:
         raise ValueError("No chunks provided for embedding")
 
-    jina_api_options = jina_api_options or {}
-    input_data = [{"text": chunk} for chunk in chunks]
-    request_payload = {"model": model, "input": input_data, **jina_api_options}
+    options = options or {}
+    request_payload = {
+        "provider": "jina",
+        "model": model,
+        "input": chunks,
+        "options": options,
+    }
 
     info_callback(
-        f"Requesting embeddings for {len(chunks)} chunks from Jina API...", job_key
+        f"Requesting embeddings for {len(chunks)} chunks from AI Gateway...", job_key
     )
 
-    jina_api_key = os.getenv("JINA_API_KEY")
-    jina_api_url = os.getenv("JINA_API_URL")
-
-    if not jina_api_key:
-        raise ValueError("JINA_API_KEY environment variable is required")
-    if not jina_api_url:
-        raise ValueError("JINA_API_URL environment variable is required")
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {jina_api_key}",
-    }
+    ai_gateway_url = os.getenv("AI_GATEWAY_URL")
+    if not ai_gateway_url:
+        raise ValueError("AI_GATEWAY_URL environment variable is required")
 
     try:
         response = requests.post(
-            f"{jina_api_url}/embeddings",
+            f"{ai_gateway_url}/v1/embeddings",
             json=request_payload,
-            headers=headers,
             timeout=30,
         )
         response.raise_for_status()
@@ -100,7 +94,7 @@ def fetch_embeddings_from_jina(
 
         if "data" not in response_data or not isinstance(response_data["data"], list):
             logger.error(f"Unexpected response structure: {response_data}")
-            raise ValueError("Invalid response structure from Jina API")
+            raise ValueError("Invalid response structure from AI Gateway")
 
         embeddings = []
         for item in response_data["data"]:
@@ -112,12 +106,12 @@ def fetch_embeddings_from_jina(
         return embeddings
 
     except requests.exceptions.RequestException as e:
-        error_msg = f"Jina API request failed: {str(e)}"
+        error_msg = f"AI Gateway request failed: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
         logger.error(error_msg)
         raise
     except Exception as e:
-        error_msg = f"Unexpected error during Jina API call: {str(e)}"
+        error_msg = f"Unexpected error during AI Gateway call: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
         logger.error(error_msg)
         raise
@@ -131,7 +125,7 @@ def vectorize_text(
         raise ValueError("No chunks provided for vectorization")
 
     info_callback("Starting vectorization process...", job_key)
-    return fetch_embeddings_from_jina(
+    return fetch_embeddings_from_ai_gateway(
         chunks, job_key, info_callback, "jina-clip-v2", {}
     )
 

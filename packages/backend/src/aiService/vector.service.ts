@@ -11,32 +11,30 @@ export class AiVectorService {
     private readonly httpService: HttpService,
   ) {}
 
-  private async _fetchEmbeddingsFromJina(
+  private async _fetchEmbeddingsFromAiGateway(
     text: string,
     model: string,
-    jinaApiOptions: Record<string, unknown>,
+    options: Record<string, unknown>,
     task?: string,
   ): Promise<number[]> {
     const requestPayload: Record<string, unknown> = {
+      provider: 'jina',
       model,
-      input: [{ text }],
-      ...jinaApiOptions,
+      input: [text],
+      options,
     };
 
     if (task) {
-      requestPayload.task = task;
+      requestPayload.options = { ...options, task };
     }
 
-    const headers = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.configService.getOrThrow<string>('JINA_API_KEY')}`,
-    };
-    const jinaApiUrl = this.configService.getOrThrow<string>('JINA_API_URL');
+    const aiGatewayUrl =
+      this.configService.getOrThrow<string>('AI_GATEWAY_URL');
 
     try {
       const response = await lastValueFrom(
-        this.httpService.post(`${jinaApiUrl}/embeddings`, requestPayload, {
-          headers,
+        this.httpService.post(`${aiGatewayUrl}/v1/embeddings`, requestPayload, {
+          headers: { 'Content-Type': 'application/json' },
         }),
       );
 
@@ -61,14 +59,14 @@ export class AiVectorService {
     } catch (error) {
       if (error instanceof AxiosError) {
         console.error(
-          `Jina API Error: ${error.response?.status} ${error.response?.statusText}`,
+          `AI Gateway Error: ${error.response?.status} ${error.response?.statusText}`,
           error.response?.data || error.message,
         );
         throw new Error(
-          `Jina API request failed: ${error.response?.statusText || error.message}`,
+          `AI Gateway request failed: ${error.response?.statusText || error.message}`,
         );
       } else {
-        console.error('Unexpected error during Jina API call:', error);
+        console.error('Unexpected error during AI Gateway call:', error);
         throw error instanceof Error
           ? error
           : new Error(
@@ -83,7 +81,7 @@ export class AiVectorService {
     model: string,
     options: Record<string, unknown>,
   ): Promise<number[]> {
-    return this._fetchEmbeddingsFromJina(text, model, options);
+    return this._fetchEmbeddingsFromAiGateway(text, model, options);
   }
 
   async search(
@@ -91,7 +89,7 @@ export class AiVectorService {
     model: string,
     options: Record<string, unknown>,
   ): Promise<number[]> {
-    return this._fetchEmbeddingsFromJina(
+    return this._fetchEmbeddingsFromAiGateway(
       text,
       model,
       options,

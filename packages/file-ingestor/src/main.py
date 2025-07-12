@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import time
 import logging
 from typing import Tuple
 
@@ -82,7 +81,6 @@ class FileIngestor:
 
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
-        time.sleep(5)
         try:
             source_id, file_key, file_type, job_key = self.parse_message_body(body)
             self.info(
