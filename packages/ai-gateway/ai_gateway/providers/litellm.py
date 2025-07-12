@@ -8,9 +8,9 @@ import httpx
 class LitellmProvider(BaseProvider):
     def __init__(self):
         self.api_url = "https://litellm.katt.gdn/v1/chat/completions"
-        self.client = httpx.AsyncClient(timeout=60.0)
+        self.client = httpx.Client(timeout=60.0)
 
-    async def generate_text(self, prompt, model, options):
+    def generate_text(self, prompt, model, options):
         headers = {
             "Authorization": f"Bearer {settings.openai_api_key}",
             "Content-Type": "application/json",
@@ -21,14 +21,14 @@ class LitellmProvider(BaseProvider):
             "stream": True,
         }
         try:
-            async with self.httpx_client.stream(
+            with self.client.stream(
                 "POST",
                 self.api_url,
                 json=data,
                 headers=headers,
             ) as response:
                 response.raise_for_status()
-                async for line in response.aiter_lines():
+                for line in response.iter_lines():
                     if line.startswith("data:"):
                         message = line[6:]
                         if message == "[DONE]":

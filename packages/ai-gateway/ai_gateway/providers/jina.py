@@ -5,7 +5,7 @@ import httpx
 
 
 class JinaProvider(BaseProvider):
-    async def generate_embeddings(self, chunks, model, options: object = {}):
+    def generate_embeddings(self, chunks, model, options: object = {}):
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {settings.jina_api_key}",
@@ -17,8 +17,8 @@ class JinaProvider(BaseProvider):
         }
 
         try:
-            async with httpx.AsyncClient() as httpx_client:
-                response = await httpx_client.post(
+            with httpx.Client() as httpx_client:
+                response = httpx_client.post(
                     f"{settings.jina_api_url}/embeddings",
                     json=data,
                     headers=headers,
