@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
-
 import { Montserrat } from 'next/font/google';
+
+import Providers from '@/components/Providers';
 
 const inter = Montserrat({
   variable: '--font-montserrat',
@@ -22,10 +22,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await getLocale();
+  const messages = await getMessages();
+  
   return (
     <html lang={locale} className={`${inter.variable}`}>
       <body className="p-16 font-montserrat bg-blue-50 text-gray-900 h-screen">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <Providers locale={locale} messages={messages}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -6,10 +6,11 @@ import { AxiosError } from 'axios';
 
 @Injectable()
 export class AiVectorService {
+  private readonly logger = new Logger(AiVectorService.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
-    private readonly logger = new Logger(AiVectorService.name),
   ) {}
 
   private async _fetchEmbeddingsFromAiGateway(

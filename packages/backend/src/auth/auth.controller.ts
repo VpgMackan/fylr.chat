@@ -82,4 +82,10 @@ export class AuthController {
   getProfile(@Request() req: RequestWithUser) {
     return req.user;
   }
+
+  @UseGuards(AuthGuard)
+  @Get('websocket-token')
+  async getWebSocketToken(@Request() req: RequestWithUser) {
+    return this.authService.generateWebSocketToken(req.user);
+  }
 }

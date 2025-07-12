@@ -48,6 +48,16 @@ export class AuthService {
     };
   }
 
+  async generateWebSocketToken(user: UserPayload): Promise<{ token: string }> {
+    const payload: UserPayload = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    };
+    const token = await this.jwtService.signAsync(payload);
+    return { token };
+  }
+
   async generateChatToken(
     payload: UserPayload,
     conversationId: string,
