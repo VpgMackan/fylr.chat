@@ -1,4 +1,3 @@
-// packages/web/src/hooks/useEvents.ts
 'use client';
 
 import {
@@ -11,34 +10,34 @@ import {
   ReactNode,
 } from 'react';
 import { io, Socket } from 'socket.io-client';
+
 import { useAuth } from './useAuth';
 import { getEventsWsToken } from '@/services/api/auth.api';
 
 interface EventsContextType {
   isConnected: boolean;
-  // The 'topic' is the RabbitMQ routing key, e.g., 'job.xyz.status'
-  // The 'eventName' is the event the server will emit back to the client, e.g., 'jobStatusUpdate'
-  subscribe: (
-    topic: string,
-    eventName: string,
-    callback: (payload: any) => void,
+  subscribe: (routingKey: string) => void;
+  unsubscribe: (routingKey: string) => void;
+  addGlobalCallback: (
+    callback: (routingKey: string, payload: any) => void,
   ) => void;
-  unsubscribe: (
-    topic: string,
-    eventName: string,
-    callback: (payload: any) => void,
+  removeGlobalCallback: (
+    callback: (routingKey: string, payload: any) => void,
   ) => void;
 }
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined);
 
 type EventListener = (payload: any) => void;
+type GlobalEventListener = (routingKey: string, payload: any) => void;
 
 export const EventsProvider = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+
   const listenersRef = useRef<Map<string, Set<EventListener>>>(new Map());
+  const globalListenersRef = useRef<Set<GlobalEventListener>>(new Set());
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -46,24 +45,33 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
         if (socketRef.current) return;
 
         try {
+          console.log('Fetching WebSocket token...');
           const { token } = await getEventsWsToken();
-          const socket = io('http://localhost:3001/', { auth: { token } });
+          console.log('WebSocket token received, connecting...');
+
+          const socket = io('http://localhost:3001/', {
+            auth: { token },
+          });
           socketRef.current = socket;
 
           socket.on('connect', () => {
+            console.log('Events WebSocket connected:', socket.id);
             setIsConnected(true);
           });
 
           socket.on('disconnect', () => {
+            console.log('Events WebSocket disconnected.');
             setIsConnected(false);
           });
 
-          // This remains our generic handler for all incoming events
-          socket.onAny((eventName, payload) => {
-            const listeners = listenersRef.current.get(eventName);
+          socket.onAny((routingKey, payload) => {
+            const listeners = listenersRef.current.get(routingKey);
             if (listeners) {
               listeners.forEach((callback) => callback(payload));
             }
+            globalListenersRef.current.forEach((callback) =>
+              callback(routingKey, payload),
+            );
           });
         } catch (error) {
           console.error(
@@ -78,6 +86,7 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       if (socketRef.current) {
+        console.log('Disconnecting Events WebSocket.');
         socketRef.current.disconnect();
         socketRef.current = null;
         setIsConnected(false);
@@ -85,32 +94,33 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isAuthenticated]);
 
-  const subscribe = useCallback(
-    (topic: string, eventName: string, callback: EventListener) => {
-      // 1. Tell the server we are interested in this topic
-      socketRef.current?.emit('subscribe', topic);
+  const subscribe = useCallback((routingKey: string) => {
+    if (!listenersRef.current.has(routingKey)) {
+      listenersRef.current.set(routingKey, new Set());
+    }
+    socketRef.current?.emit('subscribe', routingKey);
+  }, []);
 
-      // 2. Register the local callback for the event name
-      if (!listenersRef.current.has(eventName)) {
-        listenersRef.current.set(eventName, new Set());
-      }
-      listenersRef.current.get(eventName)?.add(callback);
-    },
-    [],
-  );
+  const unsubscribe = useCallback((routingKey: string) => {
+    listenersRef.current.delete(routingKey);
+    socketRef.current?.emit('unsubscribe', routingKey);
+  }, []);
 
-  const unsubscribe = useCallback(
-    (topic: string, eventName: string, callback: EventListener) => {
-      // 1. Tell the server we are no longer interested in this topic
-      socketRef.current?.emit('unsubscribe', topic);
+  const addGlobalCallback = useCallback((callback: GlobalEventListener) => {
+    globalListenersRef.current.add(callback);
+  }, []);
 
-      // 2. Remove the local callback
-      listenersRef.current.get(eventName)?.delete(callback);
-    },
-    [],
-  );
+  const removeGlobalCallback = useCallback((callback: GlobalEventListener) => {
+    globalListenersRef.current.delete(callback);
+  }, []);
 
-  const value = { isConnected, subscribe, unsubscribe };
+  const value = {
+    isConnected,
+    subscribe,
+    unsubscribe,
+    addGlobalCallback,
+    removeGlobalCallback,
+  };
 
   return (
     <EventsContext.Provider value={value}>{children}</EventsContext.Provider>

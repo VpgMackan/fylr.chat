@@ -1,5 +1,3 @@
-// packages/web/src/app/pocket/[id]/summaries/[summaryid]/page.tsx
-
 'use client';
 
 import { useTranslations } from 'next-intl';
@@ -14,46 +12,45 @@ import MarkdownComponent from '@/components/MarkdownComponents';
 
 import { useEvents } from '@/hooks/useEvents';
 
-// Note: Renamed the component to be more accurate (SummaryPage instead of ChatPage)
-export default function SummaryPage({
+export default function ChatPage({
   params,
 }: {
   params: Promise<{ id: string; summaryid: string }>;
 }) {
-  const { isConnected, subscribe, unsubscribe } = useEvents();
+  const {
+    isConnected,
+    subscribe,
+    unsubscribe,
+    addGlobalCallback,
+    removeGlobalCallback,
+  } = useEvents();
 
   const t = useTranslations('pages.summaries');
-  const [pocketId, setPocketId] = useState<string | null>(null); // Renamed for clarity
+  const [id, setId] = useState<string | null>(null);
   const [summaryid, setSummaryid] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
     params.then((res) => {
-      setPocketId(res.id);
+      setId(res.id);
       setSummaryid(res.summaryid);
     });
   }, [params]);
 
   useEffect(() => {
-    if (!summaryid) return;
-
-    const topic = `summary.${summaryid}.status`;
-    const eventName = 'done';
-
-    const handleSummaryUpdate = (payload: any) => {
-      console.log('Received summary update:', payload);
-      alert(`Summary Status: ${JSON.stringify(payload)}`);
+    const handleSummaryDone = (payload: any) => {
+      alert(payload);
     };
 
-    console.log(`Subscribing to topic: ${topic} with event: ${eventName}`);
-    subscribe(topic, eventName, handleSummaryUpdate);
+    subscribe('summary.3FJuBAFGCIP3GxDzAAAB.status');
+    addGlobalCallback(handleSummaryDone);
 
     return () => {
-      console.log(`Unsubscribing from topic: ${topic}`);
-      unsubscribe(topic, eventName, handleSummaryUpdate);
+      unsubscribe('summary.3FJuBAFGCIP3GxDzAAAB.status');
+      removeGlobalCallback(handleSummaryDone);
     };
-  }, [summaryid, subscribe, unsubscribe]);
+  }, [subscribe, unsubscribe]);
 
   return (
     <ContentLayout
@@ -66,6 +63,7 @@ export default function SummaryPage({
         <>
           <p className="text-xl">{t('summaryEpisodes')}</p>
           <hr className="mb-2" />
+
           <div className="flex flex-col gap-2">
             <SummaryCard
               fileName="What's ai's impact on the world?"
@@ -80,7 +78,6 @@ export default function SummaryPage({
         </>
       }
     >
-      <p>Connection Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
       <MarkdownComponent text={``} />
     </ContentLayout>
   );
