@@ -13,6 +13,7 @@ class ChatCompletionRequest(BaseModel):
     provider: str
     model: str
     messages: List[ChatMessage]
+    stream: bool = False
     options: Dict[str, Any] = Field(default_factory=dict)
 
 

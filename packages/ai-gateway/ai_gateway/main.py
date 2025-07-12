@@ -1,6 +1,13 @@
-import importlib
+import json
+import time
+import uuid
 from functools import lru_cache
-from fastapi import FastAPI, HTTPException, status
+from typing import AsyncGenerator
+
+from openai import APIStatusError
+
+from fastapi import FastAPI, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 
 from .schemas import (
     ChatCompletionRequest,
@@ -9,6 +16,7 @@ from .schemas import (
     EmbeddingResponse,
 )
 from .providers.base import BaseProvider
+import importlib
 
 app = FastAPI(
     title="AI Gateway",
@@ -40,35 +48,82 @@ def get_provider(provider_name: str) -> BaseProvider:
         )
 
 
+async def stream_provider_response(
+    provider: BaseProvider, request: ChatCompletionRequest
+) -> AsyncGenerator[str, None]:
+    """
+    Calls the provider's streaming method and formats the output as SSE.
+    """
+    completion_id = f"chatcmpl-{uuid.uuid4()}"
+    created_time = int(time.time())
+
+    messages_dict = [msg.model_dump() for msg in request.messages]
+
+    try:
+        async for chunk_content in provider.generate_text_stream(
+            messages=messages_dict, model=request.model, options=request.options
+        ):
+            chunk_data = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created_time,
+                "model": request.model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": chunk_content},
+                        "finish_reason": None,
+                    }
+                ],
+            }
+            # Format as Server-Sent Event (SSE)
+            yield f"data: {json.dumps(chunk_data)}\n\n"
+
+        # Send the final DONE message
+        yield "data: [DONE]\n\n"
+
+    except Exception as e:
+        error_data = {
+            "error": f"An error occurred with the '{request.provider}' provider: {e}"
+        }
+        yield f"data: {json.dumps(error_data)}\n\n"
+        yield "data: [DONE]\n\n"
+
+
 # --- API Endpoints ---
 
 
-@app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
+@app.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest):
     """
     Generates a chat completion through the specified provider.
+    Supports both streaming and non-streaming responses.
     """
-    try:
-        provider = get_provider(request.provider)
+    provider = get_provider(request.provider)
 
-        messages_dict = [msg.model_dump() for msg in request.messages]
+    if request.stream:
+        return StreamingResponse(
+            stream_provider_response(provider, request), media_type="text/event-stream"
+        )
+    else:
+        try:
+            messages_dict = [msg.model_dump() for msg in request.messages]
+            response_data = provider.generate_text(
+                messages=messages_dict, model=request.model, options=request.options
+            )
+            return ChatCompletionResponse(**response_data)
 
-        response = provider.generate_text(
-            messages=messages_dict, model=request.model, options=request.options
-        )
-        return response.model_dump()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred with the '{request.provider}' provider: {e}",
-        )
+        except APIStatusError as e:
+            raise HTTPException(status_code=e.status_code, detail=e.response.text)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"An error occurred with the '{request.provider}' provider: {e}",
+            )
 
 
 @app.post("/v1/embeddings", response_model=EmbeddingResponse)
 async def create_embedding(request: EmbeddingRequest):
-    """
-    Generates embeddings for the input text using the specified provider.
-    """
     try:
         provider = get_provider(request.provider)
         response = provider.generate_embeddings(
