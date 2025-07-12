@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Icon } from '@iconify/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 import Button from '@/components/common/Button';
@@ -12,7 +12,8 @@ import MarkdownComponent from '@/components/MarkdownComponents';
 
 import { useEvents } from '@/hooks/useEvents';
 
-export default function ChatPage({
+// Renamed component for clarity
+export default function SummaryPage({
   params,
 }: {
   params: Promise<{ id: string; summaryid: string }>;
@@ -26,8 +27,9 @@ export default function ChatPage({
   } = useEvents();
 
   const t = useTranslations('pages.summaries');
-  const [id, setId] = useState<string | null>(null);
+  const [_id, setId] = useState<string | null>(null);
   const [summaryid, setSummaryid] = useState<string | null>(null);
+  const [summaryContent, setSummaryContent] = useState('');
 
   const router = useRouter();
 
@@ -39,18 +41,39 @@ export default function ChatPage({
   }, [params]);
 
   useEffect(() => {
-    const handleSummaryDone = (payload: any) => {
-      alert(payload);
+    if (!summaryid) return;
+
+    const routingKey = `summary.${summaryid}.status`;
+
+    const handleSummaryUpdate = (key: string, data: any) => {
+      if (key === routingKey) {
+        console.log('Received summary update:', data);
+        if (data?.payload?.summary) {
+          setSummaryContent((prev) => prev + data.payload.summary);
+        }
+        if (data?.payload?.message) {
+          console.log('Status:', data.payload.message);
+        }
+      } else {
+        console.log(key, data);
+      }
     };
 
-    subscribe('summary.3FJuBAFGCIP3GxDzAAAB.status');
-    addGlobalCallback(handleSummaryDone);
+    subscribe(routingKey);
+    addGlobalCallback(handleSummaryUpdate);
 
     return () => {
-      unsubscribe('summary.3FJuBAFGCIP3GxDzAAAB.status');
-      removeGlobalCallback(handleSummaryDone);
+      unsubscribe(routingKey);
+      removeGlobalCallback(handleSummaryUpdate);
     };
-  }, [subscribe, unsubscribe]);
+  }, [
+    summaryid,
+    subscribe,
+    unsubscribe,
+    addGlobalCallback,
+    removeGlobalCallback,
+    isConnected,
+  ]);
 
   return (
     <ContentLayout
@@ -78,7 +101,7 @@ export default function ChatPage({
         </>
       }
     >
-      <MarkdownComponent text={``} />
+      <MarkdownComponent text={summaryContent} />
     </ContentLayout>
   );
 }

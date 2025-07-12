@@ -63,7 +63,7 @@ export class WebSocketGateway
     this.logger.log('Closing RabbitMQ connections...');
     await this.amqpConnection?.close();
   }
-  
+
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token;
@@ -203,17 +203,7 @@ export class WebSocketGateway
 
     try {
       const messageContent = JSON.parse(msg.content.toString());
-
-      const { eventName, payload } = messageContent;
-
-      if (eventName && payload) {
-        client.emit(eventName, payload);
-      } else {
-        this.logger.warn(
-          'Received message with invalid format:',
-          messageContent,
-        );
-      }
+      client.emit(msg.fields.routingKey, messageContent);
     } catch (error) {
       this.logger.error(
         'Could not parse and forward message:',

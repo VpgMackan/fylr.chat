@@ -65,6 +65,7 @@ export const EventsProvider = ({ children }: { children: ReactNode }) => {
           });
 
           socket.onAny((routingKey, payload) => {
+            console.log(routingKey, payload);
             const listeners = listenersRef.current.get(routingKey);
             if (listeners) {
               listeners.forEach((callback) => callback(payload));
