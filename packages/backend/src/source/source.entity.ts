@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 
 import { Pocket } from 'src/pocket/pocket.entity';
-import { Vector } from './handler/vector.entity';
+import { Vector } from './vector.entity';
 import { Conversation } from 'src/chat/conversation.entity';
 
 @Entity('Sources')

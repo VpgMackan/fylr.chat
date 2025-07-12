@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
@@ -9,6 +9,7 @@ export class AiVectorService {
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly logger = new Logger(AiVectorService.name),
   ) {}
 
   private async _fetchEmbeddingsFromAiGateway(
@@ -39,7 +40,7 @@ export class AiVectorService {
       );
 
       if (response.status < 200 || response.status >= 300) {
-        console.error(
+        this.logger.error(
           `Error fetching embeddings (unexpected status): ${response.status} ${response.statusText}`,
           response.data,
         );
@@ -53,12 +54,12 @@ export class AiVectorService {
       if (responseData?.data?.[0]?.embedding) {
         return responseData.data[0].embedding;
       } else {
-        console.error('Unexpected response structure:', responseData);
+        this.logger.error('Unexpected response structure:', responseData);
         throw new Error('Failed to extract embeddings from response');
       }
     } catch (error) {
       if (error instanceof AxiosError) {
-        console.error(
+        this.logger.error(
           `AI Gateway Error: ${error.response?.status} ${error.response?.statusText}`,
           error.response?.data || error.message,
         );
@@ -66,7 +67,7 @@ export class AiVectorService {
           `AI Gateway request failed: ${error.response?.statusText || error.message}`,
         );
       } else {
-        console.error('Unexpected error during AI Gateway call:', error);
+        this.logger.error('Unexpected error during AI Gateway call:', error);
         throw error instanceof Error
           ? error
           : new Error(

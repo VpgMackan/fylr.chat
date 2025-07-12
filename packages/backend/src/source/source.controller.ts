@@ -17,7 +17,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { RabbitMQService } from '../utils/rabbitmq.service';
 import { SourceService } from './source.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { AiService } from 'src/aiService/ai.service';
 
 import { CreateSourceDto } from '@fylr/types';
 
@@ -33,7 +32,6 @@ const allowedMimeTypes = [
 export class SourceController {
   constructor(
     private sourceService: SourceService,
-    private readonly aiService: AiService,
     private readonly rabbitMQService: RabbitMQService,
   ) {}
 

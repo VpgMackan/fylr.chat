@@ -7,12 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import { Server } from 'socket.io';
 
-import { Message } from './message.entity';
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 import { createHydePrompt, createFinalRagPrompt } from '@fylr/prompts';
-import { AiService } from 'src/aiService/ai.service';
+
+import { LLMService } from 'src/ai/llm.service';
+import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
+
 import { Conversation } from './conversation.entity';
+import { Message } from './message.entity';
 
 @Injectable()
 export class MessageService {
@@ -21,7 +24,8 @@ export class MessageService {
     private messageRepository: Repository<Message>,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
-    private aiService: AiService,
+    private readonly llmService: LLMService,
+    private readonly vectorService: AiVectorService,
     private sourceService: SourceService,
   ) {}
 
@@ -93,12 +97,12 @@ export class MessageService {
       .join('\n');
 
     emitStatus('searchQuery', 'Formulating search query...');
-    const hypotheticalAnswer = await this.aiService.llm.generate(
+    const hypotheticalAnswer = await this.llmService.generate(
       createHydePrompt(chatHistory, userQuery),
     );
 
     emitStatus('retrieval', 'Searching relevant sources...');
-    const searchQueryEmbedding = await this.aiService.vector.search(
+    const searchQueryEmbedding = await this.vectorService.search(
       hypotheticalAnswer,
       'jina-clip-v2',
       {},
@@ -119,7 +123,7 @@ export class MessageService {
 
     emitStatus('generation', 'Generating response...');
 
-    const stream = this.aiService.llm.generateStream(
+    const stream = this.llmService.generateStream(
       createFinalRagPrompt(context, chatHistory, userQuery, relevantChunks),
     );
     let fullResponse = '';

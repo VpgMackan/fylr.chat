@@ -7,7 +7,7 @@ import { MessageService } from './message.service';
 import { ChatGateway } from './chat.gateway';
 
 import { AuthModule } from 'src/auth/auth.module';
-import { AiModule } from 'src/aiService/aiService.module';
+import { AiModule } from 'src/ai/ai.module';
 import { SourceModule } from 'src/source/source.module';
 
 import { Conversation } from './conversation.entity';

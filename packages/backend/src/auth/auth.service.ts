@@ -14,6 +14,8 @@ import {
   UserPayload,
 } from '@fylr/types';
 
+const BCRYPT_SALT_ROUNDS = 10;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -60,8 +62,7 @@ export class AuthService {
   }
 
   async signUp(data: CreateUserDto): Promise<UserApiResponse> {
-    const saltRounds = 10;
-    const hashedPassword = await hash(data.password, saltRounds);
+    const hashedPassword = await hash(data.password, BCRYPT_SALT_ROUNDS);
     const user = await this.usersService.createUser({
       ...data,
       password: hashedPassword,
@@ -76,8 +77,10 @@ export class AuthService {
     const dataToUpdate = { ...updateData };
 
     if (dataToUpdate.password) {
-      const saltRounds = 10;
-      dataToUpdate.password = await hash(dataToUpdate.password, saltRounds);
+      dataToUpdate.password = await hash(
+        dataToUpdate.password,
+        BCRYPT_SALT_ROUNDS,
+      );
     }
 
     const updatedUser = await this.usersService.updateUser(

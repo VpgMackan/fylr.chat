@@ -5,18 +5,17 @@ import { ConfigService } from '@nestjs/config';
 
 import { RabbitMQService } from '../utils/rabbitmq.service';
 
-import { S3Module } from './s3/s3.module';
-import { S3Service } from './s3/s3.service';
+import { S3Module } from 'src/common/s3/s3.module';
+import { S3Service } from 'src/common/s3/s3.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
 import { Source } from './source.entity';
-import { Vector } from './handler/vector.entity';
+import { Vector } from './vector.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
 
-import { AiModule } from 'src/aiService/aiService.module';
 @Module({
   imports: [
     S3Module.registerAsync(),
@@ -29,7 +28,6 @@ import { AiModule } from 'src/aiService/aiService.module';
     }),
     AuthModule,
     EventsModule,
-    AiModule,
   ],
   controllers: [SourceController],
   providers: [SourceService, S3Service, RabbitMQService],

@@ -5,8 +5,8 @@ import { Repository } from 'typeorm';
 
 import { Source } from './source.entity';
 import { toSql } from 'pgvector';
-import { Vector } from './handler/vector.entity';
-import { S3Service } from './s3/s3.service';
+import { Vector } from './vector.entity';
+import { S3Service } from 'src/common/s3/s3.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
