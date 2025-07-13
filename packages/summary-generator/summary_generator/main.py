@@ -1,2 +1,9 @@
+from .SummaryGenerator import SummaryGenerator
+
+
 def main():
-    print("Hello world")
+    try:
+        generator = SummaryGenerator()
+        generator.run()
+    except Exception as e:
+        print(e)
