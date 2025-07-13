@@ -17,6 +17,8 @@ psycopg2-binary = "^2.9.10"
 pymupdf = "^1.26.3"
 requests = "^2.32.4"
 
+[tool.poetry.scripts]
+ingest = "file_ingestor.main:main"
 
 [build-system]
 requires = ["poetry-core"]

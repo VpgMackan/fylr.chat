@@ -9,9 +9,9 @@ import boto3
 from dotenv import load_dotenv
 from botocore.config import Config
 
-from handlers import manager
+from .handlers import manager
 
-from vector.saver import save_text_chunks_as_vectors
+from .vector.saver import save_text_chunks_as_vectors
 
 
 class FileIngestor:
@@ -150,17 +150,17 @@ class FileIngestor:
 
 def main():
     """Main function to run the file ingestor."""
-    ingestor = FileIngestor()
-    ingestor.run()
-
-
-if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     try:
-        main()
+        ingestor = FileIngestor()
+        ingestor.run()
     except KeyboardInterrupt:
         print("Interrupted")
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

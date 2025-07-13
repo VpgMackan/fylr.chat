@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from vector.entity import Vector, Base
+from .entity import Vector, Base
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
