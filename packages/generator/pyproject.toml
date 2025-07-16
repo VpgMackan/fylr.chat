@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "summary-generator"
+name = "generator"
 version = "0.1.0"
 description = ""
 authors = ["VpgMackan <dev@mndev.se>"]
@@ -14,7 +14,7 @@ sqlalchemy = "^2.0.41"
 pgvector = "^0.4.1"
 
 [tool.poetry.scripts]
-summary = "summary_generator.main:main"
+generator = "generator.main:main"
 
 [build-system]
 requires = ["poetry-core"]
