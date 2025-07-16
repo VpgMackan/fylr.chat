@@ -9,8 +9,6 @@ import { S3Service } from 'src/common/s3/s3.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
-import { Source } from './source.entity';
-import { Vector } from './vector.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
