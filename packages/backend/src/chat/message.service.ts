@@ -3,9 +3,8 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
 import { Server } from 'socket.io';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 import { createHydePrompt, createFinalRagPrompt } from '@fylr/prompts';
@@ -14,26 +13,20 @@ import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
 
-import { Conversation } from './conversation.entity';
-import { Message } from './message.entity';
-
 @Injectable()
 export class MessageService {
   constructor(
-    @InjectRepository(Message)
-    private messageRepository: Repository<Message>,
-    @InjectRepository(Conversation)
-    private conversationRepository: Repository<Conversation>,
+    private prisma: PrismaService,
     private readonly llmService: LLMService,
     private readonly vectorService: AiVectorService,
     private sourceService: SourceService,
   ) {}
 
-  async getMessages(conversationId: string): Promise<Message[]> {
+  async getMessages(conversationId: string) {
     try {
-      return await this.messageRepository.find({
+      return await this.prisma.message.findMany({
         where: { conversationId },
-        order: { createdAt: 'ASC' },
+        orderBy: { createdAt: 'asc' },
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -42,10 +35,7 @@ export class MessageService {
     }
   }
 
-  async createMessage(
-    body: CreateMessageDto,
-    conversationId: string,
-  ): Promise<Message> {
+  async createMessage(body: CreateMessageDto, conversationId: string) {
     try {
       if (typeof body.metadata === 'string') {
         body.metadata = JSON.parse(body.metadata);
@@ -54,15 +44,16 @@ export class MessageService {
       throw new InternalServerErrorException('Invalid JSON format in metadata');
     }
 
-    const newMessage = this.messageRepository.create({
-      conversationId,
-      ...body,
+    return await this.prisma.message.create({
+      data: {
+        conversationId,
+        ...body,
+      },
     });
-    return await this.messageRepository.save(newMessage);
   }
 
   async generateAndStreamAiResponse(
-    userMessage: Message,
+    userMessage,
     server: Server,
   ): Promise<void> {
     const { conversationId, content: userQuery } = userMessage;
@@ -76,9 +67,9 @@ export class MessageService {
     };
 
     emitStatus('history', 'Analyzing conversation history...');
-    const conversation = await this.conversationRepository.findOne({
+    const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      relations: ['sources'],
+      include: { sources: true },
     });
     if (!conversation) {
       throw new NotFoundException(
@@ -86,9 +77,9 @@ export class MessageService {
       );
     }
 
-    const recentMessages = await this.messageRepository.find({
+    const recentMessages = await this.prisma.message.findMany({
       where: { conversationId },
-      order: { createdAt: 'DESC' },
+      orderBy: { createdAt: 'desc' },
       take: 10,
     });
     const chatHistory = recentMessages
@@ -166,19 +157,19 @@ export class MessageService {
     assistantMessageId: string,
     server: Server,
   ) {
-    const assistantMessage = await this.messageRepository.findOneBy({
-      id: assistantMessageId,
+    const assistantMessage = await this.prisma.message.findUnique({
+      where: { id: assistantMessageId },
     });
     if (!assistantMessage || assistantMessage.role !== 'assistant') {
       throw new NotFoundException('Assistant message to regenerate not found.');
     }
 
-    const userMessage = await this.messageRepository.findOne({
+    const userMessage = await this.prisma.message.findFirst({
       where: {
         conversationId: assistantMessage.conversationId,
-        createdAt: LessThan(assistantMessage.createdAt),
+        createdAt: { lt: assistantMessage.createdAt },
       },
-      order: { createdAt: 'DESC' },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!userMessage || userMessage.role !== 'user') {
@@ -187,14 +178,18 @@ export class MessageService {
       );
     }
 
-    await this.messageRepository.delete(assistantMessageId);
+    await this.prisma.message.delete({
+      where: {
+        id: assistantMessageId,
+      },
+    });
 
     await this.generateAndStreamAiResponse(userMessage, server);
   }
 
   async getMessage(id: string) {
     try {
-      return await this.messageRepository.findOne({
+      return await this.prisma.message.findUnique({
         where: { id },
       });
     } catch (error) {
@@ -206,18 +201,11 @@ export class MessageService {
 
   async updateMessage(body: UpdateMessageDto, id: string) {
     try {
-      const messageToUpdate = await this.messageRepository.preload({
-        id,
-        ...body,
+      await this.getMessage(id);
+      return await this.prisma.message.update({
+        where: { id },
+        data: body,
       });
-
-      if (!messageToUpdate)
-        throw new NotFoundException(
-          `Message with the ID "${id}" doesn't exist in database`,
-        );
-
-      await this.messageRepository.save(messageToUpdate);
-      return messageToUpdate;
     } catch (error) {
       throw new InternalServerErrorException(`Failed to update message ${id}`);
     }
@@ -225,15 +213,8 @@ export class MessageService {
 
   async deleteMessage(id: string) {
     try {
-      const result = await this.messageRepository.delete(id);
-
-      if (result.affected === 0) {
-        throw new NotFoundException(
-          `Message with the ID "${id}" could not be deleted (unexpected error).`,
-        );
-      }
-
-      return result;
+      await this.getMessage(id);
+      return await this.prisma.message.delete({ where: { id } });
     } catch (error) {
       throw new InternalServerErrorException(`Failed to delete message ${id}`);
     }

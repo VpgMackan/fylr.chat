@@ -9,7 +9,7 @@ export interface SourceApiResponse {
   name: string;
   type: string;
   url: string;
-  size: number;
+  size: bigint;
   uploadTime: string;
   status: string;
 }

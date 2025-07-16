@@ -4,10 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { Conversation } from './conversation.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 import {
   CreateConversationDto,
@@ -20,8 +17,7 @@ import { AuthService } from 'src/auth/auth.service';
 @Injectable()
 export class ConversationService {
   constructor(
-    @InjectRepository(Conversation)
-    private conversationRepository: Repository<Conversation>,
+    private prisma: PrismaService,
     private authService: AuthService,
   ) {}
 
@@ -29,12 +25,17 @@ export class ConversationService {
     user: UserPayload,
     conversationId: string,
   ): Promise<{ token: string }> {
-    const conversation = await this.conversationRepository
-      .createQueryBuilder('conversation')
-      .innerJoin('conversation.pocket', 'pocket')
-      .where('conversation.id = :conversationId', { conversationId })
-      .andWhere('pocket.userId = :userId', { userId: user.id })
-      .getOne();
+    const conversation = await this.prisma.conversation.findUnique({
+      where: {
+        id: conversationId,
+        pocket: {
+          userId: user.id,
+        },
+      },
+      include: {
+        pocket: true,
+      },
+    });
 
     if (!conversation) {
       throw new ForbiddenException('Access to this conversation is denied.');
@@ -49,7 +50,7 @@ export class ConversationService {
 
   async getConversations(pocketId: string, take = 10, offset = 0) {
     try {
-      return await this.conversationRepository.find({
+      return await this.prisma.conversation.findMany({
         where: { pocketId },
         take,
         skip: offset,
@@ -61,13 +62,18 @@ export class ConversationService {
     }
   }
 
-  async getConversationsByUserId(userId: string): Promise<Conversation[]> {
+  async getConversationsByUserId(userId: string) {
     try {
-      return await this.conversationRepository
-        .createQueryBuilder('conversation')
-        .innerJoinAndSelect('conversation.pocket', 'pocket')
-        .where('pocket.userId = :userId', { userId })
-        .getMany();
+      return await this.prisma.conversation.findMany({
+        where: {
+          pocket: {
+            userId: userId,
+          },
+        },
+        include: {
+          pocket: true,
+        },
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve conversations for user ${userId}: ${error.message}`,
@@ -87,14 +93,18 @@ export class ConversationService {
         }
       }
 
-      const newConversation = this.conversationRepository.create({
-        pocketId,
-        title: body.title,
-        metadata: body.metadata,
-        sources: body.sourceIds?.map((id) => ({ id })) || [],
+      return await this.prisma.conversation.create({
+        data: {
+          pocketId,
+          title: body.title,
+          metadata: body.metadata,
+          sources: body.sourceIds
+            ? {
+                connect: body.sourceIds.map((id) => ({ id })),
+              }
+            : undefined,
+        },
       });
-      await this.conversationRepository.save(newConversation);
-      return newConversation;
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to create conversation: ${error.message}`,
@@ -104,7 +114,7 @@ export class ConversationService {
 
   async getConversation(conversationId: string) {
     try {
-      return await this.conversationRepository.findOne({
+      return await this.prisma.conversation.findUnique({
         where: { id: conversationId },
       });
     } catch (error) {
@@ -116,18 +126,11 @@ export class ConversationService {
 
   async updateConversation(body: UpdateConversationDto, id: string) {
     try {
-      const conversationToUpdate = await this.conversationRepository.preload({
-        id,
-        ...body,
+      await this.getConversation(id);
+      return await this.prisma.conversation.update({
+        where: { id },
+        data: body,
       });
-
-      if (!conversationToUpdate)
-        throw new NotFoundException(
-          `Conversation with the ID "${id}" doesn't exist in database`,
-        );
-
-      await this.conversationRepository.save(conversationToUpdate);
-      return conversationToUpdate;
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to update conversation ${id}`,
@@ -137,15 +140,10 @@ export class ConversationService {
 
   async deleteConversation(id: string) {
     try {
-      const result = await this.conversationRepository.delete(id);
-
-      if (result.affected === 0) {
-        throw new NotFoundException(
-          `Conversation with the ID "${id}" could not be deleted (unexpected error).`,
-        );
-      }
-
-      return result;
+      await this.getConversations(id);
+      return await this.prisma.conversation.delete({
+        where: { id },
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to delete conversation ${id}`,

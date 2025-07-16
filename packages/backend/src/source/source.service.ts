@@ -1,35 +1,26 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { Source } from './source.entity';
-import { toSql } from 'pgvector';
-import { Vector } from './vector.entity';
 import { S3Service } from 'src/common/s3/s3.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SourceService {
   constructor(
-    @InjectRepository(Source)
-    private sourceRepository: Repository<Source>,
-    @InjectRepository(Vector)
-    private vectorRepository: Repository<Vector>,
+    private prisma: PrismaService,
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
   ) {}
 
-  async createSourceDatabaseEntry(data: Partial<Source>): Promise<Source> {
-    const newSource = this.sourceRepository.create(data);
-    await this.sourceRepository.save(newSource);
-    return newSource;
+  async createSourceDatabaseEntry(data) {
+    return await this.prisma.source.create(data);
   }
 
   async getSourcesByPocketId(pocketId: string) {
-    return await this.sourceRepository.find({
+    return await this.prisma.source.findMany({
       where: { pocketId },
-      order: { uploadTime: 'DESC' },
+      orderBy: { uploadTime: 'desc' },
     });
   }
 
@@ -37,33 +28,46 @@ export class SourceService {
     if (sourceIds.length === 0) {
       return [];
     }
-    return await this.vectorRepository
-      .createQueryBuilder('vector')
-      .innerJoinAndSelect('vector.source', 'source')
-      .where('source.id IN (:...sourceIds)', { sourceIds })
-      .orderBy('vector.embedding <-> :embedding')
-      .setParameters({ embedding: toSql(vector) })
-      .limit(5)
-      .select([
-        'vector.id',
-        'vector.fileId',
-        'vector.content',
-        'source.id',
-        'source.pocketId',
-        'source.name',
-      ])
-      .getMany();
+
+    const vectorSql = `[${vector.join(',')}]`;
+    const result = await this.prisma.$queryRaw<any[]>`
+      SELECT
+        v.id,
+        v.file_id AS "fileId",
+        v.content,
+        s.id AS "source.id",
+        s.pocket_id AS "source.pocketId",
+        s.name AS "source.name"
+      FROM "Vectors" v
+      INNER JOIN "Sources" s ON s.id = v.file_id
+      WHERE s.id IN (${Prisma.join(sourceIds)})
+      ORDER BY v.embedding <-> ${vectorSql}::vector
+      LIMIT 5
+    `;
+
+    return result.map((item) => ({
+      id: item.id,
+      fileId: item.fileId,
+      content: item.content,
+      source: {
+        id: item['source.id'],
+        pocketId: item['source.pocketId'],
+        name: item['source.name'],
+      },
+    }));
   }
 
   async getSourceURL(sourceId: string) {
-    return this.sourceRepository.findOneBy({
-      id: sourceId,
+    return this.prisma.source.findUnique({
+      where: { id: sourceId },
     });
   }
 
   async getFileStreamById(fileId: string) {
     // Find the source entry to get metadata
-    const source = await this.sourceRepository.findOneBy({ id: fileId });
+    const source = await this.prisma.source.findUnique({
+      where: { id: fileId },
+    });
     if (!source) return null;
     const bucket = this.configService.get<string>('S3_BUCKET_USER_FILE');
     if (!bucket) throw new Error('S3_BUCKET_USER_FILE is not set in config');
