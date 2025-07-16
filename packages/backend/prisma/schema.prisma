@@ -32,6 +32,7 @@ model Pocket {
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   sources       Source[]
   conversations Conversation[]
+  Summary       Summary[]
 
   @@map("Pockets")
 }
@@ -61,6 +62,31 @@ model Vector {
   source    Source                      @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@map("Vectors")
+}
+
+model Summary {
+  id        String           @id @default(uuid())
+  pocketId  String           @map("pocket_id")
+  title     String
+  createdAt DateTime         @default(now()) @map("created_at")
+  length    BigInt
+  generated String?          @db.Text
+  pocket    Pocket           @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  episodes  SummaryEpisode[]
+
+  @@map("Summary")
+}
+
+model SummaryEpisode {
+  id        String   @id @default(uuid())
+  summaryId String   @map("summary_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  title     String
+  focus     String?  @db.Text
+  summary   Summary  @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+
+  @@map("SummaryEpisode")
 }
 
 model Conversation {
