@@ -14,7 +14,7 @@ export class SourceService {
   ) {}
 
   async createSourceDatabaseEntry(data) {
-    return await this.prisma.source.create(data);
+    return await this.prisma.source.create({ data });
   }
 
   async getSourcesByPocketId(pocketId: string) {
