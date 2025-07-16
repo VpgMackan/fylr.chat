@@ -9,22 +9,22 @@ import uuid
 Base = declarative_base()
 
 
-class Vector(Base):
-    __tablename__ = "Vectors"
+class DocumentVector(Base):
+    __tablename__ = "Vector"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("Sources.id"), nullable=False)
+    file_id = Column(UUID(as_uuid=True), ForeignKey("Source.id"), nullable=False)
     embedding = Column(PgVector(1024))
     content = Column(Text)
 
-    source = relationship("Sources", back_populates="vectors")
+    source = relationship("Source", back_populates="vectors")
 
 
-class Sources(Base):
-    __tablename__ = "Sources"
+class Source(Base):
+    __tablename__ = "Source"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pockets.id"), nullable=False)
+    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pocket.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
     url = Column(String, nullable=False)
@@ -34,11 +34,38 @@ class Sources(Base):
     status = Column(Text, nullable=False)
 
     vectors = relationship("Vector", back_populates="source")
-    pockets = relationship("Pockets", back_populates="sources")
+    pocket = relationship("Pocket", back_populates="source")
 
 
-class Pockets(Base):
-    __tablename__ = "Pockets"
+class SummaryEpisode(Base):
+    __tablename__ = "SummaryEpisode"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    summary_id = Column(UUID(as_uuid=True), ForeignKey("Summary.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    title = Column(String, nullable=False)
+    focus = Column(Text, nullable=True)
+
+    summary = relationship("Summary", back_populates="episodes")
+
+
+class Summary(Base):
+    __tablename__ = "Summary"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pocket.id"), nullable=False)
+    title = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    length = Column(BigInteger, nullable=False)
+    generated = Column(Text, nullable=True)
+
+    pocket = relationship("Pocket", back_populates="summaries")
+    episodes = relationship("SummaryEpisode", back_populates="summary")
+
+
+class Pocket(Base):
+    __tablename__ = "Pocket"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
@@ -48,4 +75,5 @@ class Pockets(Base):
     tags = Column(Text, nullable=True)
     title = Column(String, nullable=False)
 
-    sources = relationship("Sources", back_populates="pockets")
+    sources = relationship("Source", back_populates="pocket")
+    summaries = relationship("Summary", back_populates="pocket")
