@@ -1,0 +1,89 @@
+// packages/backend/prisma/schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  password String
+  name     String
+  pockets  Pocket[]
+
+  @@map("Users")
+}
+
+model Pocket {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  icon          String
+  description   String         @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  tags          String[]       @db.Text
+  title         String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources       Source[]
+  conversations Conversation[]
+
+  @@map("Pockets")
+}
+
+model Source {
+  id            String         @id @default(uuid())
+  pocketId      String         @map("pocket_id")
+  name          String
+  type          String
+  url           String
+  size          BigInt
+  uploadTime    DateTime       @default(now()) @map("upload_time")
+  jobKey        String         @map("job_key")
+  status        String         @db.Text
+  pocket        Pocket         @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  vectors       Vector[]
+  conversations Conversation[] @relation("ConversationSources")
+
+  @@map("Sources")
+}
+
+model Vector {
+  id        String                      @id @default(uuid())
+  fileId    String                      @map("file_id")
+  embedding Unsupported("vector(1024)")
+  content   String                      @db.Text
+  source    Source                      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("Vectors")
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  pocketId  String    @map("pocket_id")
+  metadata  Json
+  createdAt DateTime  @default(now()) @map("created_at")
+  title     String
+  pocket    Pocket    @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  sources   Source[]  @relation("ConversationSources")
+
+  @@map("Conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  role           String
+  content        String       @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  metadata       Json
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("Messages")
+}

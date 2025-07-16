@@ -9,7 +9,7 @@ export interface SourceApiResponse {
   name: string;
   type: string;
   url: string;
-  size: number;
+  size: string;
   uploadTime: string;
   status: string;
 }
@@ -30,7 +30,7 @@ export interface PocketApiResponse {
   createdAt: string;
   tags: string[];
   title: string;
-  source: SourceApiResponse[];
+  sources: SourceApiResponse[];
 }
 
 export interface PocketWithRecentActivityApiResponse extends PocketApiResponse {

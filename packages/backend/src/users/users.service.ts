@@ -1,27 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { User } from './users.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 import { CreateUserDto, UpdateUserDto, UserApiResponse } from '@fylr/types';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async findOneById(id: string): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ id });
+  async findOneById(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User with ID "${id}" not found`);
 
     return user;
   }
 
-  async findOneByEmail(email: string): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ email });
+  async findOneByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new NotFoundException(`User with email "${email}" not found`);
     }
@@ -29,8 +23,7 @@ export class UsersService {
   }
 
   async createUser(userData: CreateUserDto): Promise<UserApiResponse> {
-    const newUser = this.usersRepository.create(userData);
-    await this.usersRepository.save(newUser);
+    const newUser = await this.prisma.user.create({ data: userData });
     const { password: _password, ...result } = newUser;
     return result;
   }
@@ -39,16 +32,12 @@ export class UsersService {
     id: string,
     updateData: UpdateUserDto,
   ): Promise<UserApiResponse> {
-    const userToUpdate = await this.usersRepository.preload({
-      id: id,
-      ...updateData,
+    await this.findOneById(id);
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
     });
-
-    if (!userToUpdate)
-      throw new NotFoundException(`User with ID "${id}" not found`);
-
-    await this.usersRepository.save(userToUpdate);
-    const { password: _password, ...result } = userToUpdate;
+    const { password: _password, ...result } = updatedUser;
     return result;
   }
 }

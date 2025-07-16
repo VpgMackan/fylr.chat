@@ -20,19 +20,7 @@ class EnvironmentVariables {
   NODE_ENV: NodeEnv = NodeEnv.Development;
 
   @IsString()
-  DB_HOST: string;
-
-  @IsNumber()
-  DB_PORT: number;
-
-  @IsString()
-  DB_USER: string;
-
-  @IsString()
-  DB_PASS: string;
-
-  @IsString()
-  DB_NAME: string;
+  DATABASE_URL: string;
 
   @IsString()
   S3_ENDPOINT: string;

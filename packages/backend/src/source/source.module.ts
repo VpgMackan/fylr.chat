@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 
@@ -10,8 +9,6 @@ import { S3Service } from 'src/common/s3/s3.service';
 
 import { SourceController } from './source.controller';
 import { SourceService } from './source.service';
-import { Source } from './source.entity';
-import { Vector } from './vector.entity';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
@@ -19,7 +16,6 @@ import { EventsModule } from 'src/events/events.module';
 @Module({
   imports: [
     S3Module.registerAsync(),
-    TypeOrmModule.forFeature([Source, Vector]),
     MulterModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
         dest: configService.get<string>('TEMP_FILE_DIR'),

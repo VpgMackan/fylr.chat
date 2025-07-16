@@ -1,21 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DeleteResult, Repository } from 'typeorm';
-
-import { Pocket } from './pocket.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreatePocketDto,
   PocketApiResponse,
   UpdatePocketDto,
 } from '@fylr/types';
-import { Conversation } from 'src/chat/conversation.entity';
 
 @Injectable()
 export class PocketService {
-  constructor(
-    @InjectRepository(Pocket)
-    private pocketRepository: Repository<Pocket>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   /**
    * Get multiple pockets by a user id.
@@ -29,14 +22,13 @@ export class PocketService {
     take = 10,
     offset = 0,
   ): Promise<PocketApiResponse[]> {
-    const pockets = await this.pocketRepository
-      .createQueryBuilder('pocket')
-      .leftJoinAndSelect('pocket.source', 'source')
-      .where('pocket.userId = :id', { id })
-      .orderBy('pocket.createdAt', 'DESC')
-      .take(take)
-      .offset(offset)
-      .getMany();
+    const pockets = await this.prisma.pocket.findMany({
+      where: { userId: id },
+      include: { sources: true },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip: offset,
+    });
 
     if (!pockets || pockets.length === 0)
       throw new NotFoundException(
@@ -44,12 +36,13 @@ export class PocketService {
       );
 
     return pockets.map((p) => {
-      const { createdAt, source, ...rest } = p;
+      const { createdAt, sources, ...rest } = p;
       return {
         ...rest,
         createdAt: createdAt.toISOString(),
-        source: source.map((s) => ({
+        sources: sources.map((s) => ({
           ...s,
+          size: s.size.toString(),
           uploadTime: s.uploadTime.toISOString(),
         })),
       };
@@ -61,22 +54,18 @@ export class PocketService {
    * @param id The id for the pocket to be retrived
    * @returns A promise resolving a pocket
    */
-  async findOneById(
-    id: string,
-  ): Promise<
-    Omit<Pocket, 'conversation'> & { recentActivity: Conversation[] }
-  > {
-    const pocket = await this.pocketRepository.findOne({
+  async findOneById(id: string) {
+    const pocket = await this.prisma.pocket.findUnique({
       where: { id },
-      relations: ['conversation', 'source'],
+      include: { conversations: true, sources: true },
     });
     if (!pocket)
       throw new NotFoundException(
         `Pocket with the ID "${id}" could not be located in database`,
       );
 
-    const { conversation, ...pocketData } = pocket;
-    return { ...pocketData, recentActivity: conversation };
+    const { conversations, ...pocketData } = pocket;
+    return { ...pocketData, recentActivity: conversations };
   }
 
   /**
@@ -84,10 +73,8 @@ export class PocketService {
    * @param data An object containing the data for the new pocket
    * @returns A promise resolving the newly created pocket
    */
-  async createPocket(data: CreatePocketDto): Promise<Pocket> {
-    const newPocket = this.pocketRepository.create(data);
-    await this.pocketRepository.save(newPocket);
-    return newPocket;
+  async createPocket(data: CreatePocketDto) {
+    return await this.prisma.pocket.create({ data });
   }
 
   /**
@@ -96,19 +83,11 @@ export class PocketService {
    * @param updateData An object containing the fields to update (icon, description, tags)
    * @returns A promise resolving the newly updated pocket
    */
-  async updatePocket(id: string, updateData: UpdatePocketDto): Promise<Pocket> {
-    const pocketToUpdate = await this.pocketRepository.preload({
-      id,
-      ...updateData,
+  async updatePocket(id: string, updateData: UpdatePocketDto) {
+    return await this.prisma.pocket.update({
+      where: { id },
+      data: updateData,
     });
-
-    if (!pocketToUpdate)
-      throw new NotFoundException(
-        `Pocket with the ID "${id}" doesn't exist in database`,
-      );
-
-    await this.pocketRepository.save(pocketToUpdate);
-    return pocketToUpdate;
   }
 
   /**
@@ -116,16 +95,10 @@ export class PocketService {
    * @param id The id for the pocket that should be deleted
    * @returns A promise resolving a DeleteResult object indicating the outcome of the deletion.
    */
-  async deletePocket(id: string): Promise<DeleteResult> {
+  async deletePocket(id: string) {
     await this.findOneById(id);
-    const result = await this.pocketRepository.delete(id);
-
-    if (result.affected === 0) {
-      throw new NotFoundException(
-        `Pocket with the ID "${id}" could not be deleted (unexpected error).`,
-      );
-    }
-
-    return result;
+    return await this.prisma.pocket.delete({
+      where: { id },
+    });
   }
 }

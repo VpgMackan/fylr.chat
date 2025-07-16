@@ -50,7 +50,7 @@ export default function PocketIdPage({
         setPocketName(pocketData.title);
         setPocketDescription(pocketData.description);
         setPocketTags(pocketData.tags.join(','));
-        setSources(pocketData.source);
+        setSources(pocketData.sources);
 
         setOriginalPocket({
           title: pocketData.title,
@@ -140,7 +140,7 @@ export default function PocketIdPage({
                 key={id}
                 title={name}
                 summary="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                size={size as unknown as string}
+                size={size}
                 imported="2025/04/13"
                 id={id}
                 pocketId={pocketId}

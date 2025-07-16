@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
+import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -10,7 +11,10 @@ async function bootstrap() {
       credentials: true,
     },
   });
+
   app.use(cookieParser());
+  app.useGlobalInterceptors(new BigIntInterceptor());
+  
   const configService = app.get(ConfigService);
   await app.listen(configService.get('PORT') ?? 3001);
 }
