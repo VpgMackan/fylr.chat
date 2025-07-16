@@ -79,7 +79,7 @@ export class SourceController {
     await fs.unlink(file.path);
 
     const data = {
-      pocketId: body.pocketId,
+      pocket: { connect: { id: body.pocketId } },
       name: file.originalname,
       type: file.mimetype,
       url: file.filename || file.originalname,
