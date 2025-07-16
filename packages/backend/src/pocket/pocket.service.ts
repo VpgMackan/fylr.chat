@@ -40,8 +40,9 @@ export class PocketService {
       return {
         ...rest,
         createdAt: createdAt.toISOString(),
-        source: sources.map((s) => ({
+        sources: sources.map((s) => ({
           ...s,
+          size: s.size.toString(),
           uploadTime: s.uploadTime.toISOString(),
         })),
       };
