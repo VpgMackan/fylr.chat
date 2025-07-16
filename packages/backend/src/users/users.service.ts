@@ -32,9 +32,12 @@ export class UsersService {
     id: string,
     updateData: UpdateUserDto,
   ): Promise<UserApiResponse> {
-    return await this.prisma.user.update({
+    await this.findOneById(id);
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateData,
     });
+    const { password: _password, ...result } = updatedUser;
+    return result;
   }
 }

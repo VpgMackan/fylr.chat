@@ -140,7 +140,7 @@ export class ConversationService {
 
   async deleteConversation(id: string) {
     try {
-      await this.getConversations(id);
+      await this.getConversation(id);
       return await this.prisma.conversation.delete({
         where: { id },
       });

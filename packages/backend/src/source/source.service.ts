@@ -13,7 +13,7 @@ export class SourceService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createSourceDatabaseEntry(data) {
+  async createSourceDatabaseEntry(data: Prisma.SourceCreateInput) {
     return await this.prisma.source.create({ data });
   }
 
