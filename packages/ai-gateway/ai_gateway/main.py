@@ -4,6 +4,8 @@ import uuid
 from functools import lru_cache
 from typing import AsyncGenerator
 
+import uvicorn
+
 from openai import APIStatusError
 
 from fastapi import FastAPI, HTTPException, status, Request
@@ -156,3 +158,7 @@ async def create_embedding(request: EmbeddingRequest):
 @app.get("/")
 def read_root():
     return {"status": "AI Gateway is running"}
+
+
+def start():
+    uvicorn.run("ai_gateway.main:app", host="0.0.0.0", port=8000, reload=True)

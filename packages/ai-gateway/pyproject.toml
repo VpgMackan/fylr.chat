@@ -11,11 +11,11 @@ openai = "^1.95.0"
 pydantic-settings = "^2.10.1"
 httpx = "^0.28.1"
 fastapi = "^0.116.1"
-uvicorn = {extras = ["standard"], version = "^0.35.0"}
+uvicorn = { extras = ["standard"], version = "^0.35.0" }
 
 
 [tool.poetry.scripts]
-ai-gateway = "ai_gateway.main:run"
+gateway = "ai_gateway.main:start"
 
 [build-system]
 requires = ["poetry-core"]
