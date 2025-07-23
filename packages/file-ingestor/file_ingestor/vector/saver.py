@@ -4,10 +4,11 @@ import os
 from typing import List, Dict, Any, Optional, Generator
 from contextlib import contextmanager
 
+from langchain_core.documents import Document
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from .entity import Vector, Base
+from .entity import Vector
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -131,14 +132,16 @@ def vectorize_text(
 
 
 def save_text_chunks_as_vectors(
-    chunks: List[str], file_id: str, job_key: str, info_callback: callable
+    docs: List[Document], file_id: str, job_key: str, info_callback: callable
 ) -> List[Vector]:
     """Save text chunks as vectors in the database."""
-    if not chunks:
-        raise ValueError("No chunks provided")
+    if not docs:
+        raise ValueError("No documents provided")
 
     if not file_id:
         raise ValueError("File ID is required")
+
+    chunks = [doc.page_content for doc in docs]
 
     try:
         embeddings = vectorize_text(chunks, job_key, info_callback)
@@ -146,8 +149,14 @@ def save_text_chunks_as_vectors(
         info_callback(f"Saving {len(embeddings)} vectors to the database...", job_key)
         with get_db_session() as session:
             vectors = []
-            for chunk, embedding in zip(chunks, embeddings):
-                vector = Vector(file_id=file_id, content=chunk, embedding=embedding)
+            for i, (doc, embedding) in enumerate(zip(docs, embeddings)):
+                start_index = doc.metadata.get("start_index")
+                vector = Vector(
+                    file_id=file_id,
+                    content=doc.page_content,
+                    embedding=embedding,
+                    chunk_index=start_index if start_index is not None else i,
+                )
                 vectors.append(vector)
 
             session.add_all(vectors)

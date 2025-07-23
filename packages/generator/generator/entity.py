@@ -1,5 +1,5 @@
 from pgvector.sqlalchemy import Vector as PgVector
-from sqlalchemy import Column, String, Text, ForeignKey, BigInteger, DateTime
+from sqlalchemy import Column, String, Text, ForeignKey, BigInteger, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -10,21 +10,22 @@ Base = declarative_base()
 
 
 class DocumentVector(Base):
-    __tablename__ = "Vector"
+    __tablename__ = "Vectors"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("Source.id"), nullable=False)
+    file_id = Column(UUID(as_uuid=True), ForeignKey("Sources.id"), nullable=False)
     embedding = Column(PgVector(1024))
     content = Column(Text)
+    chunk_index = Column(Integer)
 
     source = relationship("Source", back_populates="vectors")
 
 
 class Source(Base):
-    __tablename__ = "Source"
+    __tablename__ = "Sources"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pocket.id"), nullable=False)
+    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pockets.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
     url = Column(String, nullable=False)
@@ -33,8 +34,8 @@ class Source(Base):
     job_key = Column(UUID(as_uuid=True), nullable=False)
     status = Column(Text, nullable=False)
 
-    vectors = relationship("Vector", back_populates="source")
-    pocket = relationship("Pocket", back_populates="source")
+    vectors = relationship("DocumentVector", back_populates="source")
+    pocket = relationship("Pocket", back_populates="sources")
 
 
 class SummaryEpisode(Base):
@@ -54,7 +55,7 @@ class Summary(Base):
     __tablename__ = "Summary"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pocket.id"), nullable=False)
+    pocket_id = Column(UUID(as_uuid=True), ForeignKey("Pockets.id"), nullable=False)
     title = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     length = Column(BigInteger, nullable=False)
@@ -65,14 +66,14 @@ class Summary(Base):
 
 
 class Pocket(Base):
-    __tablename__ = "Pocket"
+    __tablename__ = "Pockets"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
     icon = Column(String, nullable=False)
     description = Column(Text)
     created_at = Column(DateTime, default=func.now(), nullable=False)
-    tags = Column(Text, nullable=True)
+    tags = Column(String, array_dimensions=1)
     title = Column(String, nullable=False)
 
     sources = relationship("Source", back_populates="pocket")

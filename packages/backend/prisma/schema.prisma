@@ -55,11 +55,12 @@ model Source {
 }
 
 model Vector {
-  id        String                      @id @default(uuid())
-  fileId    String                      @map("file_id")
-  embedding Unsupported("vector(1024)")
-  content   String                      @db.Text
-  source    Source                      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  id         String                      @id @default(uuid())
+  fileId     String                      @map("file_id")
+  embedding  Unsupported("vector(1024)")
+  content    String                      @db.Text
+  source     Source                      @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  chunkIndex Int                         @map("chunk_index")
 
   @@map("Vectors")
 }

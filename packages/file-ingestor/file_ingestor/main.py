@@ -92,18 +92,26 @@ class FileIngestor:
             obj = self.s3_bucket.Object(file_key)
             buffer = obj.get()["Body"].read()
 
-            self.info("Passing to handler for processing...", job_key=job_key)
-            chunks = manager.process_data(
+            self.info(
+                "Passing to handler for processing...",
+                job_key=job_key,
+                payload={"stage": "parsing"},
+            )
+            docs = manager.process_data(
                 file_type=file_type,
                 buffer=buffer,
                 job_key=job_key,
                 info_callback=self.info,
             )
-            if not isinstance(chunks, list):
-                raise Exception(f"Handler failed to return chunks: {chunks}")
+            if not isinstance(docs, list):
+                raise Exception(f"Handler failed to return docs: {docs}")
 
-            self.info("Passing chunks to vector saver...", job_key=job_key)
-            save_text_chunks_as_vectors(chunks, source_id, job_key, self.info)
+            self.info(
+                "Passing chunks to vector saver...",
+                job_key=job_key,
+                payload={"stage": "vectorizing"},
+            )
+            save_text_chunks_as_vectors(docs, source_id, job_key, self.info)
 
             self.info(f"Successfully processed file: {file_key}", job_key=job_key)
             ch.basic_ack(delivery_tag=method.delivery_tag)

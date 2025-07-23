@@ -22,13 +22,11 @@ def handle(buffer: bytes, job_key: str, info_callback: callable):
         info_callback("Buffer was empty, no text to process.", job_key)
         raise ValueError("Empty buffer received")
 
-    all_chunks = text_splitter.split_text(text)
-    if not all_chunks:
+    all_docs = text_splitter.create_documents([text])
+    if not all_docs:
         info_callback("Text splitting resulted in zero chunks.", job_key)
         raise ValueError("No chunks created from the text")
 
-    message = f"Successfully created {len(all_chunks)} chunks from the text."
-    info_callback(
-        message, job_key, {"chunk_count": len(all_chunks), "message": message}
-    )
-    return all_chunks
+    message = f"Successfully created {len(all_docs)} chunks from the text."
+    info_callback(message, job_key, {"chunk_count": len(all_docs), "message": message})
+    return all_docs

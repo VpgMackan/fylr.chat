@@ -1,5 +1,5 @@
 from pgvector.sqlalchemy import Vector as PgVector
-from sqlalchemy import Column, String, Text, ForeignKey, BigInteger, DateTime
+from sqlalchemy import Column, String, Text, ForeignKey, BigInteger, DateTime, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -16,6 +16,7 @@ class Vector(Base):
     file_id = Column(UUID(as_uuid=True), ForeignKey("Sources.id"), nullable=False)
     embedding = Column(PgVector(1024))
     content = Column(Text)
+    chunk_index = Column(Integer)
 
     source = relationship("Sources", back_populates="vectors")
 
