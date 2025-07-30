@@ -1,39 +1,18 @@
-import pika
-import uuid
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, joinedload
-
-from collections import defaultdict
-
-from .entity import Base, Summary, Source
-from .config import settings
+from ..base_generator import BaseGenerator
 
 
-class SummaryGenerator:
-    def __init__(self):
-        self.channel = None
-        self.engine = None
-        self.Session = None
-        self.session = None
+class SummaryGenerator(BaseGenerator):
+    def generate(self, ch, method, properties, body: bytes):
+        print(body.decode("utf-8"))
+        # Your existing summary generation logic here
+        pass
 
-    def setup_database(self, db_url: str) -> None:
-        """Initialize database connection and session."""
-        self.engine = create_engine(db_url, echo=False)
-        self.Session = sessionmaker(bind=self.engine)
-        self.session = self.Session()
+    def validate_input(self, input_data):
+        # Validate the input data before processing
+        pass
 
-    def setup_rabbitmq_connection(self) -> None:
-        """Initialize RabbitMQ connection and channel."""
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
-            self.channel = connection.channel()
-            self.channel.queue_declare("summary-generator", durable=True)
-            print("RabbitMQ connection established successfully")
-        except Exception as e:
-            print(f"Failed to connect to RabbitMQ: {e}")
-            raise
 
+'''
     def fetch_sources(self, pocket_id):
         """
         Get all the vectors grouped by source and chunkIndex and store them in an array like this:
@@ -101,35 +80,4 @@ class SummaryGenerator:
         except Exception as e:
             print(f"Error processing summary: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-
-    def start_consuming(self) -> None:
-        self.channel.basic_consume(
-            queue="summary-generator",
-            on_message_callback=self.process_summary,
-            auto_ack=False,
-        )
-        self.channel.start_consuming()
-
-    def run(self) -> None:
-        try:
-            db_url = f"postgresql://{settings.db_user}:{settings.db_pass}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
-            print(f"Connecting to database...")
-            self.setup_database(db_url)
-            print("Database connection established successfully")
-
-            print("Setting up RabbitMQ connection...")
-            self.setup_rabbitmq_connection()
-
-            print("Starting to consume messages...")
-            self.start_consuming()
-        except KeyboardInterrupt:
-            print("Stopping consumer...")
-            if self.channel:
-                self.channel.stop_consuming()
-            if self.session:
-                self.session.close()
-        except Exception as e:
-            print(f"Error in run method: {e}")
-            if self.session:
-                self.session.close()
-            raise
+'''
