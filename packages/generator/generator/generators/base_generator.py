@@ -20,7 +20,7 @@ class BaseGenerator(ABC):
         This method is responsible for the entire lifecycle of a message,
         including parsing, processing, and acknowledging or rejecting it.
         """
-        pass
+        return True
 
     @abstractmethod
     def validate_input(self, input_data: dict) -> bool:

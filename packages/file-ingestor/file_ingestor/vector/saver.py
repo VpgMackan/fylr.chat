@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from .entity import Vector
+from .entity import DocumentVector
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ def vectorize_text(
 
 def save_text_chunks_as_vectors(
     docs: List[Document], file_id: str, job_key: str, info_callback: callable
-) -> List[Vector]:
+) -> List[DocumentVector]:
     """Save text chunks as vectors in the database."""
     if not docs:
         raise ValueError("No documents provided")
@@ -151,7 +151,7 @@ def save_text_chunks_as_vectors(
             vectors = []
             for i, (doc, embedding) in enumerate(zip(docs, embeddings)):
                 start_index = doc.metadata.get("start_index")
-                vector = Vector(
+                vector = DocumentVector(
                     file_id=file_id,
                     content=doc.page_content,
                     embedding=embedding,

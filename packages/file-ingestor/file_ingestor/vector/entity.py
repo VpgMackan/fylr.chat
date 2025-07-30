@@ -9,29 +9,30 @@ import uuid
 Base = declarative_base()
 
 
-class Vector(Base):
+class DocumentVector(Base):
     __tablename__ = "Vectors"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("Sources.id"), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    file_id = Column(String, ForeignKey("Sources.id"), nullable=False)
     embedding = Column(PgVector(1024))
     content = Column(Text)
     chunk_index = Column(Integer)
 
-    source = relationship("Sources", back_populates="vectors")
+    source = relationship("Source", back_populates="vectors")
 
 
-class Sources(Base):
+class Source(Base):
     __tablename__ = "Sources"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    pocket_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
     url = Column(String, nullable=False)
     size = Column(BigInteger, nullable=False)
     upload_time = Column(DateTime, default=func.now())
-    job_key = Column(UUID(as_uuid=True), nullable=False)
+    job_key = Column(String, nullable=False)
     status = Column(Text, nullable=False)
 
-    vectors = relationship("Vector", back_populates="source")
+    vectors = relationship("DocumentVector", back_populates="source")
+    pocket = relationship("Pocket", back_populates="sources")
