@@ -2,9 +2,11 @@ import pika
 import uuid
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 
-from .entity import Base, Summary
+from collections import defaultdict
+
+from .entity import Base, Summary, Source
 from .config import settings
 
 
@@ -32,6 +34,53 @@ class SummaryGenerator:
             print(f"Failed to connect to RabbitMQ: {e}")
             raise
 
+    def fetch_sources(self, pocket_id):
+        """
+        Get all the vectors grouped by source and chunkIndex and store them in an array like this:
+        [{id, name, type, url, content}, .....]
+        Content is all the vectors joined together based on chunkIndex
+        """
+
+        try:
+            sources = (
+                self.session.query(Source)
+                .options(joinedload(Source.vectors))
+                .filter(Source.pocket_id == pocket_id)
+                .all()
+            )
+
+            result = []
+
+            for source in sources:
+                vectors_by_chunk = defaultdict(list)
+                for vector in source.vectors:
+                    vectors_by_chunk[vector.chunk_index].append(vector.content)
+
+                sorted_chunks = sorted(vectors_by_chunk.items())
+                content_parts = []
+                for chunk_index, contents in sorted_chunks:
+                    chunk_content = " ".join(contents)
+                    content_parts.append(chunk_content)
+
+                full_content = " ".join(content_parts)
+
+                source_entry = {
+                    "id": source.id,
+                    "name": source.name,
+                    "type": source.type,
+                    "url": source.url,
+                    "content": full_content,
+                }
+
+                result.append(source_entry)
+
+            print(f"Found {len(result)} sources for pocket {pocket_id}")
+            return result
+
+        except Exception as e:
+            print(f"Error fetching sources for pocket {pocket_id}: {e}")
+            raise
+
     def process_summary(self, ch, method, properties, body: bytes) -> None:
         try:
             summary_id_str = body.decode("utf-8")
@@ -41,6 +90,7 @@ class SummaryGenerator:
             summary = self.session.get(Summary, summary_id_str)
             if summary:
                 print(f"Found summary: {summary.title}")
+                print(self.fetch_sources(summary.pocket_id))
                 ch.basic_ack(delivery_tag=method.delivery_tag)
             else:
                 print(f"Summary with ID {summary_id_str} not found")
