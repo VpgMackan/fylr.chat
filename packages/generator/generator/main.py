@@ -1,76 +1,96 @@
 import pika
+import logging
+import sys
+from functools import partial
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, joinedload
+from pika.adapters.blocking_connection import BlockingChannel
+from pika.spec import Basic, BasicProperties
 
+from .database import get_db_session
 from .generator_service import GeneratorService
+from .generators.base_generator import BaseGenerator
 
-from .config import settings
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger(__name__)
 
 
-class Generator:
-    def __init__(self):
-        self.channel = None
-        self.engine = None
-        self.Session = None
-        self.session = None
-
-    def setup_database(self, db_url: str) -> None:
-        """Initialize database connection and session."""
-        self.engine = create_engine(db_url, echo=False)
-        self.Session = sessionmaker(bind=self.engine)
-        self.session = self.Session()
-
-    def setup_rabbitmq_connection(self) -> None:
-        """Initialize RabbitMQ connection and channel."""
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
-            self.channel = connection.channel()
-            self.channel.queue_declare("summary-generator", durable=True)
-            print("RabbitMQ connection established successfully")
-        except Exception as e:
-            print(f"Failed to connect to RabbitMQ: {e}")
-            raise
-
-    def start_consuming(self) -> None:
-        service = GeneratorService()
-        summary_generator = service.get_generator("summary")
-
-        self.channel.basic_consume(
-            queue="summary-generator",
-            on_message_callback=summary_generator.generate,
-            auto_ack=False,
-        )
-        self.channel.start_consuming()
-
-    def run(self) -> None:
-        try:
-            db_url = f"postgresql://{settings.db_user}:{settings.db_pass}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
-            print(f"Connecting to database...")
-            self.setup_database(db_url)
-            print("Database connection established successfully")
-
-            print("Setting up RabbitMQ connection...")
-            self.setup_rabbitmq_connection()
-
-            print("Starting to consume messages...")
-            self.start_consuming()
-        except KeyboardInterrupt:
-            print("Stopping consumer...")
-            if self.channel:
-                self.channel.stop_consuming()
-            if self.session:
-                self.session.close()
-        except Exception as e:
-            print(f"Error in run method: {e}")
-            if self.session:
-                self.session.close()
-            raise
+def on_message_callback(
+    channel: BlockingChannel,
+    method: Basic.Deliver,
+    properties: BasicProperties,
+    body: bytes,
+    generator_instance: BaseGenerator,
+):
+    """
+    Wrapper callback that handles database session management for each message.
+    """
+    logger.info(f"Received message with delivery tag {method.delivery_tag}")
+    try:
+        with get_db_session() as db:
+            generator_instance.generate(db, channel, method, properties, body)
+    except Exception as e:
+        logger.error(f"Unhandled exception in message callback: {e}", exc_info=True)
+        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 
 def main():
+    """
+    Main entry point for the Generator service.
+    Initializes services and starts consuming messages from RabbitMQ.
+    """
+    logger.info("Starting Generator service...")
+
     try:
-        generator = Generator()
-        generator.run()
+        generator_service = GeneratorService()
+
+        queue_name = "summary-generator"
+        generator_class = generator_service.get_generator_class("summary")
+
+        if not generator_class:
+            logger.critical(
+                f"Could not find or load generator class for 'summary'. Exiting."
+            )
+            sys.exit(1)
+
+        generator_instance = generator_class()
+
+        # Setup RabbitMQ connection
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host="localhost")
+        )
+        channel = connection.channel()
+        channel.queue_declare(queue=queue_name, durable=True)
+        logger.info(f"Connected to RabbitMQ and declared queue '{queue_name}'")
+
+        # Create a partial function to pass the generator instance to the callback
+        on_message_with_generator = partial(
+            on_message_callback, generator_instance=generator_instance
+        )
+
+        channel.basic_consume(
+            queue=queue_name,
+            on_message_callback=on_message_with_generator,
+            auto_ack=False,  # Manual message acknowledgment
+        )
+
+        logger.info("Waiting for messages. To exit press CTRL+C")
+        channel.start_consuming()
+
+    except pika.exceptions.AMQPConnectionError as e:
+        logger.critical(f"Failed to connect to RabbitMQ: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        logger.info("Service stopped by user.")
     except Exception as e:
-        print(e)
+        logger.critical(
+            f"An unhandled error occurred during startup: {e}", exc_info=True
+        )
+        sys.exit(1)
+    finally:
+        if "connection" in locals() and connection.is_open:
+            connection.close()
+        logger.info("Generator service shut down.")

@@ -1,7 +1,7 @@
 {
   "generators": {
     "summary": {
-      "module": "generators.summary.summary_generator",
+      "module": "generator.generators.summary.summary_generator",
       "class": "SummaryGenerator"
     }
   }
