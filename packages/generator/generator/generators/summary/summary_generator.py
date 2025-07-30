@@ -49,6 +49,26 @@ class SummaryGenerator(BaseGenerator):
         )
         return documents
 
+    def _create_summary(self, summary, documents):
+        print(summary.title)
+        print(summary.pocket_id)
+        print(summary.id)
+        print(summary.created_at)
+        print(summary.length)
+        print(summary.generated)
+        for episode in summary.episodes:
+            print(episode.summary_id)
+            print(episode.content)
+            print(episode.created_at)
+            print(episode.id)
+            print(episode.title)
+            print(episode.focus)
+        
+        for doc in documents:
+            print(doc.id)
+            print(doc.name)
+            print(doc.content)
+
     def generate(
         self,
         db: Session,
@@ -59,8 +79,8 @@ class SummaryGenerator(BaseGenerator):
     ) -> None:
         """Processes a summary generation request."""
         try:
-            summary_id_str = body.decode("utf-8")
-            summary_id = uuid.UUID(summary_id_str)
+            summary_id = body.decode("utf-8")
+            uuid.UUID(summary_id)
         except (ValueError, UnicodeDecodeError) as e:
             logger.error(
                 f"Invalid message body, expecting a UUID string. Got '{body}'. Error: {e}"
@@ -71,7 +91,12 @@ class SummaryGenerator(BaseGenerator):
         logger.info(f"Processing summary request for ID: {summary_id}")
 
         try:
-            summary = db.query(Summary).filter(Summary.id == summary_id).first()
+            summary = (
+                db.query(Summary)
+                .options(joinedload(Summary.episodes))
+                .filter(Summary.id == summary_id)
+                .first()
+            )
             if not summary:
                 logger.warning(f"Summary with ID {summary_id} not found in database.")
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
@@ -89,7 +114,7 @@ class SummaryGenerator(BaseGenerator):
                 channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            # Generate podcast
+            self._create_summary(summary, documents)
 
             logger.info(f"Successfully processed and updated summary ID: {summary_id}")
             channel.basic_ack(delivery_tag=method.delivery_tag)
