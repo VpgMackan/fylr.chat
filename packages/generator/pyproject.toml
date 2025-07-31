@@ -12,6 +12,7 @@ pydantic-settings = "^2.10.1"
 psycopg2-binary = "^2.9.10"
 sqlalchemy = "^2.0.41"
 pgvector = "^0.4.1"
+httpx = "^0.28.1"
 
 [tool.poetry.scripts]
 generator = "generator.main:main"

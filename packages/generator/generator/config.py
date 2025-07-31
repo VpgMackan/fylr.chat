@@ -11,5 +11,7 @@ class Settings(BaseSettings):
     db_pass: str = None
     db_name: str = None
 
+    ai_gateway_url: str = "http://localhost:8000"
+
 
 settings = Settings()

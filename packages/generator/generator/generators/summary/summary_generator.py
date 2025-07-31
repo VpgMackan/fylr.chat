@@ -8,6 +8,8 @@ from pika.spec import Basic, BasicProperties
 
 from ...entity import Summary, Source
 from ..base_generator import BaseGenerator
+from ...services.ai_gateway_service import ai_gateway_service
+from .prompts import create_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -49,25 +51,32 @@ class SummaryGenerator(BaseGenerator):
         )
         return documents
 
-    def _create_summary(self, summary, documents):
-        print(summary.title)
-        print(summary.pocket_id)
-        print(summary.id)
-        print(summary.created_at)
-        print(summary.length)
-        print(summary.generated)
-        for episode in summary.episodes:
-            print(episode.summary_id)
-            print(episode.content)
-            print(episode.created_at)
-            print(episode.id)
-            print(episode.title)
-            print(episode.focus)
-        
-        for doc in documents:
-            print(doc.id)
-            print(doc.name)
-            print(doc.content)
+    def _create_summary(
+        self, db: Session, summary: Summary, documents: List[Dict[str, Any]]
+    ):
+        """Generates summary content using the AI Gateway and updates the database."""
+        logger.info(f"Generating summary for '{summary.title}' (ID: {summary.id})")
+
+        prompt = create_summary_prompt(documents, summary.title)
+
+        try:
+            generated_content = ai_gateway_service.generate_text(prompt)
+        except Exception as e:
+            logger.error(f"Failed to generate summary content for {summary.id}: {e}")
+            summary.generated = "Error: Failed to communicate with the AI service."
+            db.add(summary)
+            return
+
+        if generated_content:
+            summary.generated = generated_content
+            logger.info(f"Successfully generated content for summary {summary.id}")
+        else:
+            summary.generated = "Failed: AI service returned an empty response."
+            logger.warning(
+                f"AI service returned empty content for summary {summary.id}"
+            )
+
+        db.add(summary)
 
     def generate(
         self,
@@ -114,7 +123,7 @@ class SummaryGenerator(BaseGenerator):
                 channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            self._create_summary(summary, documents)
+            self._create_summary(db, summary, documents)
 
             logger.info(f"Successfully processed and updated summary ID: {summary_id}")
             channel.basic_ack(delivery_tag=method.delivery_tag)
