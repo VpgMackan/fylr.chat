@@ -13,6 +13,45 @@ class AIGatewayService:
         self.client = httpx.Client(base_url=self.base_url, timeout=120.0)
         logger.info(f"AI Gateway Service initialized for URL: {self.base_url}")
 
+    def generate_embeddings(
+        self, text: str, model: str = "jina-clip-v2"
+    ) -> List[float]:
+        """
+        Generates embeddings for search queries using the AI Gateway.
+        """
+        request_payload = {
+            "provider": "jina",
+            "model": model,
+            "input": [text],
+            "options": {"task": "retrieval.query"},
+        }
+
+        try:
+            response = self.client.post("/v1/embeddings", json=request_payload)
+            response.raise_for_status()
+
+            data = response.json()
+
+            if "data" not in data or not isinstance(data["data"], list):
+                logger.error(f"Unexpected response structure: {data}")
+                raise ValueError("Invalid response structure from AI Gateway")
+
+            if not data["data"] or "embedding" not in data["data"][0]:
+                raise ValueError("Missing embedding in response data")
+
+            return data["data"][0]["embedding"]
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error calling AI Gateway for embeddings: {e.response.status_code} - {e.response.text}"
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                f"An unexpected error occurred while generating embeddings: {e}"
+            )
+            raise
+
     def generate_text(self, prompt: str, model: str = "groq/llama3-70b-8192") -> str:
         """
         Generates text using the AI Gateway's chat completion endpoint.

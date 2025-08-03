@@ -3,10 +3,11 @@ import uuid
 from typing import List, Dict, Any
 
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import text, select
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
-from ...entity import Summary, Source
+from ...entity import Summary, Source, DocumentVector
 from ..base_generator import BaseGenerator
 from ...services.ai_gateway_service import ai_gateway_service
 from .prompts import create_summary_prompt
@@ -19,7 +20,7 @@ class SummaryGenerator(BaseGenerator):
         """This generator expects a simple string body, so this method is not used."""
         return True
 
-    def _fetch_related_documents(
+    def _fetch_all_documents(
         self, db: Session, pocket_id: uuid.UUID
     ) -> List[Dict[str, Any]]:
         """
@@ -51,32 +52,173 @@ class SummaryGenerator(BaseGenerator):
         )
         return documents
 
-    def _create_summary(
-        self, db: Session, summary: Summary, documents: List[Dict[str, Any]]
-    ):
+    def _fetch_related_documents(
+        self, db: Session, query_text: str, pocket_id: uuid.UUID, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Performs vector search to find documents related to the query text within a specific pocket.
+
+        Args:
+            db: Database session
+            query_text: The search query text
+            pocket_id: The pocket ID to limit search to
+            limit: Maximum number of results to return
+
+        Returns:
+            List of dictionaries containing document content and metadata
+        """
+        logger.info(
+            f"Performing vector search for query: '{query_text}' in pocket {pocket_id}"
+        )
+
+        try:
+            # Generate embedding for the search query
+            query_embedding = ai_gateway_service.generate_embeddings(query_text)
+
+            # Use SQLAlchemy scalars with pgvector cosine distance
+            query = (
+                select(
+                    DocumentVector.id,
+                    DocumentVector.content,
+                    DocumentVector.chunk_index,
+                    Source.id.label("source_id"),
+                    Source.name.label("source_name"),
+                    DocumentVector.embedding.cosine_distance(query_embedding).label(
+                        "distance"
+                    ),
+                )
+                .join(Source, DocumentVector.file_id == Source.id)
+                .filter(Source.pocket_id == str(pocket_id))
+                .order_by(DocumentVector.embedding.cosine_distance(query_embedding))
+                .limit(limit)
+            )
+
+            result = db.execute(query).fetchall()
+
+            # Convert results to a more usable format
+            related_docs = []
+            for row in result:
+                related_docs.append(
+                    {
+                        "vector_id": row.id,
+                        "content": row.content,
+                        "chunk_index": row.chunk_index,
+                        "source_id": row.source_id,
+                        "source_name": row.source_name,
+                        "similarity_distance": float(row.distance),
+                    }
+                )
+
+            logger.info(f"Found {len(related_docs)} related documents")
+            return related_docs
+
+        except Exception as e:
+            logger.error(f"Error during vector search: {e}", exc_info=True)
+            return []
+
+    def _create_summary(self, db: Session, summary: Summary):
         """Generates summary content using the AI Gateway and updates the database."""
         logger.info(f"Generating summary for '{summary.title}' (ID: {summary.id})")
 
-        prompt = create_summary_prompt(documents, summary.title)
-
         try:
-            generated_content = ai_gateway_service.generate_text(prompt)
+            generated_episodes = []
+
+            for episode in summary.episodes:
+                logger.info(f"Processing episode: '{episode.title}'")
+
+                keywords_prompt = f"""
+                Based on the episode title "{episode.title}" and focus area "{episode.focus or 'general information'}", 
+                generate 3-5 specific search keywords or short phrases that would help find relevant information for this episode.
+                Return only the keywords/phrases, one per line, without numbering or extra formatting.
+                """
+
+                search_queries_text = ai_gateway_service.generate_text(keywords_prompt)
+                search_queries = [
+                    q.strip() for q in search_queries_text.split("\n") if q.strip()
+                ]
+
+                logger.info(f"Generated search queries: {search_queries}")
+
+                all_related_docs = []
+                for query in search_queries[:3]:
+                    related_docs = self._fetch_related_documents(
+                        db, query, summary.pocket_id, limit=5
+                    )
+                    all_related_docs.extend(related_docs)
+
+                seen_ids = set()
+                unique_docs = []
+                for doc in all_related_docs:
+                    if doc["vector_id"] not in seen_ids:
+                        seen_ids.add(doc["vector_id"])
+                        unique_docs.append(doc)
+
+                unique_docs.sort(key=lambda x: x["similarity_distance"])
+                top_docs = unique_docs[:10]
+
+                if top_docs:
+                    context_content = "\n\n".join(
+                        [
+                            f"Source: {doc['source_name']}\nContent: {doc['content']}"
+                            for doc in top_docs
+                        ]
+                    )
+
+                    summary_prompt = f"""
+                    Create a comprehensive summary for the episode titled "{episode.title}".
+                    Focus area: {episode.focus or 'general information'}
+                    
+                    Based on the following relevant content from documents:
+                    
+                    {context_content}
+                    
+                    Please provide a well-structured summary that:
+                    1. Focuses on the specified topic/area
+                    2. Synthesizes information from multiple sources
+                    3. Is informative and well-organized
+                    4. Includes specific details and insights from the content
+                    
+                    Summary:
+                    """
+
+                    episode_content = ai_gateway_service.generate_text(summary_prompt)
+
+                    episode.content = episode_content
+                    logger.info(
+                        f"Generated content for episode '{episode.title}' ({len(episode_content)} characters)"
+                    )
+
+                    generated_episodes.append(
+                        {
+                            "title": episode.title,
+                            "content": episode_content,
+                            "sources_used": len(top_docs),
+                        }
+                    )
+                else:
+                    logger.warning(
+                        f"No relevant content found for episode '{episode.title}'"
+                    )
+                    episode.content = f"No relevant content found for the topic '{episode.title}' in the available documents."
+
+            # Mark summary as generated (boolean flag)
+            if generated_episodes:
+                summary.generated = "true"
+                logger.info(
+                    f"Successfully generated content for {len(generated_episodes)} episodes"
+                )
+            else:
+                summary.generated = "false"
+                logger.warning("No content generated for any episodes")
+
+            # Commit the changes to the database
+            db.commit()
+            logger.info(f"Successfully saved summary episodes to database")
+
         except Exception as e:
-            logger.error(f"Failed to generate summary content for {summary.id}: {e}")
-            summary.generated = "Error: Failed to communicate with the AI service."
-            db.add(summary)
-            return
-
-        if generated_content:
-            summary.generated = generated_content
-            logger.info(f"Successfully generated content for summary {summary.id}")
-        else:
-            summary.generated = "Failed: AI service returned an empty response."
-            logger.warning(
-                f"AI service returned empty content for summary {summary.id}"
-            )
-
-        db.add(summary)
+            logger.error(f"Error generating summary content: {e}", exc_info=True)
+            db.rollback()
+            raise
 
     def generate(
         self,
@@ -111,19 +253,7 @@ class SummaryGenerator(BaseGenerator):
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
 
-            documents = self._fetch_related_documents(db, summary.pocket_id)
-            if not documents:
-                logger.warning(
-                    f"No documents found for summary {summary_id}, cannot generate."
-                )
-                summary.generated = (
-                    "Failed: No source documents with content were found in the pocket."
-                )
-                db.add(summary)
-                channel.basic_ack(delivery_tag=method.delivery_tag)
-                return
-
-            self._create_summary(db, summary, documents)
+            self._create_summary(db, summary)
 
             logger.info(f"Successfully processed and updated summary ID: {summary_id}")
             channel.basic_ack(delivery_tag=method.delivery_tag)
