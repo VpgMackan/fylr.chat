@@ -8,8 +8,15 @@ import uvicorn
 
 from openai import APIStatusError
 
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import FastAPI, HTTPException, status, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+
+from .prompts.registry import (
+    PromptRegistry,
+    PromptRenderError,
+    PromptNotFound,
+    PromptValidationError,
+)
 
 from .schemas import (
     ChatCompletionRequest,
@@ -25,6 +32,21 @@ app = FastAPI(
     description="A unified API for multiple AI providers.",
     version="1.0.0",
 )
+
+PROMPTS_DIR = "/path/to/ai_gateway/prompts/config"
+app.state.prompt_registry = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    app.state.prompt_registry = PromptRegistry(PROMPTS_DIR)
+
+
+def get_registry() -> PromptRegistry:
+    reg = app.state.prompt_registry
+    if not reg:
+        raise RuntimeError("Prompt registry not initialized")
+    return reg
 
 
 @lru_cache(maxsize=10)
