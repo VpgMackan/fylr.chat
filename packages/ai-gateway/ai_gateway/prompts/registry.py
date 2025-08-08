@@ -53,7 +53,9 @@ class PromptRegistry:
     def __init__(self, prompts_dir: str, jinja_env: Optional[Environment] = None):
         self.prompts_dir = Path(prompts_dir)
         if not self.prompts_dir.exists():
-            raise ValueError(f"Prompts directory does not exist: {self.prompts_dir!s}")
+            raise ValueError(
+                f"Prompts directory does not exist: {str(self.prompts_dir)}"
+            )
 
         self.jinja = jinja_env or Environment(
             loader=FileSystemLoader(str(self.prompts_dir)),
@@ -101,20 +103,22 @@ class PromptRegistry:
         return sorted(self._store.keys())
 
     def get_entry(self, prompt_id: str, version: Optional[str] = None) -> PromptEntry:
-        version = version or "v1"
-        key = f"{prompt_id}@{version}"
-        entry = self._store.get(key)
-        if not entry:
-            candidates = [
-                e for k, e in self._store.items() if k.startswith(f"{prompt_id}@")
-            ]
-            if candidates and version is None:
+        key = f"{prompt_id}@{version}" if version is not None else None
+        entry = self._store.get(key) if key is not None else None
+        if entry:
+            return entry
+        candidates = [
+            e for k, e in self._store.items() if k.startswith(f"{prompt_id}@")
+        ]
+        if candidates:
+            if version is None:
                 candidates_sorted = sorted(
                     candidates, key=lambda e: e.version, reverse=True
                 )
                 return candidates_sorted[0]
-            raise PromptNotFound(f"Prompt not found: {key}")
-        return entry
+        raise PromptNotFound(
+            f"Prompt not found: {prompt_id}@{version if version is not None else 'latest'}"
+        )
 
     def _declared_required_vars(self, entry: PromptEntry) -> List[str]:
         reqs = []

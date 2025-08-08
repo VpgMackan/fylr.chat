@@ -8,9 +8,47 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { AxiosError, RawAxiosRequestHeaders } from 'axios';
 
+interface ChatCompletionChoice {
+  index: number;
+  message: {
+    role: string;
+    content: string;
+  };
+  finish_reason: string | null;
+}
+
+interface ChatCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ChatCompletionChoice[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+interface StreamingChoice {
+  index: number;
+  delta: {
+    content?: string;
+  };
+  finish_reason: string | null;
+}
+
+interface StreamingChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: StreamingChoice[];
+}
+
 type TemplatePayload = {
   prompt_type: string;
-  prompt_vars: Record<string, any>;
+  prompt_vars: Record<string, unknown>;
   prompt_version?: string;
 };
 
@@ -30,7 +68,7 @@ export class LLMService {
   private async _fetchChatCompletionFromAiGateway(
     payload: TemplatePayload | MessagePayload,
     stream: boolean,
-  ): Promise<any> {
+  ): Promise<ChatCompletionResponse | NodeJS.ReadableStream> {
     const requestPayload = {
       provider: 'openai',
       model: 'groq/llama3-70b-8192',
@@ -82,10 +120,10 @@ export class LLMService {
       typeof promptOrOptions === 'string'
         ? { messages: [{ role: 'user', content: promptOrOptions }] }
         : promptOrOptions;
-    const response = await this._fetchChatCompletionFromAiGateway(
+    const response = (await this._fetchChatCompletionFromAiGateway(
       payload,
       false,
-    );
+    )) as ChatCompletionResponse;
     return response.choices[0]?.message?.content || '';
   }
 
@@ -116,7 +154,7 @@ export class LLMService {
         }
 
         try {
-          const parsed = JSON.parse(message);
+          const parsed: StreamingChunk = JSON.parse(message);
           const content = parsed.choices[0]?.delta?.content;
           if (content) {
             yield content;

@@ -3,7 +3,7 @@ import time
 import uuid
 from pathlib import Path
 from functools import lru_cache
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 import uvicorn
 
@@ -209,7 +209,7 @@ async def list_prompts(registry: PromptRegistry = Depends(get_registry)):
 @app.get("/v1/prompts/{prompt_id}")
 async def inspect_prompt(
     prompt_id: str,
-    version: str | None = None,
+    version: Optional[str] = None,
     registry: PromptRegistry = Depends(get_registry),
 ):
     """
