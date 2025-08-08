@@ -74,15 +74,13 @@ def get_provider(provider_name: str) -> BaseProvider:
 
 
 async def stream_provider_response(
-    provider: BaseProvider, request: ChatCompletionRequest
+    provider: BaseProvider, request: ChatCompletionRequest, messages_dict: list
 ) -> AsyncGenerator[str, None]:
     """
     Calls the provider's streaming method and formats the output as SSE.
     """
     completion_id = f"chatcmpl-{uuid.uuid4()}"
     created_time = int(time.time())
-
-    messages_dict = [msg.model_dump() for msg in request.messages]
 
     try:
         async for chunk_content in provider.generate_text_stream(
@@ -152,7 +150,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     if request.stream:
         return StreamingResponse(
-            stream_provider_response(provider, request),
+            stream_provider_response(provider, request, messages_dict),
             media_type="text/event-stream",
         )
     else:

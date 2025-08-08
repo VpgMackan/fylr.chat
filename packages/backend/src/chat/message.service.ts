@@ -7,7 +7,6 @@ import { Server } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
-import { createHydePrompt, createFinalRagPrompt } from '@fylr/prompts';
 
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
@@ -88,9 +87,10 @@ export class MessageService {
       .join('\n');
 
     emitStatus('searchQuery', 'Formulating search query...');
-    const hypotheticalAnswer = await this.llmService.generate(
-      createHydePrompt(chatHistory, userQuery),
-    );
+    const hypotheticalAnswer = await this.llmService.generate({
+      prompt_type: 'hyde',
+      prompt_vars: { chatHistory, userQuery },
+    });
 
     emitStatus('retrieval', 'Searching relevant sources...');
     const searchQueryEmbedding = await this.vectorService.search(
@@ -114,9 +114,11 @@ export class MessageService {
 
     emitStatus('generation', 'Generating response...');
 
-    const stream = this.llmService.generateStream(
-      createFinalRagPrompt(context, chatHistory, userQuery, relevantChunks),
-    );
+    const stream = this.llmService.generateStream({
+      prompt_type: 'final_rag',
+      prompt_version: 'v1',
+      prompt_vars: { context, chatHistory, userQuery, relevantChunks },
+    });
     let fullResponse = '';
 
     for await (const chunk of stream) {
