@@ -1,6 +1,6 @@
 import httpx
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 
 from ..config import settings
 
@@ -52,15 +52,25 @@ class AIGatewayService:
             )
             raise
 
-    def generate_text(self, prompt: str, model: str = "groq/llama3-70b-8192") -> str:
+    def generate_text(
+        self,
+        prompt_or_options: Union[str, Dict[str, Any]],
+        model: str = "groq/llama3-70b-8192",
+    ) -> str:
         """
         Generates text using the AI Gateway's chat completion endpoint.
+        Accepts a raw prompt string or a dictionary for template-based generation.
         """
+        if isinstance(prompt_or_options, str):
+            payload = {"messages": [{"role": "user", "content": prompt_or_options}]}
+        else:
+            payload = prompt_or_options
+
         request_payload = {
             "provider": "openai",
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
             "stream": False,
+            **payload,
         }
 
         try:
