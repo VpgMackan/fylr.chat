@@ -12,7 +12,7 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     provider: str
     model: str
-    messages: List[ChatMessage]
+    messages: Optional[List[ChatMessage]] = None
     stream: bool = False
     options: Dict[str, Any] = Field(default_factory=dict)
 

@@ -1,6 +1,7 @@
 import json
 import time
 import uuid
+from pathlib import Path
 from functools import lru_cache
 from typing import AsyncGenerator
 
@@ -8,7 +9,7 @@ import uvicorn
 
 from openai import APIStatusError
 
-from fastapi import FastAPI, HTTPException, status, Depends, HTTPException
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 
 from .prompts.registry import (
@@ -33,7 +34,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-PROMPTS_DIR = "/path/to/ai_gateway/prompts/config"
+PROMPTS_DIR = Path(__file__).parent / "prompts" / "config"
 app.state.prompt_registry = None
 
 
@@ -123,15 +124,39 @@ async def create_chat_completion(request: ChatCompletionRequest):
     Generates a chat completion through the specified provider.
     Supports both streaming and non-streaming responses.
     """
+    messages_dict = []
+
+    if request.prompt_type:
+        registry = get_registry()
+        try:
+            rendered = registry.render(
+                prompt_id=request.prompt_type,
+                version=request.prompt_version,
+                vars=request.prompt_vars,
+            )
+            if rendered.get("form") == "messages":
+                messages_dict = rendered["messages"]
+            else:
+                messages_dict = [{"role": "user", "content": rendered["prompt"]}]
+        except (PromptNotFound, PromptRenderError, PromptValidationError) as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    elif request.messages:
+        messages_dict = [msg.model_dump() for msg in request.messages]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'messages' or 'prompt_type' must be provided.",
+        )
+
     provider = get_provider(request.provider)
 
     if request.stream:
         return StreamingResponse(
-            stream_provider_response(provider, request), media_type="text/event-stream"
+            stream_provider_response(provider, request),
+            media_type="text/event-stream",
         )
     else:
         try:
-            messages_dict = [msg.model_dump() for msg in request.messages]
             response_data = provider.generate_text(
                 messages=messages_dict, model=request.model, options=request.options
             )
@@ -175,6 +200,27 @@ async def create_embedding(request: EmbeddingRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred with the '{request.provider}' provider: {e}",
         )
+
+
+@app.get("/v1/prompts")
+async def list_prompts(registry: PromptRegistry = Depends(get_registry)):
+    """Lists all available prompt templates."""
+    return {"prompts": registry.list_prompts()}
+
+
+@app.get("/v1/prompts/{prompt_id}")
+async def inspect_prompt(
+    prompt_id: str,
+    version: str | None = None,
+    registry: PromptRegistry = Depends(get_registry),
+):
+    """
+    Inspects a specific prompt template, showing its metadata and variables.
+    """
+    try:
+        return registry.inspect(prompt_id, version)
+    except PromptNotFound as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @app.get("/")
