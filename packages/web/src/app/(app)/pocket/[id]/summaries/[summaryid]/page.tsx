@@ -12,6 +12,27 @@ import MarkdownComponent from '@/components/MarkdownComponents';
 
 import { useSubscription } from '@/hooks/useEvents';
 
+import axios from '@/utils/axios';
+
+interface Episode {
+  id: string;
+  summaryId: string;
+  content: string;
+  createdAt: any;
+  title: string;
+  focus?: string;
+}
+
+interface SummaryData {
+  id: string;
+  pocketId: string;
+  title: string;
+  createdAt: any;
+  length: string;
+  generated: string;
+  episodes: Episode[];
+}
+
 export default function SummaryPage({
   params,
 }: {
@@ -21,6 +42,13 @@ export default function SummaryPage({
   const [_id, setId] = useState<string | null>(null);
   const [summaryid, setSummaryid] = useState<string | null>(null);
   const [summaryContent, setSummaryContent] = useState('');
+  const [summaryTitle, setSummaryTitle] = useState('');
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState<string | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -30,6 +58,41 @@ export default function SummaryPage({
       setSummaryid(res.summaryid);
     });
   }, [params]);
+
+  useEffect(() => {
+    if (summaryid) {
+      fetchSummary(summaryid);
+    }
+  }, [summaryid]);
+
+  const fetchSummary = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { data } = await axios.get(`summary/${id}`);
+
+      const summaryData: SummaryData = await data;
+      setSummaryTitle(summaryData.title || '');
+      setSummaryContent(summaryData.generated || '');
+      setEpisodes(summaryData.episodes || []);
+
+      if (summaryData.episodes && summaryData.episodes.length > 0) {
+        setSelectedEpisodeId(summaryData.episodes[0].id);
+        setSummaryContent(summaryData.episodes[0].content);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching summary:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEpisodeSelect = (episode: Episode) => {
+    setSelectedEpisodeId(episode.id);
+    setSummaryContent(episode.content);
+  };
 
   const routingKey = summaryid ? `summary.${summaryid}.status` : null;
 
@@ -45,7 +108,7 @@ export default function SummaryPage({
 
   return (
     <ContentLayout
-      title="What is nine plus ten?"
+      title={summaryTitle || 'Loading...'}
       leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={() => router.back()} />
       }
@@ -56,20 +119,22 @@ export default function SummaryPage({
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
-            <SummaryCard
-              fileName="What's ai's impact on the world?"
-              fileType="pdf"
-              selected={true}
-            />
-            <SummaryCard
-              fileName="What's ai's impact on the world?"
-              fileType="web"
-            />
+            {episodes.map((episode) => (
+              <SummaryCard
+                key={episode.id}
+                fileName={episode.title}
+                fileType="episode"
+                selected={selectedEpisodeId === episode.id}
+                onClick={() => handleEpisodeSelect(episode)}
+              />
+            ))}
           </div>
         </>
       }
     >
-      <MarkdownComponent text={summaryContent} />
+      {isLoading && <p>Loading summary...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
+      {!isLoading && !error && <MarkdownComponent text={summaryContent} />}
     </ContentLayout>
   );
 }

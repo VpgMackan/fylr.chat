@@ -4,10 +4,12 @@ export default function SummarieCard({
   fileName,
   fileType,
   selected = false,
+  onClick = () => {},
 }: {
   fileName: string;
   fileType: string;
   selected?: boolean;
+  onClick?: any;
 }) {
   const fileIcon: Record<string, string> = {
     pdf: 'proicons:pdf-2',
@@ -19,6 +21,7 @@ export default function SummarieCard({
 
   return (
     <div
+      onClick={onClick}
       className={`flex ${color} transition-colors duration-150 rounded-lg border border-blue-400 p-3 justify-between items-center cursor-pointer`}
     >
       <Icon

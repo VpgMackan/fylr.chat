@@ -10,6 +10,7 @@ import { SourceModule } from './source/source.module';
 import { EventsModule } from './events/events.module';
 import { validate } from './config/config';
 import { ChatModule } from './chat/chat.module';
+import { SummaryModule } from './summary/summary.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ChatModule } from './chat/chat.module';
     SourceModule,
     EventsModule,
     ChatModule,
+    SummaryModule,
   ],
 })
 export class AppModule {}

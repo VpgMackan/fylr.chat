@@ -92,14 +92,14 @@ function HomePage() {
                 createdAt,
                 title,
                 icon,
-                source,
+                sources,
               }: PocketApiResponse) => (
                 <Pocket
                   key={id}
                   title={title}
                   icon={icon}
                   description={description}
-                  sources={source.length}
+                  sources={sources.length}
                   created={createdAt}
                   id={id}
                 />

@@ -22,14 +22,14 @@ export default function PocketPage() {
   ];
 
   const renderItems = (pockets: PocketApiResponse[]) =>
-    pockets.map(({ id, title, icon, description, source, createdAt }) => (
+    pockets.map(({ id, title, icon, description, sources, createdAt }) => (
       <Pocket
         key={id}
         id={id}
         title={title}
         icon={icon}
         description={description}
-        sources={source.length}
+        sources={sources.length}
         created={createdAt}
       />
     ));

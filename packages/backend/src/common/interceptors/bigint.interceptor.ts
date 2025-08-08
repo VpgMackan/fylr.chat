@@ -7,7 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-function convertBigIntToString(obj: any): any {
+function convertBigIntToString(obj: any, visited = new WeakSet()): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -16,19 +16,34 @@ function convertBigIntToString(obj: any): any {
     return obj.toString();
   }
 
-  if (Array.isArray(obj)) {
-    return obj.map(convertBigIntToString);
+  // Handle primitive types
+  if (typeof obj !== 'object') {
+    return obj;
   }
 
-  if (typeof obj === 'object') {
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        obj[key] = convertBigIntToString(obj[key]);
-      }
+  // Check for circular references
+  if (visited.has(obj)) {
+    return '[Circular Reference]';
+  }
+
+  visited.add(obj);
+
+  if (Array.isArray(obj)) {
+    const result = obj.map((item) => convertBigIntToString(item, visited));
+    visited.delete(obj);
+    return result;
+  }
+
+  // Handle regular objects
+  const result: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      result[key] = convertBigIntToString(obj[key], visited);
     }
   }
 
-  return obj;
+  visited.delete(obj);
+  return result;
 }
 
 @Injectable()
@@ -36,7 +51,7 @@ export class BigIntInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map((data) => {
-        return convertBigIntToString(data);
+        return convertBigIntToString(data, new WeakSet());
       }),
     );
   }
