@@ -162,8 +162,8 @@ export default function ListPageLayout<T extends { id: string | number }>({
         <div className={`grid ${gridClassName} gap-4`}>
           {dataLoader
             ? loading
-              ? Array.from({ length: skeletonCount }).map((_) => (
-                  <>{skeleton}</>
+              ? Array.from({ length: skeletonCount }).map((_, index) => (
+                  <div key={index}>{skeleton}</div>
                 ))
               : renderItems?.(items)
             : children}

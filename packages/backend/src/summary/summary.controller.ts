@@ -2,40 +2,44 @@ import {
   Controller,
   Post,
   UploadedFile,
-  UseInterceptors,
   Body,
   UseGuards,
-  HttpCode,
-  HttpStatus,
-  BadRequestException,
   Get,
   Param,
-  Res,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { v4 as uuidv4 } from 'uuid';
-import { RabbitMQService } from '../utils/rabbitmq.service';
+
 import { SummaryService } from './summary.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-
-const allowedMimeTypes = [
-  'application/pdf',
-  'text/plain',
-  'text/markdown',
-  'application/octet-stream',
-];
+import { CreateSummaryDto } from '@fylr/types';
 
 @UseGuards(AuthGuard)
 @Controller('summary')
 export class SummaryController {
-  constructor(
-    private summaryService: SummaryService,
-    private readonly rabbitMQService: RabbitMQService,
-  ) {}
+  constructor(private summaryService: SummaryService) {}
 
-  // Create summary
+  @Get('pocket/:pocketId')
+  getSummariesByPocketId(
+    @Param('pocketId') pocketId: string,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ) {
+    return this.summaryService.getSummariesByPocketId(pocketId, take, offset);
+  }
 
-  // Get summary
+  @Post('pocket/:pocketId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  createSummary(
+    @Param('pocketId') pocketId: string,
+    @Body() createSummaryDto: CreateSummaryDto,
+  ) {
+    return this.summaryService.createSummary(pocketId, createSummaryDto);
+  }
+
   @Get('/:summaryId')
   getSummaryById(@Param('summaryId') summaryId: string) {
     return this.summaryService.getSummaryById(summaryId);

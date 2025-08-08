@@ -45,3 +45,18 @@ export interface MessageApiResponse {
   createdAt: string;
   metadata: object;
 }
+
+export interface SummaryEpisodeApiResponse {
+  id: string;
+  title: string;
+  focus?: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface SummaryApiResponse {
+  id: string;
+  title: string;
+  createdAt: string;
+  generated: string | null;
+}

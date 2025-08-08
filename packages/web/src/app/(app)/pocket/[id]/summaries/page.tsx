@@ -1,25 +1,30 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Key } from 'react';
 import { useRouter } from 'next/navigation';
 import ListPageLayout, {
   DropdownOption,
 } from '@/components/layout/ListPageLayout';
 import Summarie from '@/components/SummaryListItem';
+import SummarySkeleton from '@/components/loading/SummaryListItemSkeleton';
+import CreateSummaryModal from '@/components/modals/CreateSummaryModal';
+import { SummaryApiResponse } from '@fylr/types';
+import { getSummariesByPocketId } from '@/services/api/summary.api';
 
 export default function SummariePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const [id, setId] = useState<string | null>(null);
+  const [pocketId, setPocketId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const t = useTranslations('pages.summariesList');
   const commonT = useTranslations('common');
 
   useEffect(() => {
-    params.then((res) => setId(res.id));
+    params.then((res) => setPocketId(res.id));
   }, [params]);
 
   const dropdownOptions: DropdownOption[] = [
@@ -28,21 +33,51 @@ export default function SummariePage({
     { value: 3, label: t('created') },
   ];
 
-  return (
-    <ListPageLayout
-      title={t('yourSummaries', { pocketName: 'Lorem' })}
-      onBack={() => router.back()}
-      onCreate={() => router.push('/pocket/new')}
-      createText={commonT('buttons.create')}
-      searchLabel={t('searchLabel')}
-      clearSearchLabel={t('clearSearchLabel')}
-      dropdownOptions={dropdownOptions}
-    >
+  const handleSummaryCreated = (summaryId: string) => {
+    if (pocketId) {
+      router.push(`/pocket/${pocketId}/summaries/${summaryId}`);
+    }
+  };
+
+  const dataLoader = pocketId
+    ? (params: { take: number; offset: number }) =>
+        getSummariesByPocketId(pocketId, params)
+    : undefined;
+
+  const renderItems = (items: SummaryApiResponse[]) =>
+    items.map((summary) => (
       <Summarie
-        title="🧠 Lorem"
-        pocket="Lorem"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit..."
+        key={summary.id}
+        id={summary.id}
+        pocketId={pocketId || ''}
+        title={summary.title}
+        pocket="Current Pocket"
+        description={`Generated: ${summary.generated || 'N/A'}`}
       />
-    </ListPageLayout>
+    ));
+
+  return (
+    <>
+      <ListPageLayout
+        title={t('yourSummaries', { pocketName: '...' })}
+        onBack={() => router.back()}
+        onCreate={() => setIsModalOpen(true)}
+        createText={commonT('buttons.create')}
+        searchLabel={t('searchLabel')}
+        clearSearchLabel={t('clearSearchLabel')}
+        dropdownOptions={dropdownOptions}
+        dataLoader={dataLoader}
+        skeleton={<SummarySkeleton />}
+        renderItems={renderItems}
+      />
+      {pocketId && (
+        <CreateSummaryModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          pocketId={pocketId}
+          onSuccess={handleSummaryCreated}
+        />
+      )}
+    </>
   );
 }

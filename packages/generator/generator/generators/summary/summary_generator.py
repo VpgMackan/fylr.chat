@@ -1,11 +1,13 @@
 import logging
 import uuid
+import json
 from typing import List, Dict, Any
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import text, select
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
+import pika
 
 from ...entity import Summary, Source, DocumentVector
 from ..base_generator import BaseGenerator
@@ -19,6 +21,30 @@ class SummaryGenerator(BaseGenerator):
     def validate_input(self, input_data: dict) -> bool:
         """This generator expects a simple string body, so this method is not used."""
         return True
+
+    def _publish_status(
+        self,
+        channel: BlockingChannel,
+        summary_id: str,
+        payload: dict,
+    ):
+        """Publishes a status update message to the events exchange."""
+        routing_key = f"summary.{summary_id}.status"
+        try:
+            channel.basic_publish(
+                exchange="fylr-events",
+                routing_key=routing_key,
+                body=json.dumps(payload),
+                properties=pika.BasicProperties(
+                    content_type="application/json",
+                    delivery_mode=2,
+                ),
+            )
+            logger.info(f"Published status to {routing_key}: {payload.get('stage')}")
+        except Exception as e:
+            logger.error(
+                f"Failed to publish status update for summary {summary_id}: {e}"
+            )
 
     def _fetch_all_documents(
         self, db: Session, pocket_id: uuid.UUID
@@ -116,15 +142,32 @@ class SummaryGenerator(BaseGenerator):
             logger.error(f"Error during vector search: {e}", exc_info=True)
             return []
 
-    def _create_summary(self, db: Session, summary: Summary):
+    def _create_summary(self, db: Session, channel: BlockingChannel, summary: Summary):
         """Generates summary content using the AI Gateway and updates the database."""
         logger.info(f"Generating summary for '{summary.title}' (ID: {summary.id})")
+        self._publish_status(
+            channel,
+            summary.id,
+            {
+                "stage": "starting",
+                "message": f"Starting summary generation for '{summary.title}'...",
+            },
+        )
 
         try:
             generated_episodes = []
 
             for episode in summary.episodes:
                 logger.info(f"Processing episode: '{episode.title}'")
+                self._publish_status(
+                    channel,
+                    summary.id,
+                    {
+                        "stage": "episode_start",
+                        "message": f"Generating content for episode: '{episode.title}'...",
+                        "episodeId": episode.id,
+                    },
+                )
 
                 keywords_prompt = f"""
                 Based on the episode title "{episode.title}" and focus area "{episode.focus or 'general information'}", 
@@ -188,6 +231,21 @@ class SummaryGenerator(BaseGenerator):
                         f"Generated content for episode '{episode.title}' ({len(episode_content)} characters)"
                     )
 
+                    self._publish_status(
+                        channel,
+                        summary.id,
+                        {
+                            "stage": "episode_complete",
+                            "episode": {
+                                "id": episode.id,
+                                "title": episode.title,
+                                "content": episode.content,
+                                "focus": episode.focus,
+                                "createdAt": episode.created_at.isoformat(),
+                            },
+                        },
+                    )
+
                     generated_episodes.append(
                         {
                             "title": episode.title,
@@ -200,23 +258,54 @@ class SummaryGenerator(BaseGenerator):
                         f"No relevant content found for episode '{episode.title}'"
                     )
                     episode.content = f"No relevant content found for the topic '{episode.title}' in the available documents."
+                    self._publish_status(
+                        channel,
+                        summary.id,
+                        {
+                            "stage": "episode_complete",
+                            "episode": {
+                                "id": episode.id,
+                                "content": episode.content,
+                                "title": episode.title,
+                            },
+                        },
+                    )
 
             # Mark summary as generated (boolean flag)
             if generated_episodes:
-                summary.generated = "true"
+                summary.generated = "COMPLETED"
                 logger.info(
                     f"Successfully generated content for {len(generated_episodes)} episodes"
                 )
             else:
-                summary.generated = "false"
+                summary.generated = "FAILED"
                 logger.warning("No content generated for any episodes")
 
-            # Commit the changes to the database
+            self._publish_status(
+                channel,
+                summary.id,
+                {
+                    "stage": "complete",
+                    "message": "Summary generation finished.",
+                    "finalStatus": summary.generated,
+                },
+            )
+
             db.commit()
             logger.info(f"Successfully saved summary episodes to database")
 
         except Exception as e:
             logger.error(f"Error generating summary content: {e}", exc_info=True)
+            summary.generated = "FAILED"
+            db.commit()
+            self._publish_status(
+                channel,
+                summary.id,
+                {
+                    "stage": "error",
+                    "message": "An error occurred during summary generation.",
+                },
+            )
             db.rollback()
             raise
 
@@ -230,11 +319,13 @@ class SummaryGenerator(BaseGenerator):
     ) -> None:
         """Processes a summary generation request."""
         try:
-            summary_id = body.decode("utf-8")
+            # Decode the body and parse JSON since the backend sends JSON.stringify(data)
+            body_str = body.decode("utf-8")
+            summary_id = json.loads(body_str)  # This will remove the extra quotes
             uuid.UUID(summary_id)
-        except (ValueError, UnicodeDecodeError) as e:
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
             logger.error(
-                f"Invalid message body, expecting a UUID string. Got '{body}'. Error: {e}"
+                f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}"
             )
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
@@ -253,7 +344,7 @@ class SummaryGenerator(BaseGenerator):
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
 
-            self._create_summary(db, summary)
+            self._create_summary(db, channel, summary)
 
             logger.info(f"Successfully processed and updated summary ID: {summary_id}")
             channel.basic_ack(delivery_tag=method.delivery_tag)
@@ -263,4 +354,5 @@ class SummaryGenerator(BaseGenerator):
                 f"Error during summary processing for ID {summary_id}: {e}",
                 exc_info=True,
             )
+            # Requeueing might cause loops if the error is persistent
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
