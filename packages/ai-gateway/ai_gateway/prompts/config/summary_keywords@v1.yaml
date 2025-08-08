@@ -1,0 +1,15 @@
+id: summary_keywords
+version: v1
+description: Generates search keywords for a summary episode.
+form: prompt
+variables:
+  - name: episode_title
+    required: true
+    type: string
+  - name: focus
+    required: false
+    type: string
+template: |
+  Based on the episode title "{{ episode_title }}" and focus area "{{ focus or 'general information' }}", 
+  generate 3-5 specific search keywords or short phrases that would help find relevant information for this episode.
+  Return only the keywords/phrases, one per line, without numbering or extra formatting.

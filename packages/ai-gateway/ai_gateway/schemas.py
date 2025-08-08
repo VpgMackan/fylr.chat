@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 
 # --- Chat Completion ---
 
@@ -12,9 +12,13 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     provider: str
     model: str
-    messages: List[ChatMessage]
+    messages: Optional[List[ChatMessage]] = None
     stream: bool = False
     options: Dict[str, Any] = Field(default_factory=dict)
+
+    prompt_type: Optional[str] = None
+    prompt_version: Optional[str] = None
+    prompt_vars: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionResponse(BaseModel):

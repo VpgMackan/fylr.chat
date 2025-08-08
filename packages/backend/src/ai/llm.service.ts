@@ -6,7 +6,55 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
-import { AxiosError } from 'axios';
+import { AxiosError, RawAxiosRequestHeaders } from 'axios';
+
+interface ChatCompletionChoice {
+  index: number;
+  message: {
+    role: string;
+    content: string;
+  };
+  finish_reason: string | null;
+}
+
+interface ChatCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: ChatCompletionChoice[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+interface StreamingChoice {
+  index: number;
+  delta: {
+    content?: string;
+  };
+  finish_reason: string | null;
+}
+
+interface StreamingChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: StreamingChoice[];
+}
+
+type TemplatePayload = {
+  prompt_type: string;
+  prompt_vars: Record<string, unknown>;
+  prompt_version?: string;
+};
+
+type MessagePayload = {
+  messages: { role: string; content: string }[];
+};
 
 @Injectable()
 export class LLMService {
@@ -18,13 +66,13 @@ export class LLMService {
   ) {}
 
   private async _fetchChatCompletionFromAiGateway(
-    prompt: string,
+    payload: TemplatePayload | MessagePayload,
     stream: boolean,
-  ): Promise<any> {
+  ): Promise<ChatCompletionResponse | NodeJS.ReadableStream> {
     const requestPayload = {
       provider: 'openai',
       model: 'groq/llama3-70b-8192',
-      messages: [{ role: 'user', content: prompt }],
+      ...payload,
       stream,
     };
 
@@ -37,7 +85,9 @@ export class LLMService {
           `${aiGatewayUrl}/v1/chat/completions`,
           requestPayload,
           {
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+            } as RawAxiosRequestHeaders,
             ...(stream && { responseType: 'stream' as const }),
           },
         ),
@@ -65,16 +115,30 @@ export class LLMService {
     }
   }
 
-  async generate(prompt: string): Promise<string> {
-    const response = await this._fetchChatCompletionFromAiGateway(
-      prompt,
+  async generate(promptOrOptions: string | TemplatePayload): Promise<string> {
+    const payload =
+      typeof promptOrOptions === 'string'
+        ? { messages: [{ role: 'user', content: promptOrOptions }] }
+        : promptOrOptions;
+    const response = (await this._fetchChatCompletionFromAiGateway(
+      payload,
       false,
-    );
+    )) as ChatCompletionResponse;
     return response.choices[0]?.message?.content || '';
   }
 
-  async *generateStream(prompt: string): AsyncGenerator<string> {
-    const response = await this._fetchChatCompletionFromAiGateway(prompt, true);
+  async *generateStream(
+    promptOrOptions: string | TemplatePayload,
+  ): AsyncGenerator<string> {
+    const payload =
+      typeof promptOrOptions === 'string'
+        ? { messages: [{ role: 'user', content: promptOrOptions }] }
+        : promptOrOptions;
+
+    const response = await this._fetchChatCompletionFromAiGateway(
+      payload,
+      true,
+    );
     const stream = response as NodeJS.ReadableStream;
 
     for await (const chunk of stream) {
@@ -90,7 +154,7 @@ export class LLMService {
         }
 
         try {
-          const parsed = JSON.parse(message);
+          const parsed: StreamingChunk = JSON.parse(message);
           const content = parsed.choices[0]?.delta?.content;
           if (content) {
             yield content;

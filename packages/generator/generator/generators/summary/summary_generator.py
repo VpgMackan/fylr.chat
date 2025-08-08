@@ -12,7 +12,6 @@ import pika
 from ...entity import Summary, Source, DocumentVector
 from ..base_generator import BaseGenerator
 from ...services.ai_gateway_service import ai_gateway_service
-from .prompts import create_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -169,13 +168,16 @@ class SummaryGenerator(BaseGenerator):
                     },
                 )
 
-                keywords_prompt = f"""
-                Based on the episode title "{episode.title}" and focus area "{episode.focus or 'general information'}", 
-                generate 3-5 specific search keywords or short phrases that would help find relevant information for this episode.
-                Return only the keywords/phrases, one per line, without numbering or extra formatting.
-                """
-
-                search_queries_text = ai_gateway_service.generate_text(keywords_prompt)
+                search_queries_text = ai_gateway_service.generate_text(
+                    {
+                        "prompt_type": "summary_keywords",
+                        "prompt_version": "v1",
+                        "prompt_vars": {
+                            "episode_title": episode.title,
+                            "focus": episode.focus,
+                        },
+                    }
+                )
                 search_queries = [
                     q.strip() for q in search_queries_text.split("\n") if q.strip()
                 ]
@@ -207,24 +209,17 @@ class SummaryGenerator(BaseGenerator):
                         ]
                     )
 
-                    summary_prompt = f"""
-                    Create a comprehensive summary for the episode titled "{episode.title}".
-                    Focus area: {episode.focus or 'general information'}
-                    
-                    Based on the following relevant content from documents:
-                    
-                    {context_content}
-                    
-                    Please provide a well-structured summary that:
-                    1. Focuses on the specified topic/area
-                    2. Synthesizes information from multiple sources
-                    3. Is informative and well-organized
-                    4. Includes specific details and insights from the content
-                    
-                    Summary:
-                    """
-
-                    episode_content = ai_gateway_service.generate_text(summary_prompt)
+                    episode_content = ai_gateway_service.generate_text(
+                        {
+                            "prompt_type": "episode_summary",
+                            "prompt_version": "v1",
+                            "prompt_vars": {
+                                "episode_title": episode.title,
+                                "focus": episode.focus,
+                                "context_content": context_content,
+                            },
+                        }
+                    )
 
                     episode.content = episode_content
                     logger.info(

@@ -1,0 +1,30 @@
+# episode_summary@v1.yaml
+id: episode_summary
+version: v1
+description: Creates a summary for a single episode based on a given context.
+form: prompt
+variables:
+  - name: episode_title
+    required: true
+    type: string
+  - name: focus
+    required: false
+    type: string
+  - name: context_content
+    required: true
+    type: string
+template: |
+  Create a comprehensive summary for the episode titled "{{ episode_title }}".
+  Focus area: {{ focus or 'general information' }}
+  
+  Based on the following relevant content from documents:
+  
+  {{ context_content }}
+  
+  Please provide a well-structured summary that:
+  1. Focuses on the specified topic/area
+  2. Synthesizes information from multiple sources
+  3. Is informative and well-organized
+  4. Includes specific details and insights from the content
+  
+  Summary:
