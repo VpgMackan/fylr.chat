@@ -24,6 +24,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.useGlobalInterceptors(new BigIntInterceptor());
+  app.enableShutdownHooks();
 
   const configService = app.get(ConfigService);
   await app.listen(configService.get('PORT') ?? 3001);
