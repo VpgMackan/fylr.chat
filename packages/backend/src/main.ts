@@ -8,6 +8,10 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+
   const app = await NestFactory.create(AppModule, {
     cors: {
       origin: true,
