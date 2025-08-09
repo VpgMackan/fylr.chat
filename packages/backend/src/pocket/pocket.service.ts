@@ -54,9 +54,9 @@ export class PocketService {
    * @param id The id for the pocket to be retrived
    * @returns A promise resolving a pocket
    */
-  async findOneById(id: string) {
-    const pocket = await this.prisma.pocket.findUnique({
-      where: { id },
+  async findOneById(id: string, userId: string) {
+    const pocket = await this.prisma.pocket.findFirst({
+      where: { id, userId },
       include: { conversations: true, sources: true },
     });
     if (!pocket)
@@ -83,9 +83,9 @@ export class PocketService {
    * @param updateData An object containing the fields to update (icon, description, tags)
    * @returns A promise resolving the newly updated pocket
    */
-  async updatePocket(id: string, updateData: UpdatePocketDto) {
+  async updatePocket(id: string, updateData: UpdatePocketDto, userId: string) {
     return await this.prisma.pocket.update({
-      where: { id },
+      where: { id, userId },
       data: updateData,
     });
   }
@@ -95,8 +95,8 @@ export class PocketService {
    * @param id The id for the pocket that should be deleted
    * @returns A promise resolving a DeleteResult object indicating the outcome of the deletion.
    */
-  async deletePocket(id: string) {
-    await this.findOneById(id);
+  async deletePocket(id: string, userId: string) {
+    await this.findOneById(id, userId);
     return await this.prisma.pocket.delete({
       where: { id },
     });

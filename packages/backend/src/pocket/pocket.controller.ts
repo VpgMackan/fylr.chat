@@ -36,8 +36,8 @@ export class PocketController {
   }
 
   @Get('/:id')
-  getPocketById(@Param('id') id: string) {
-    return this.pocketService.findOneById(id);
+  getPocketById(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.pocketService.findOneById(id, req.user.id);
   }
 
   @Patch('/:id')
@@ -51,8 +51,9 @@ export class PocketController {
   updatePocketById(
     @Param('id') id: string,
     @Body() updateDto: UpdatePocketDto,
+    @Request() req: RequestWithUser,
   ) {
-    return this.pocketService.updatePocket(id, updateDto);
+    return this.pocketService.updatePocket(id, updateDto, req.user.id);
   }
 
   @Post('/')
@@ -68,7 +69,7 @@ export class PocketController {
   }
 
   @Delete('/:id')
-  deletePocketById(@Param('id') id: string) {
-    return this.pocketService.deletePocket(id);
+  deletePocketById(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.pocketService.deletePocket(id, req.user.id);
   }
 }
