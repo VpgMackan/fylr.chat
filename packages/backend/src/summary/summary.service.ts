@@ -10,29 +10,53 @@ export class SummaryService {
     private readonly rabbitMQService: RabbitMQService,
   ) {}
 
-  async getSummariesByPocketId(pocketId: string, take: number, offset: number) {
-    return this.prisma.summary.findMany({
-      where: { pocketId },
+  async getSummariesByPocketId(
+    pocketId: string,
+    userId: string,
+    take: number,
+    offset: number,
+  ) {
+    const summaries = await this.prisma.summary.findMany({
+      where: { pocketId, pocket: { userId } },
       take,
       skip: offset,
       orderBy: { createdAt: 'desc' },
     });
+
+    return summaries;
   }
 
-  async getSummaryById(id: string) {
-    const summary = await this.prisma.summary.findUnique({
-      where: { id },
+  async getSummaryById(id: string, userId: string) {
+    const summary = await this.prisma.summary.findFirst({
+      where: {
+        id,
+        pocket: { userId },
+      },
       include: { episodes: true },
     });
-    if (!summary)
+    if (!summary) {
       throw new NotFoundException(
-        `Summary with the ID "${id}" could not be located in the database`,
+        `Summary not found or you do not have permission to access it.`,
       );
-
+    }
     return summary;
   }
 
-  async createSummary(pocketId: string, createSummaryDto: CreateSummaryDto) {
+  async createSummary(
+    pocketId: string,
+    userId: string,
+    createSummaryDto: CreateSummaryDto,
+  ) {
+    const pocket = await this.prisma.pocket.findUnique({
+      where: { id: pocketId },
+    });
+
+    if (!pocket || pocket.userId !== userId) {
+      throw new NotFoundException(
+        `Pocket with ID "${pocketId}" not found or access denied.`,
+      );
+    }
+
     const { title, episodes } = createSummaryDto;
 
     const newSummary = await this.prisma.summary.create({
