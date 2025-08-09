@@ -16,12 +16,10 @@ function convertBigIntToString(obj: any, visited = new WeakSet()): any {
     return obj.toString();
   }
 
-  // Handle primitive types
   if (typeof obj !== 'object') {
     return obj;
   }
 
-  // Check for circular references
   if (visited.has(obj)) {
     return '[Circular Reference]';
   }
@@ -34,7 +32,6 @@ function convertBigIntToString(obj: any, visited = new WeakSet()): any {
     return result;
   }
 
-  // Handle regular objects
   const result: any = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {

@@ -20,14 +20,6 @@ import { Readable } from 'stream';
 export class S3Service {
   constructor(@InjectS3() private readonly client: S3Client) {}
 
-  /**
-   * Uploads a file to a specified bucket.
-   * @param bucket The name of the bucket.
-   * @param name The name of the object.
-   * @param stream The file content as a Buffer or Readable stream.
-   * @param metaData Optional metadata for the object.
-   * @returns A promise resolving with the ETag and version ID of the uploaded object.
-   */
   async upload(
     bucket: string,
     name: string,
@@ -47,12 +39,6 @@ export class S3Service {
     return this.client.send(command);
   }
 
-  /**
-   * Retrieves an object from a specified bucket.
-   * @param bucket The name of the bucket.
-   * @param name The name of the object.
-   * @returns A promise resolving with a Readable stream of the object's content.
-   */
   async getObject(bucket: string, name: string): Promise<Readable> {
     try {
       const command = new GetObjectCommand({
@@ -75,12 +61,6 @@ export class S3Service {
     }
   }
 
-  /**
-   * Deletes an object from a specified bucket.
-   * @param bucket The name of the bucket.
-   * @param name The name of the object.
-   * @returns A promise resolving when the object is deleted.
-   */
   async deleteObject(bucket: string, name: string): Promise<void> {
     try {
       const command = new DeleteObjectCommand({
@@ -103,12 +83,6 @@ export class S3Service {
     }
   }
 
-  /**
-   * Gets metadata for a specific object.
-   * @param bucket The name of the bucket.
-   * @param name The name of the object.
-   * @returns A promise resolving with the object's metadata information.
-   */
   async statObject(bucket: string, name: string) {
     try {
       const command = new HeadObjectCommand({
@@ -131,13 +105,6 @@ export class S3Service {
     }
   }
 
-  /**
-   * Lists objects in a specified bucket.
-   * @param bucket The name of the bucket.
-   * @param prefix Optional prefix to filter objects.
-   * @param recursive Optional flag to list recursively (default: false).
-   * @returns A promise resolving with object information.
-   */
   async listObjects(bucket: string, prefix?: string, recursive?: boolean) {
     const command = new ListObjectsV2Command({
       Bucket: bucket,
@@ -148,21 +115,12 @@ export class S3Service {
     return this.client.send(command);
   }
 
-  /**
-   * Lists all buckets.
-   * @returns A promise resolving with an array of bucket information.
-   */
   async listBuckets() {
     const command = new ListBucketsCommand({});
     const response = await this.client.send(command);
     return response.Buckets || [];
   }
 
-  /**
-   * Checks if a bucket exists.
-   * @param bucket The name of the bucket.
-   * @returns A promise resolving with true if the bucket exists, false otherwise.
-   */
   async bucketExists(bucket: string): Promise<boolean> {
     try {
       const command = new HeadBucketCommand({ Bucket: bucket });
@@ -179,12 +137,6 @@ export class S3Service {
     }
   }
 
-  /**
-   * Creates a new bucket.
-   * @param bucket The name of the bucket.
-   * @param region Optional region for the bucket.
-   * @returns A promise resolving when the bucket is created.
-   */
   async makeBucket(bucket: string, region?: string): Promise<void> {
     const command = new CreateBucketCommand({
       Bucket: bucket,
@@ -195,22 +147,12 @@ export class S3Service {
     await this.client.send(command);
   }
 
-  /**
-   * Ensures a bucket exists, creating it if necessary.
-   * @param bucket The name of the bucket.
-   * @param region Optional region for the bucket if creation is needed.
-   */
   async ensureBucketExists(bucket: string, region?: string): Promise<void> {
     if (!(await this.bucketExists(bucket))) {
       await this.makeBucket(bucket, region);
     }
   }
 
-  /**
-   * Removes an empty bucket.
-   * @param bucket The name of the bucket.
-   * @returns A promise resolving when the bucket is removed.
-   */
   async removeBucket(bucket: string): Promise<void> {
     const command = new DeleteBucketCommand({ Bucket: bucket });
     await this.client.send(command);

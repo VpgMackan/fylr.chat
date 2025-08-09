@@ -21,12 +21,12 @@ export class S3Module {
 
             return new S3Client({
               endpoint: `http://${endpoint}:${port}`,
-              region: 'garage', // Required but can be any value for S3-compatible services
+              region: 'garage',
               credentials: {
                 accessKeyId: cs.getOrThrow('S3_KEY_ID'),
                 secretAccessKey: cs.getOrThrow('S3_SECRET_KEY'),
               },
-              forcePathStyle: true, // Required for most S3-compatible services
+              forcePathStyle: true,
             });
           },
         },

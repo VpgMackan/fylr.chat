@@ -132,7 +132,6 @@ export class SourceService {
   }
 
   async getFileStreamForUser(fileId: string, userId: string) {
-    // Find the source entry to get metadata
     const source = await this.prisma.source.findFirst({
       where: {
         id: fileId,

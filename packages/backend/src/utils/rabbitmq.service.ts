@@ -13,9 +13,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     ]);
     this.channel = this.connection.createChannel({
       json: false,
-      setup: async (channel: Channel) => {
-        // No-op, queues can be asserted on send
-      },
+      setup: async (channel: Channel) => {},
     });
   }
 

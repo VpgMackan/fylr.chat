@@ -1,5 +1,3 @@
-// packages/backend/src/common/filters/all-exceptions.filter.ts
-
 import {
   ExceptionFilter,
   Catch,

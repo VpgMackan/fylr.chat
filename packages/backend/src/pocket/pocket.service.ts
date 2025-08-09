@@ -10,13 +10,6 @@ import {
 export class PocketService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Get multiple pockets by a user id.
-   * @param id The id for the user.
-   * @param take Optional how many pockets to return. Default to 10.
-   * @param offset Optional from where the netities should be taken. Default to 0.
-   * @returns A promise resolving a array of pockets
-   */
   async findMultipleByUserId(
     id: string,
     take = 10,
@@ -49,11 +42,6 @@ export class PocketService {
     });
   }
 
-  /**
-   * Get a single pocket based on a id.
-   * @param id The id for the pocket to be retrived
-   * @returns A promise resolving a pocket
-   */
   async findOneById(id: string, userId: string) {
     const pocket = await this.prisma.pocket.findFirst({
       where: { id, userId },
@@ -68,21 +56,10 @@ export class PocketService {
     return { ...pocketData, recentActivity: conversations };
   }
 
-  /**
-   * Creates a pocket and stores it in the database
-   * @param data An object containing the data for the new pocket
-   * @returns A promise resolving the newly created pocket
-   */
   async createPocket(data: CreatePocketDto) {
     return await this.prisma.pocket.create({ data });
   }
 
-  /**
-   * A function that updates a pocket
-   * @param id The id for the pocket that should to be updated
-   * @param updateData An object containing the fields to update (icon, description, tags)
-   * @returns A promise resolving the newly updated pocket
-   */
   async updatePocket(id: string, updateData: UpdatePocketDto, userId: string) {
     return await this.prisma.pocket.update({
       where: { id, userId },
@@ -90,11 +67,6 @@ export class PocketService {
     });
   }
 
-  /**
-   * A function that will remove a pocket from the database
-   * @param id The id for the pocket that should be deleted
-   * @returns A promise resolving a DeleteResult object indicating the outcome of the deletion.
-   */
   async deletePocket(id: string, userId: string) {
     await this.findOneById(id, userId);
     return await this.prisma.pocket.delete({
