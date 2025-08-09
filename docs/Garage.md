@@ -1,4 +1,8 @@
-docker-compose.yaml
+# Garage
+
+## Config
+
+#### **`docker-compose.yaml`**
 ```yaml
 services:
   garage:
@@ -19,7 +23,7 @@ volumes:
   garage_data:
 ```
 
-garage.toml
+#### **`garage.toml`**
 ```toml
 metadata_dir = "/tmp/meta"
 data_dir = "/tmp/data"
@@ -49,3 +53,19 @@ api_bind_addr = "[::]:3903"
 admin_token = "xxxx"
 metrics_token = "xxxx"
 ```
+
+## Installation steps
+
+1. Create a folder named `garage` and copy the **`docker-compose.yaml`** and **``garage.toml`** file into it.
+2. Replace the xxxx in **`garage.toml`** with secure passwords.
+3. Open a terminal in that folder and run:
+   - `docker compose pull`
+   - `docker compose up -d`
+4. Now run the following commands to set up the required buckets and api keys.
+   - `docker exec -ti garage /garage status`
+   - `docker exec -ti garage /garage layout assign -z dc1 -c 100G <node_id>`
+   - `docker exec -ti garage /garage layout apply --version 1`
+   - `docker exec -ti garage /garage bucket create fylr.chat-sources`
+   - `docker exec -ti garage /garage key create fylr.chat`
+   - `docker exec -ti garage /garage bucket allow --read --write --owner fylr.chat-sources --key fylr-chat`
+
