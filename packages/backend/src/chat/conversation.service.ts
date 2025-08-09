@@ -48,18 +48,23 @@ export class ConversationService {
     return { token };
   }
 
-  async getConversations(pocketId: string, take = 10, offset = 0) {
-    try {
-      return await this.prisma.conversation.findMany({
-        where: { pocketId },
-        take,
-        skip: offset,
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to retrieve conversations for pocket ${pocketId}`,
-      );
+  async getConversations(
+    pocketId: string,
+    userId: string,
+    take = 10,
+    offset = 0,
+  ) {
+    const pocket = await this.prisma.pocket.findFirst({
+      where: { id: pocketId, userId },
+    });
+    if (!pocket) {
+      throw new NotFoundException(`Pocket not found or access denied.`);
     }
+    return this.prisma.conversation.findMany({
+      where: { pocketId },
+      take,
+      skip: offset,
+    });
   }
 
   async getConversationsByUserId(userId: string) {
@@ -81,7 +86,18 @@ export class ConversationService {
     }
   }
 
-  async createConversation(body: CreateConversationDto, pocketId: string) {
+  async createConversation(
+    body: CreateConversationDto,
+    pocketId: string,
+    userId: string,
+  ) {
+    const pocket = await this.prisma.pocket.findFirst({
+      where: { id: pocketId, userId },
+    });
+    if (!pocket) {
+      throw new NotFoundException(`Pocket not found or access denied.`);
+    }
+
     try {
       if (typeof body.metadata === 'string') {
         try {
@@ -112,21 +128,23 @@ export class ConversationService {
     }
   }
 
-  async getConversation(conversationId: string) {
-    try {
-      return await this.prisma.conversation.findUnique({
-        where: { id: conversationId },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Failed to retrieve conversation ${conversationId}`,
-      );
+  async getConversation(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, pocket: { userId } },
+    });
+    if (!conversation) {
+      throw new NotFoundException(`Conversation not found or access denied.`);
     }
+    return conversation;
   }
 
-  async updateConversation(body: UpdateConversationDto, id: string) {
+  async updateConversation(
+    body: UpdateConversationDto,
+    id: string,
+    userId: string,
+  ) {
     try {
-      await this.getConversation(id);
+      await this.getConversation(id, userId);
       return await this.prisma.conversation.update({
         where: { id },
         data: body,
@@ -138,9 +156,9 @@ export class ConversationService {
     }
   }
 
-  async deleteConversation(id: string) {
+  async deleteConversation(id: string, userId: string) {
     try {
-      await this.getConversation(id);
+      await this.getConversation(id, userId);
       return await this.prisma.conversation.delete({
         where: { id },
       });

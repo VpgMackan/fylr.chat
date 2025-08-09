@@ -1,5 +1,4 @@
 import {
-  Req,
   Body,
   Controller,
   Delete,
@@ -13,6 +12,7 @@ import {
   Query,
   DefaultValuePipe,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -28,7 +28,7 @@ export class ChatController {
 
   @Post('conversation/:id/ws-token')
   getWebSocketToken(
-    @Req() req: RequestWithUser,
+    @Request() req: RequestWithUser,
     @Param('id') conversationId: string,
   ) {
     return this.conversationService.generateWebSocketToken(
@@ -39,45 +39,56 @@ export class ChatController {
 
   // === CONVERSATIONS ===
   @Get('conversations')
-  getConversationsByUser(@Req() req: RequestWithUser) {
-    const userId = req.user.id;
-    return this.conversationService.getConversationsByUserId(userId);
+  getConversationsByUser(@Request() req: RequestWithUser) {
+    return this.conversationService.getConversationsByUserId(req.user.id);
   }
 
   @Get(':pocketId/conversations')
   getConversations(
     @Param('pocketId') pocketId: string,
+    @Request() req: RequestWithUser,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
   ) {
-    return this.conversationService.getConversations(pocketId, take, offset);
+    return this.conversationService.getConversations(
+      pocketId,
+      req.user.id,
+      take,
+      offset,
+    );
   }
 
   @Post(':pocketId/conversation')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createConversation(
     @Body() body: CreateConversationDto,
+    @Request() req: RequestWithUser,
     @Param('pocketId') pocketId: string,
   ) {
-    return this.conversationService.createConversation(body, pocketId);
+    return this.conversationService.createConversation(
+      body,
+      pocketId,
+      req.user.id,
+    );
   }
 
   @Get('conversation/:id')
-  getConversation(@Param('id') id: string) {
-    return this.conversationService.getConversation(id);
+  getConversation(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.conversationService.getConversation(id, req.user.id);
   }
 
   @Patch('conversation/:id')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   updateConversation(
+    @Request() req: RequestWithUser,
     @Param('id') id: string,
     @Body() body: UpdateConversationDto,
   ) {
-    return this.conversationService.updateConversation(body, id);
+    return this.conversationService.updateConversation(body, id, req.user.id);
   }
 
   @Delete('conversation/:id')
-  deletConversation(@Param('id') id: string) {
-    return this.conversationService.deleteConversation(id);
+  deletConversation(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.conversationService.deleteConversation(id, req.user.id);
   }
 }
