@@ -8,24 +8,39 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private channel: amqp.ChannelWrapper;
 
   async onModuleInit() {
-    this.connection = amqp.connect([
-      process.env.RABBITMQ_URL || 'amqp://localhost',
-    ]);
-    this.channel = this.connection.createChannel({
-      json: false,
-      setup: async (channel: Channel) => {},
-    });
+    try {
+      this.connection = amqp.connect([
+        process.env.RABBITMQ_URL || 'amqp://localhost',
+      ]);
+      this.channel = this.connection.createChannel({
+        json: false,
+        setup: async (channel: Channel) => {},
+      });
+    } catch (error) {
+      console.error('RabbitMQ connection/channel error:', error);
+      throw error;
+    }
   }
 
   async sendToQueue(queue: string, data: any) {
-    await this.channel.assertQueue(queue, { durable: true });
-    await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
-      persistent: true,
-    });
+    try {
+      await this.channel.assertQueue(queue, { durable: true });
+      await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
+        persistent: true,
+      });
+    } catch (error) {
+      console.error(`Error sending to queue "${queue}":`, error);
+      throw error;
+    }
   }
 
   async onModuleDestroy() {
-    if (this.channel) await this.channel.close();
-    if (this.connection) await this.connection.close();
+    try {
+      if (this.channel) await this.channel.close();
+      if (this.connection) await this.connection.close();
+    } catch (error) {
+      console.error(`Error closing connection and / or channel`);
+      throw error;
+    }
   }
 }
