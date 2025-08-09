@@ -1,25 +1,93 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-
+import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from 'src/common/s3/s3.service';
 import { ConfigService } from '@nestjs/config';
+import { RabbitMQService } from 'src/utils/rabbitmq.service';
+import * as fs from 'fs/promises';
 
 @Injectable()
 export class SourceService {
+  private readonly s3Bucket: string;
+
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
-  ) {}
-
-  async createSourceDatabaseEntry(data: Prisma.SourceCreateInput) {
-    return await this.prisma.source.create({ data });
+    private readonly rabbitMQService: RabbitMQService,
+  ) {
+    const bucket = this.configService.get('S3_BUCKET_USER_FILE');
+    if (!bucket) {
+      throw new Error('S3_BUCKET_USER_FILE is not set in config');
+    }
+    this.s3Bucket = bucket;
   }
 
-  async getSourcesByPocketId(pocketId: string) {
+  async createSource(
+    file: Express.Multer.File,
+    pocketId: string,
+    userId: string,
+  ) {
+    const pocket = await this.prisma.pocket.findFirst({
+      where: { id: pocketId, userId },
+    });
+
+    if (!pocket) {
+      await fs.unlink(file.path);
+      throw new NotFoundException(
+        `Pocket with ID "${pocketId}" not found or you do not have permission to access it.`,
+      );
+    }
+
+    const jobKey = uuidv4();
+    const s3Key = file.filename || file.originalname;
+
+    try {
+      const buffer = await fs.readFile(file.path);
+      await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
+        'Content-Type': file.mimetype,
+      });
+    } catch (error) {
+      await fs.unlink(file.path);
+      throw error;
+    }
+
+    await fs.unlink(file.path);
+
+    const data: Prisma.SourceCreateInput = {
+      pocket: { connect: { id: pocketId } },
+      name: file.originalname,
+      type: file.mimetype,
+      url: s3Key,
+      size: file.size,
+      jobKey,
+      status: 'QUEUED',
+    };
+
+    const entry = await this.prisma.source.create({ data });
+
+    await this.rabbitMQService.sendToQueue('file-processing', {
+      sourceId: entry.id,
+      s3Key,
+      mimeType: file.mimetype,
+      jobKey,
+    });
+
+    return {
+      message: 'File uploaded successfully and queued for processing.',
+      jobKey,
+      database: entry,
+    };
+  }
+
+  async getSourcesByPocketId(pocketId: string, userId: string) {
     return await this.prisma.source.findMany({
-      where: { pocketId },
+      where: { pocketId, pocket: { userId } },
       orderBy: { uploadTime: 'desc' },
     });
   }
@@ -57,9 +125,9 @@ export class SourceService {
     }));
   }
 
-  async getSourceURL(sourceId: string) {
-    return this.prisma.source.findUnique({
-      where: { id: sourceId },
+  async getSourceURL(sourceId: string, userId: string) {
+    return this.prisma.source.findFirst({
+      where: { id: sourceId, pocket: { userId } },
     });
   }
 
@@ -71,7 +139,7 @@ export class SourceService {
     if (!source) return null;
     const bucket = this.configService.get<string>('S3_BUCKET_USER_FILE');
     if (!bucket) throw new Error('S3_BUCKET_USER_FILE is not set in config');
-    const stream = await this.s3Service.getObject(bucket, fileId);
+    const stream = await this.s3Service.getObject(this.s3Bucket, source.url);
     return {
       stream,
       contentType: source.type,

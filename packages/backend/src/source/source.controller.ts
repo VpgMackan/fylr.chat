@@ -11,14 +11,15 @@ import {
   Get,
   Param,
   Res,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { v4 as uuidv4 } from 'uuid';
-import { RabbitMQService } from '../utils/rabbitmq.service';
+import { Response } from 'express';
 import { SourceService } from './source.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 
 import { CreateSourceDto } from '@fylr/types';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 const allowedMimeTypes = [
   'application/pdf',
@@ -27,94 +28,59 @@ const allowedMimeTypes = [
   'application/octet-stream',
 ];
 
+export const fileFilter = (_req, file, cb) => {
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new BadRequestException(
+        `Invalid file type. Allowed types: ${allowedMimeTypes.join(
+          ', ',
+        )}. Received: ${file.mimetype}`,
+      ),
+      false,
+    );
+  }
+};
+
 @UseGuards(AuthGuard)
 @Controller('source')
 export class SourceController {
-  constructor(
-    private sourceService: SourceService,
-    private readonly rabbitMQService: RabbitMQService,
-  ) {}
+  constructor(private readonly sourceService: SourceService) {}
 
   @Post('')
   @HttpCode(HttpStatus.ACCEPTED)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      fileFilter: (_req, file, cb) => {
-        if (allowedMimeTypes.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(
-            new BadRequestException(
-              `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}. Received: ${file.mimetype}`,
-            ),
-            false,
-          );
-        }
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', { fileFilter }))
   async createSource(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: CreateSourceDto,
+    @Request() req: RequestWithUser,
   ) {
     if (!file) {
       throw new BadRequestException('No file provided.');
     }
 
-    const jobKey = uuidv4();
-    const s3Bucket = this.sourceService['configService'].get(
-      'S3_BUCKET_USER_FILE',
-    );
-    if (!s3Bucket) {
-      throw new BadRequestException('S3 bucket not configured.');
-    }
-    const fs = await import('fs/promises');
-    const buffer = await fs.readFile(file.path);
-    await this.sourceService['s3Service'].upload(
-      s3Bucket,
-      file.filename || file.originalname,
-      buffer,
-      { 'Content-Type': file.mimetype },
-    );
-    await fs.unlink(file.path);
-
-    const data = {
-      pocket: { connect: { id: body.pocketId } },
-      name: file.originalname,
-      type: file.mimetype,
-      url: file.filename || file.originalname,
-      size: file.size,
-      jobKey,
-      status: 'QUEUED',
-    };
-
-    const entry = await this.sourceService.createSourceDatabaseEntry(data);
-    await this.rabbitMQService.sendToQueue('file-processing', {
-      sourceId: entry.id,
-      s3Key: file.filename || file.originalname,
-      mimeType: file.mimetype,
-      jobKey,
-    });
-
-    return {
-      message: 'File uploaded successfully and queued for processing.',
-      jobKey,
-      database: entry,
-    };
+    return this.sourceService.createSource(file, body.pocketId, req.user.id);
   }
 
   @Get('pocket/:pocketId')
-  async getSourcesByPocketId(@Param('pocketId') pocketId: string) {
-    return this.sourceService.getSourcesByPocketId(pocketId);
+  async getSourcesByPocketId(
+    @Param('pocketId') pocketId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.getSourcesByPocketId(pocketId, req.user.id);
   }
 
-  @Post('access/:sourceId')
-  async getSourceURL(@Param('sourceId') sourceId: string) {
-    return this.sourceService.getSourceURL(sourceId);
+  @Get('access/:sourceId')
+  async getSourceURL(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.getSourceURL(sourceId, req.user.id);
   }
 
   @Get('file/:fileId')
-  async serveFile(@Param('fileId') fileId: string, @Res() res) {
+  async serveFile(@Param('fileId') fileId: string, @Res() res: Response) {
     const fileStreamData = await this.sourceService.getFileStreamById(fileId);
     if (!fileStreamData) {
       throw new BadRequestException('File not found.');
