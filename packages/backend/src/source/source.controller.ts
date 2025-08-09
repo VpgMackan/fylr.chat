@@ -80,8 +80,15 @@ export class SourceController {
   }
 
   @Get('file/:fileId')
-  async serveFile(@Param('fileId') fileId: string, @Res() res: Response) {
-    const fileStreamData = await this.sourceService.getFileStreamById(fileId);
+  async serveFile(
+    @Param('fileId') fileId: string,
+    @Request() req: RequestWithUser,
+    @Res() res: Response,
+  ) {
+    const fileStreamData = await this.sourceService.getFileStreamForUser(
+      fileId,
+      req.user.id,
+    );
     if (!fileStreamData) {
       throw new BadRequestException('File not found.');
     }

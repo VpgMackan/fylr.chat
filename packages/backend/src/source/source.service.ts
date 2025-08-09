@@ -131,14 +131,18 @@ export class SourceService {
     });
   }
 
-  async getFileStreamById(fileId: string) {
+  async getFileStreamForUser(fileId: string, userId: string) {
     // Find the source entry to get metadata
-    const source = await this.prisma.source.findUnique({
-      where: { id: fileId },
+    const source = await this.prisma.source.findFirst({
+      where: {
+        id: fileId,
+        pocket: {
+          userId: userId,
+        },
+      },
     });
     if (!source) return null;
-    const bucket = this.configService.get<string>('S3_BUCKET_USER_FILE');
-    if (!bucket) throw new Error('S3_BUCKET_USER_FILE is not set in config');
+
     const stream = await this.s3Service.getObject(this.s3Bucket, source.url);
     return {
       stream,
