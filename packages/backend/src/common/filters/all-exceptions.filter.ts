@@ -30,11 +30,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    this.logger.error(
-      `[${request.method}] ${request.url} - Status: ${httpStatus}`,
-      exception instanceof Error ? exception.stack : exception,
-      'ExceptionFilter',
-    );
+    if (exception instanceof HttpException && httpStatus === HttpStatus.UNAUTHORIZED) {
+      this.logger.warn(
+        `[${request.method}] ${request.url} - Status: ${httpStatus} (Unauthorized)`,
+      );
+    } else {
+      this.logger.error(
+        `[${request.method}] ${request.url} - Status: ${httpStatus}`,
+        exception instanceof Error ? exception.stack : exception,
+        'ExceptionFilter',
+      );
+    }
 
     const responseBody = {
       statusCode: httpStatus,
