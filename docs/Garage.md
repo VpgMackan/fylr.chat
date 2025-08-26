@@ -62,10 +62,10 @@ metrics_token = "xxxx"
    - `docker compose pull`
    - `docker compose up -d`
 4. Now run the following commands to set up the required buckets and api keys.
-   - `docker exec -ti garage /garage status`
-   - `docker exec -ti garage /garage layout assign -z dc1 -c 100G <node_id>`
-   - `docker exec -ti garage /garage layout apply --version 1`
-   - `docker exec -ti garage /garage bucket create fylr.chat-sources`
-   - `docker exec -ti garage /garage key create fylr.chat`
-   - `docker exec -ti garage /garage bucket allow --read --write --owner fylr.chat-sources --key fylr-chat`
+   - `podman-compose exec garage /garage status`
+   - `podman-compose exec garage /garage layout assign -z dc1 -c 100G <node_id>`
+   - `podman-compose exec garage /graage layout apply --version 1`
+   - `podman-compose exec garage /garage bucket create fylr.chat-sources`
+   - `podman-compose exec garage /garage key create fylr.chat`
+   - `podman-compose exec garage /garage bucket allow --read --write --owner fylr.chat-sources --key fylr.chat`
 
