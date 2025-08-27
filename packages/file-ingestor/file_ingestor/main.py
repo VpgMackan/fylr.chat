@@ -11,7 +11,7 @@ from botocore.config import Config
 
 from .handlers import manager
 
-from .vector.saver import save_text_chunks_as_vectors
+from .vector.saver import save_text_chunks_as_vectors, update_source_status
 
 
 class FileIngestor:
@@ -44,7 +44,20 @@ class FileIngestor:
             pika.ConnectionParameters(os.getenv("RABBITMQ_HOST", "localhost"))
         )
         self.channel = connection.channel()
-        self.channel.queue_declare("file-processing", durable=True)
+        dlx_name = 'fylr-dlx'
+        dlq_name = 'file-processing.dlq'
+        self.channel.exchange_declare(exchange=dlx_name, exchange_type='direct', durable=True)
+        self.channel.queue_declare(queue=dlq_name, durable=True)
+        self.channel.queue_bind(queue=dlq_name, exchange=dlx_name, routing_key='file-processing')
+
+        self.channel.queue_declare(
+            "file-processing",
+            durable=True,
+            arguments={
+                "x-dead-letter-exchange": dlx_name,
+                "x-dead-letter-routing-key": 'file-processing'
+            }
+        )
 
     def parse_message_body(self, body: bytes) -> Tuple[str, str, str]:
         """Parse the message body to extract source ID, file key and type."""
@@ -81,6 +94,7 @@ class FileIngestor:
 
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
+        job_key = None
         try:
             source_id, file_key, file_type, job_key = self.parse_message_body(body)
             self.info(
@@ -114,14 +128,17 @@ class FileIngestor:
             save_text_chunks_as_vectors(docs, source_id, job_key, self.info)
 
             self.info(f"Successfully processed file: {file_key}", job_key=job_key)
+            update_source_status(source_id, "COMPLETED")
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
             error_message = f"Fatal error processing message {body}: {e}"
             self.logger.error(error_message)
             if job_key:
-                self.info(error_message, job_key)
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                self.status_update(job_key, {"error": True, "message": str(e), "stage": "failed"})
+            if source_id:
+                update_source_status(source_id, "FAILED", str(e))
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     def start_consuming(self) -> None:
         """Start consuming messages from the queue."""

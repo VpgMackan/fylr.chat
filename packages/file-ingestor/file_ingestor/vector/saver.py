@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from .entity import DocumentVector
+from .entity import DocumentVector, Source
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -117,6 +117,20 @@ def fetch_embeddings_from_ai_gateway(
         logger.error(error_msg)
         raise
 
+def update_source_status(source_id: str, status: str, error_message: Optional[str] = None):
+    """Updates the status of a source record."""
+    with get_db_session() as session:
+        try:
+            source = session.query(Source).filter(Source.id == source_id).first()
+            if source:
+                source.status = status
+                # You could add an error message column to the Source model if desired
+                logger.info(f"Updated status for source {source_id} to {status}")
+            else:
+                logger.warning(f"Could not find source {source_id} to update status.")
+        except SQLAlchemyError as e:
+            logger.error(f"Database error updating source status: {e}")
+            raise
 
 def vectorize_text(
     chunks: List[str], job_key: str, info_callback: callable
