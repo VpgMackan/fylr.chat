@@ -135,15 +135,10 @@ export default function PocketIdPage({
               { length: Math.floor(Math.random() * 6) + 1 },
               (_, index) => <SourceSkeleton key={index} />,
             )
-          : sources?.map(({ id, name, size, pocketId }) => (
+          : sources?.map((source) => (
               <Source
                 key={id}
-                title={name}
-                summary="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                size={size}
-                imported="2025/04/13"
-                id={id}
-                pocketId={pocketId}
+                source={source}
               />
             ))}
       </Section>
@@ -152,14 +147,6 @@ export default function PocketIdPage({
         title={t('pocketDetail.mostRecent')}
         cols="grid-cols-1 md:grid-cols-2 lg:grid-cols-6"
       >
-        <Source
-          title="🧠 Lorem"
-          summary="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-          size="2.4 KB"
-          imported="2025/04/13"
-          id="e57b8ddd-c118-43cf-a595-067579b62b97"
-          pocketId={id || ''}
-        />
         <PinnedPod title="Lorem ipsum" pocket="Lorem" />
         <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />
         <Chat title="Lorem ipsum" pocket="Lorem" id="temp" />

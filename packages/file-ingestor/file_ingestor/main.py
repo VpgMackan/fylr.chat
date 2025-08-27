@@ -95,21 +95,27 @@ class FileIngestor:
     def process_file_message(self, ch, method, properties, body: bytes) -> None:
         """Process a single file message from the queue."""
         job_key = None
+        source_id = None
         try:
             source_id, file_key, file_type, job_key = self.parse_message_body(body)
             self.info(
                 f"Processing file: {file_key} (sourceId: {source_id}) with type: {file_type}",
                 job_key=job_key,
+                payload={"stage": "STARTING", "message": "Starting processing..."},
             )
 
-            self.info("Fetching file from S3...", job_key=job_key)
+            self.info(
+                "Fetching file from S3...", 
+                job_key=job_key,
+                payload={"stage": "FETCHING", "message": "Retrieving file..."},
+            )
             obj = self.s3_bucket.Object(file_key)
             buffer = obj.get()["Body"].read()
 
             self.info(
                 "Passing to handler for processing...",
                 job_key=job_key,
-                payload={"stage": "parsing"},
+                payload={"stage": "PARSING", "message": "Parsing file content..."},
             )
             docs = manager.process_data(
                 file_type=file_type,
@@ -123,11 +129,15 @@ class FileIngestor:
             self.info(
                 "Passing chunks to vector saver...",
                 job_key=job_key,
-                payload={"stage": "vectorizing"},
+                payload={"stage": "VECTORIZING", "message": f"Generating embeddings for {len(docs)} chunks..."},
             )
             save_text_chunks_as_vectors(docs, source_id, job_key, self.info)
-
-            self.info(f"Successfully processed file: {file_key}", job_key=job_key)
+            
+            self.info(
+                f"Successfully processed file: {file_key}",
+                job_key=job_key,
+                payload={"stage": "COMPLETED", "message": "Processing complete!"},
+            )
             update_source_status(source_id, "COMPLETED")
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -135,7 +145,7 @@ class FileIngestor:
             error_message = f"Fatal error processing message {body}: {e}"
             self.logger.error(error_message)
             if job_key:
-                self.status_update(job_key, {"error": True, "message": str(e), "stage": "failed"})
+                self.status_update(job_key, {"stage": "FAILED", "message": str(e), "error": True})
             if source_id:
                 update_source_status(source_id, "FAILED", str(e))
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
