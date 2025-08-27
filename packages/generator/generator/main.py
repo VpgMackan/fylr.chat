@@ -59,13 +59,25 @@ def main():
         generator_instance = generator_class()
 
         # Setup RabbitMQ connection
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host="localhost")
-        )
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         channel = connection.channel()
-        channel.queue_declare(queue=queue_name, durable=True)
-        logger.info(f"Connected to RabbitMQ and declared queue '{queue_name}'")
+        dlx_name = 'fylr-dlx'
+        dlq_name = 'summary-generator.dlq'
+        channel.exchange_declare(exchange=dlx_name, exchange_type='direct', durable=True)
+        channel.queue_declare(queue=dlq_name, durable=True)
+        channel.queue_bind(queue=dlq_name, exchange=dlx_name, routing_key='summary-generator')
 
+        # Configure main queue with DLX
+        channel.queue_declare(
+            queue=queue_name,
+            durable=True,
+            arguments={
+                "x-dead-letter-exchange": dlx_name,
+                "x-dead-letter-routing-key": 'summary-generator'
+            }
+        )
+        logger.info(f"Connected to RabbitMQ and declared queue '{queue_name}' with DLQ support")
+        
         # Create a partial function to pass the generator instance to the callback
         on_message_with_generator = partial(
             on_message_callback, generator_instance=generator_instance
