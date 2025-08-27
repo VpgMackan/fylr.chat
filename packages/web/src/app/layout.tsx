@@ -3,6 +3,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
 import { Montserrat } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Montserrat({
   variable: '--font-montserrat',
@@ -27,6 +28,7 @@ export default async function RootLayout({
     <html lang={locale} className={`${inter.variable}`}>
       <body className="p-16 font-montserrat bg-blue-50 text-gray-900 h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <Toaster position='top-right' reverseOrder={false} />
           {children}
         </NextIntlClientProvider>
       </body>

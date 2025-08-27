@@ -13,6 +13,7 @@ import MarkdownComponent from '@/components/MarkdownComponents';
 import { useSubscription } from '@/hooks/useEvents';
 import { SummaryEpisodeApiResponse } from '@fylr/types';
 import axios from '@/utils/axios';
+import { toast } from "react-hot-toast";
 
 interface SummaryData {
   id: string;
@@ -112,6 +113,15 @@ export default function SummaryPage({
       setSummaryData((prevData) =>
         prevData ? { ...prevData, generated: eventData.finalStatus } : null,
       );
+    }
+
+    if (eventData.stage === 'error') {
+      toast.error(`Summary generation failed: ${eventData.message}`);
+      setGenerationStatus(`Error: ${eventData.message}`);
+    }
+    
+    if (eventData.stage === 'complete' && eventData.finalStatus === 'FAILED') {
+      toast.error('Summary generation finished with an error.');
     }
   });
 
