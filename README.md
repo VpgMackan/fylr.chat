@@ -1,3 +1,6 @@
+> [!WARNING]  
+> This project is under development and is not ready for use. [**Todo list**](./TODO.md).
+
 # Fylr.Chat
 
 Fylr.Chat is a powerful, self-hostable alternative to services like NotebookLM, designed for in-depth analysis and querying of large document collections. Upload your documents, and leverage AI to ask questions, generate summaries, and uncover insights from your private knowledge base.
