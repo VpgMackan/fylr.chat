@@ -18,8 +18,10 @@
 - [ ] Implement video generation (Insperation: [Notebook LM](https://notebooklm.google/))
 
 ## Low priority
-- [ ] Onboarding: Design a simple onboarding flow for new users.
 - [ ] Features: Add support for more source types (web scraping, etc.).
 - [ ] Ops: Integrate a metrics collection system (e.g., Prometheus).
-- [ ] CI/CD: Set up a basic CI/CD pipeline for linting, testing, and building Docker images.
 - [ ] DB: Establish and document the prisma migrate workflow.
+
+## Possible
+- [ ] Onboarding: Design a simple onboarding flow for new users.
+- [ ] CI/CD: Set up a basic CI/CD pipeline for linting, testing, and building Docker images.
