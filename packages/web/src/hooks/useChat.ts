@@ -1,12 +1,18 @@
 import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getConversationWsToken } from '@/services/api/chat.api';
-import { MessageApiResponse, WsServerEventPayload } from '@fylr/types';
+import {
+  MessageApiResponse,
+  WsServerEventPayload,
+  MessageAndSourceApiResponse,
+  SourceApiResponse,
+} from '@fylr/types';
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
 interface ChatState {
   messages: MessageApiResponse[];
+  sources: SourceApiResponse[];
   isConnected: boolean;
   status: { stage: string; message: string } | null;
 }
@@ -22,10 +28,12 @@ type ChatAction =
     }
   | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
   | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
-  | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse };
+  | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
+  | { type: 'SET_SOURCES'; payload: SourceApiResponse[] };
 
 const initialState: ChatState = {
   messages: [],
+  sources: [],
   isConnected: false,
   status: null,
 };
@@ -36,6 +44,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, isConnected: action.payload };
     case 'SET_HISTORY':
       return { ...state, messages: action.payload };
+    case 'SET_SOURCES':
+      return { ...state, sources: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_MESSAGE':
@@ -114,9 +124,13 @@ export function useChat(chatId: string | null) {
         socket.on('disconnect', () =>
           dispatch({ type: 'SET_CONNECTED', payload: false }),
         );
-        socket.on('conversationHistory', (history: MessageApiResponse[]) => {
-          dispatch({ type: 'SET_HISTORY', payload: history.messages });
-        });
+        socket.on(
+          'conversationHistory',
+          (history: MessageAndSourceApiResponse) => {
+            dispatch({ type: 'SET_HISTORY', payload: history.messages });
+            dispatch({ type: 'SET_SOURCES', payload: history.sources });
+          },
+        );
 
         socket.on(
           'conversationAction',
@@ -227,6 +241,7 @@ export function useChat(chatId: string | null) {
 
   return {
     messages: state.messages,
+    sources: state.sources,
     isConnected: state.isConnected,
     status: state.status,
     sendMessage,

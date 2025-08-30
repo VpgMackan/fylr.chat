@@ -22,9 +22,9 @@ export default function ChatPage({
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
-  const { messages, sendMessage, isConnected, status } = useChat(chatId);
+  const { messages, sources, sendMessage, isConnected, status } =
+    useChat(chatId);
 
-  // const [sources, setSources] = useState([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
@@ -57,14 +57,9 @@ export default function ChatPage({
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
-            <SourceCheckbox
-              fileName="What's ai's impact on the world?"
-              fileType="pdf"
-            />
-            <SourceCheckbox
-              fileName="What's ai's impact on the world?"
-              fileType="web"
-            />
+            {sources.map((m) => (
+              <SourceCheckbox key={m.id} fileName={m.name} fileType={m.type} />
+            ))}
           </div>
         </>
       }

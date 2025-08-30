@@ -46,6 +46,11 @@ export interface MessageApiResponse {
   metadata: object;
 }
 
+export interface MessageAndSourceApiResponse {
+  messages: MessageApiResponse[];
+  sources: SourceApiResponse[];
+}
+
 export interface SummaryEpisodeApiResponse {
   id: string;
   title: string;
