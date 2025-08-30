@@ -10,7 +10,12 @@ import {
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
-type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
+type ConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
@@ -35,7 +40,7 @@ type ChatAction =
 const initialState: ChatState = {
   messages: [],
   sources: [],
-  connectionStatus: 'connecting',
+  connectionStatus: 'idle',
   status: null,
 };
 
@@ -115,7 +120,7 @@ export function useChat(chatId: string | null) {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
@@ -130,6 +135,7 @@ export function useChat(chatId: string | null) {
           (history: MessageAndSourceApiResponse) => {
             dispatch({ type: 'SET_HISTORY', payload: history.messages });
             dispatch({ type: 'SET_SOURCES', payload: history.sources });
+            dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
           },
         );
 
