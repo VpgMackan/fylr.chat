@@ -5,12 +5,15 @@ export default function SourceCheckbox({
   fileName,
   fileType,
   checked,
+  onClick,
 }: {
   fileName: string;
   fileType: string;
   checked: boolean;
+  onClick: () => void;
 }) {
   const fileIcon: Record<string, string> = {
+    'text/markdown': 'material-symbols:markdown-outline',
     pdf: 'proicons:pdf-2',
     web: 'mdi:web',
   };
@@ -29,6 +32,7 @@ export default function SourceCheckbox({
       <Checkbox
         className="group block size-5 rounded border border-gray-400 bg-white data-[checked]:bg-blue-600 data-[checked]:border-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
         checked={checked}
+        onClick={onClick}
       >
         <Icon
           icon="uim:check"

@@ -19,6 +19,7 @@ import {
 } from '@fylr/types';
 import { MessageService } from './message.service';
 import { SourceService } from 'src/source/source.service';
+import { ConversationService } from './conversation.service';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -37,6 +38,7 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly messageService: MessageService,
+    private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
   ) {}
 
@@ -159,6 +161,30 @@ export class ChatGateway
           this.server,
         );
         break;
+
+      case 'updateSources':
+        const { sourcesId } = payload as { sourcesId: string[] };
+        try {
+          await this.conversationService.updateSources(
+            conversationId,
+            sourcesId,
+            client.user.id,
+          );
+
+          const updatedSources =
+            await this.sourceService.getSourcesByConversationId(
+              conversationId,
+              client.user.id,
+            );
+
+          this.server.to(conversationId).emit('sourcesUpdated', {
+            sources: updatedSources,
+          });
+          break;
+        } catch (error) {
+          client.emit('error', { message: 'Failed to update sources' });
+          throw new WsException('Failed to update sources');
+        }
 
       default:
         throw new WsException(`Invalid action: ${action}`);

@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -154,6 +155,32 @@ export class ConversationService {
         `Failed to update conversation ${id}`,
       );
     }
+  }
+
+  async updateSources(
+    conversationId: string,
+    sourcesId: string[],
+    userId: string,
+  ) {
+    const sources = await this.prisma.source.findMany({
+      where: {
+        id: { in: sourcesId },
+        pocket: { userId },
+      },
+    });
+
+    if (sources.length !== sourcesId.length) {
+      throw new BadRequestException('Some sources not found or not accessible');
+    }
+
+    return await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        sources: {
+          set: sourcesId.map((id) => ({ id })),
+        },
+      },
+    });
   }
 
   async deleteConversation(id: string, userId: string) {
