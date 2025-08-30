@@ -10,12 +10,7 @@ import {
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
-type ConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'error';
+type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
@@ -24,7 +19,7 @@ interface ChatState {
 }
 
 type ChatAction =
-  | { type: 'SET_CONNECTED'; payload: ConnectionStatus }
+  | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
@@ -40,13 +35,13 @@ type ChatAction =
 const initialState: ChatState = {
   messages: [],
   sources: [],
-  connectionStatus: 'idle',
+  connectionStatus: 'connecting',
   status: null,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'SET_CONNECTED':
+    case 'SET_CONNECTION_STATUS':
       return { ...state, connectionStatus: action.payload };
     case 'SET_HISTORY':
       return { ...state, messages: action.payload };
@@ -120,7 +115,7 @@ export function useChat(chatId: string | null) {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          dispatch({ type: 'SET_CONNECTED', payload: 'connected' });
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
@@ -128,7 +123,7 @@ export function useChat(chatId: string | null) {
         });
 
         socket.on('disconnect', () =>
-          dispatch({ type: 'SET_CONNECTED', payload: 'reconnecting' }),
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'reconnecting' }),
         );
         socket.on(
           'conversationHistory',
