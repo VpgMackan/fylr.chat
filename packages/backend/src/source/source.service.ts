@@ -92,6 +92,18 @@ export class SourceService {
     });
   }
 
+  async getSourcesByConversationId(conversationId: string) {
+    return await this.prisma.source.findMany({
+      where: {
+        conversations: {
+          some: {
+            id: conversationId,
+          },
+        },
+      },
+    });
+  }
+
   async findByVector(vector: number[], sourceIds: string[]) {
     if (sourceIds.length === 0) {
       return [];

@@ -43,7 +43,7 @@ model Source {
   name          String
   type          String
   url           String
-  size          BigInt
+  size          Int
   uploadTime    DateTime       @default(now()) @map("upload_time")
   jobKey        String         @map("job_key")
   status        String         @db.Text
@@ -70,7 +70,7 @@ model Summary {
   pocketId  String           @map("pocket_id")
   title     String
   createdAt DateTime         @default(now()) @map("created_at")
-  length    BigInt
+  length    Int
   generated String?          @db.Text
   pocket    Pocket           @relation(fields: [pocketId], references: [id], onDelete: Cascade)
   episodes  SummaryEpisode[]

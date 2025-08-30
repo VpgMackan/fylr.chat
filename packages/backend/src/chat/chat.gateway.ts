@@ -18,6 +18,7 @@ import {
   WsClientActionPayload,
 } from '@fylr/types';
 import { MessageService } from './message.service';
+import { SourceService } from 'src/source/source.service';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -36,6 +37,7 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly messageService: MessageService,
+    private readonly sourceService: SourceService,
   ) {}
 
   afterInit(server: Server) {
@@ -90,7 +92,9 @@ export class ChatGateway
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
         const messages = await this.messageService.getMessages(conversationId);
-        client.emit('conversationHistory', messages);
+        const sources =
+          await this.sourceService.getSourcesByConversationId(conversationId);
+        client.emit('conversationHistory', { messages, sources });
         break;
 
       case 'sendMessage':

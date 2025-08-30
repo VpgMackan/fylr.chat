@@ -115,7 +115,7 @@ export function useChat(chatId: string | null) {
           dispatch({ type: 'SET_CONNECTED', payload: false }),
         );
         socket.on('conversationHistory', (history: MessageApiResponse[]) => {
-          dispatch({ type: 'SET_HISTORY', payload: history });
+          dispatch({ type: 'SET_HISTORY', payload: history.messages });
         });
 
         socket.on(

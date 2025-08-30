@@ -4,7 +4,6 @@ import * as cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 
-import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
@@ -23,7 +22,6 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));
 
   app.use(cookieParser());
-  app.useGlobalInterceptors(new BigIntInterceptor());
   app.enableShutdownHooks();
 
   const configService = app.get(ConfigService);
