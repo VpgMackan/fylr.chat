@@ -92,16 +92,29 @@ export class SourceService {
     });
   }
 
-  async getSourcesByConversationId(conversationId: string) {
-    return await this.prisma.source.findMany({
-      where: {
+  async getSourcesByConversationId(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, pocket: { userId } },
+      select: { pocketId: true },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or not accessible');
+    }
+    const pocketId = conversation.pocketId;
+    const sources = await this.prisma.source.findMany({
+      where: { pocketId },
+      include: {
         conversations: {
-          some: {
-            id: conversationId,
-          },
+          where: { id: conversationId },
+          select: { id: true },
         },
       },
+      orderBy: { uploadTime: 'desc' },
     });
+    return sources.map(({ conversations, ...source }) => ({
+      ...source,
+      isActive: conversations.length > 0,
+    }));
   }
 
   async findByVector(vector: number[], sourceIds: string[]) {

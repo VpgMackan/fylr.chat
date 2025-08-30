@@ -5,14 +5,14 @@ import {
   MessageApiResponse,
   WsServerEventPayload,
   MessageAndSourceApiResponse,
-  SourceApiResponse,
+  SourceApiResponseWithIsActive,
 } from '@fylr/types';
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
 interface ChatState {
   messages: MessageApiResponse[];
-  sources: SourceApiResponse[];
+  sources: SourceApiResponseWithIsActive[];
   isConnected: boolean;
   status: { stage: string; message: string } | null;
 }
@@ -29,7 +29,7 @@ type ChatAction =
   | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
   | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
   | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
-  | { type: 'SET_SOURCES'; payload: SourceApiResponse[] };
+  | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] };
 
 const initialState: ChatState = {
   messages: [],

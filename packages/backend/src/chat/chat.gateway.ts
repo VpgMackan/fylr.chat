@@ -92,8 +92,10 @@ export class ChatGateway
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
         const messages = await this.messageService.getMessages(conversationId);
-        const sources =
-          await this.sourceService.getSourcesByConversationId(conversationId);
+        const sources = await this.sourceService.getSourcesByConversationId(
+          conversationId,
+          client.user.id,
+        );
         client.emit('conversationHistory', { messages, sources });
         break;
 

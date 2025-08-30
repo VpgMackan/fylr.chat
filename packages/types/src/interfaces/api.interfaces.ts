@@ -46,9 +46,13 @@ export interface MessageApiResponse {
   metadata: object;
 }
 
+export interface SourceApiResponseWithIsActive extends SourceApiResponse {
+  isActive: boolean;
+}
+
 export interface MessageAndSourceApiResponse {
   messages: MessageApiResponse[];
-  sources: SourceApiResponse[];
+  sources: SourceApiResponseWithIsActive[];
 }
 
 export interface SummaryEpisodeApiResponse {

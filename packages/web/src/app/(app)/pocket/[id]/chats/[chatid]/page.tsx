@@ -58,7 +58,12 @@ export default function ChatPage({
 
           <div className="flex flex-col gap-2">
             {sources.map((m) => (
-              <SourceCheckbox key={m.id} fileName={m.name} fileType={m.type} />
+              <SourceCheckbox
+                key={m.id}
+                fileName={m.name}
+                fileType={m.type}
+                checked={m.isActive}
+              />
             ))}
           </div>
         </>
