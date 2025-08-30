@@ -133,6 +133,13 @@ export function useChat(chatId: string | null) {
         );
 
         socket.on(
+          'sourcesUpdated',
+          (sources: SourceApiResponseWithIsActive[]) => {
+            dispatch({ type: 'SET_SOURCES', payload: sources });
+          },
+        );
+
+        socket.on(
           'conversationAction',
           (event: WsServerEventPayload & { data: any }) => {
             const { action, data, conversationId: eventConvId } = event;
@@ -226,6 +233,19 @@ export function useChat(chatId: string | null) {
     [chatId],
   );
 
+  const updateSources = useCallback(
+    (sourcesId: string[]) => {
+      if (socketRef.current && chatId) {
+        socketRef.current.emit('conversationAction', {
+          action: 'updateSources',
+          conversationId: chatId,
+          sourcesId,
+        });
+      }
+    },
+    [chatId],
+  );
+
   const regenerateMessage = useCallback(
     (messageId: string) => {
       if (socketRef.current && chatId) {
@@ -247,6 +267,7 @@ export function useChat(chatId: string | null) {
     sendMessage,
     deleteMessage,
     updateMessage,
+    updateSources,
     regenerateMessage,
   };
 }

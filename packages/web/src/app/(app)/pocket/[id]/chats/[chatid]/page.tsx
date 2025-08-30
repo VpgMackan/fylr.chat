@@ -22,7 +22,7 @@ export default function ChatPage({
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
-  const { messages, sources, sendMessage, isConnected, status } =
+  const { messages, sources, sendMessage, updateSources, isConnected, status } =
     useChat(chatId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -44,6 +44,18 @@ export default function ChatPage({
     router.back();
   };
 
+  const handleUpdateSources = (sourceId: string) => {
+    if (!sources) return;
+
+    const updatedSources = sources.map((s) =>
+      s.id === sourceId ? { ...s, isActive: !s.isActive } : s,
+    );
+
+    const activeIds = updatedSources.filter((s) => s.isActive).map((s) => s.id);
+
+    updateSources(activeIds);
+  };
+
   return (
     <ContentLayout
       title="What is nine plus ten?"
@@ -57,14 +69,16 @@ export default function ChatPage({
           <hr className="mb-2" />
 
           <div className="flex flex-col gap-2">
-            {sources.map((m) => (
-              <SourceCheckbox
-                key={m.id}
-                fileName={m.name}
-                fileType={m.type}
-                checked={m.isActive}
-              />
-            ))}
+            {sources &&
+              sources.map((m) => (
+                <SourceCheckbox
+                  key={m.id}
+                  fileName={m.name}
+                  fileType={m.type}
+                  checked={m.isActive}
+                  onClick={() => handleUpdateSources(m.id)}
+                />
+              ))}
           </div>
         </>
       }

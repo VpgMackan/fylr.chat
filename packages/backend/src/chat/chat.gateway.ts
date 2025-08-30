@@ -177,9 +177,7 @@ export class ChatGateway
               client.user.id,
             );
 
-          this.server.to(conversationId).emit('sourcesUpdated', {
-            sources: updatedSources,
-          });
+          this.server.to(conversationId).emit('sourcesUpdated', updatedSources);
           break;
         } catch (error) {
           client.emit('error', { message: 'Failed to update sources' });
