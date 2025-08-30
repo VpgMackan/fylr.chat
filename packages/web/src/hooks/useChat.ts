@@ -10,15 +10,21 @@ import {
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
+type ConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
-  isConnected: boolean;
+  connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
 }
 
 type ChatAction =
-  | { type: 'SET_CONNECTED'; payload: boolean }
+  | { type: 'SET_CONNECTED'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
@@ -34,14 +40,14 @@ type ChatAction =
 const initialState: ChatState = {
   messages: [],
   sources: [],
-  isConnected: false,
+  connectionStatus: 'idle',
   status: null,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'SET_CONNECTED':
-      return { ...state, isConnected: action.payload };
+      return { ...state, connectionStatus: action.payload };
     case 'SET_HISTORY':
       return { ...state, messages: action.payload };
     case 'SET_SOURCES':
@@ -114,7 +120,7 @@ export function useChat(chatId: string | null) {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          dispatch({ type: 'SET_CONNECTED', payload: true });
+          dispatch({ type: 'SET_CONNECTED', payload: 'connected' });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
@@ -122,7 +128,7 @@ export function useChat(chatId: string | null) {
         });
 
         socket.on('disconnect', () =>
-          dispatch({ type: 'SET_CONNECTED', payload: false }),
+          dispatch({ type: 'SET_CONNECTED', payload: 'reconnecting' }),
         );
         socket.on(
           'conversationHistory',
@@ -262,7 +268,7 @@ export function useChat(chatId: string | null) {
   return {
     messages: state.messages,
     sources: state.sources,
-    isConnected: state.isConnected,
+    connectionStatus: state.connectionStatus,
     status: state.status,
     sendMessage,
     deleteMessage,

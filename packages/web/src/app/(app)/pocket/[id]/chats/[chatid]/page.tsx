@@ -25,7 +25,7 @@ export default function ChatPage({
   const {
     messages,
     sources,
-    isConnected,
+    connectionStatus,
     status,
     sendMessage,
     deleteMessage,
