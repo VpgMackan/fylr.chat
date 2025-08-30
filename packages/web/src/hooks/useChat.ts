@@ -10,12 +10,7 @@ import {
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
-type ConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'error';
+type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
@@ -40,7 +35,7 @@ type ChatAction =
 const initialState: ChatState = {
   messages: [],
   sources: [],
-  connectionStatus: 'idle',
+  connectionStatus: 'connecting',
   status: null,
 };
 
@@ -120,7 +115,6 @@ export function useChat(chatId: string | null) {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
@@ -130,6 +124,15 @@ export function useChat(chatId: string | null) {
         socket.on('disconnect', () =>
           dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'reconnecting' }),
         );
+
+        socket.on('connect_error', () =>
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' }),
+        );
+
+        socket.on('reconnect_failed', () =>
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' }),
+        );
+
         socket.on(
           'conversationHistory',
           (history: MessageAndSourceApiResponse) => {
@@ -154,6 +157,7 @@ export function useChat(chatId: string | null) {
 
             switch (action) {
               case 'statusUpdate':
+                retry;
                 dispatch({ type: 'SET_STATUS', payload: data });
                 break;
               case 'newMessage':
@@ -266,6 +270,11 @@ export function useChat(chatId: string | null) {
     [chatId],
   );
 
+  const retryConnection = useCallback(() => {
+    dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
+    socketRef.current?.connect();
+  }, [socketRef]);
+
   return {
     messages: state.messages,
     sources: state.sources,
@@ -276,5 +285,6 @@ export function useChat(chatId: string | null) {
     updateMessage,
     updateSources,
     regenerateMessage,
+    retryConnection,
   };
 }
