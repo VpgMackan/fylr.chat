@@ -4,7 +4,7 @@
 - [x] Error Handling: Implement a Dead-Letter Queue (DLQ) strategy in RabbitMQ consumers. Improve frontend error surfacing (e.g., toasts).
 
 ## High priority
-- [x] UI Feedback: Implement real-time file ingestion feedback in the UI using WebSockets. (UNDERWAY)
+- [x] UI Feedback: Implement real-time file ingestion feedback in the UI using WebSockets.
 - [ ] UI Feedback: Improve chat error/loading/reconnecting states.
 - [ ] Functionality: Implement search functionality on all list pages.
 - [ ] Ops: Implement structured (JSON) logging across all services.
