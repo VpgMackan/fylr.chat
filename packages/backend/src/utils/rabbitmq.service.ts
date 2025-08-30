@@ -24,7 +24,21 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   async sendToQueue(queue: string, data: any) {
     try {
-      await this.channel.assertQueue(queue, { durable: true });
+      const queueOptions: any = { durable: true };
+
+      if (queue === 'file-processing') {
+        queueOptions.arguments = {
+          'x-dead-letter-exchange': 'fylr-dlx',
+          'x-dead-letter-routing-key': 'file-processing',
+        };
+      } else if (queue === 'summary-generator') {
+        queueOptions.arguments = {
+          'x-dead-letter-exchange': 'fylr-dlx',
+          'x-dead-letter-routing-key': 'summary-generator',
+        };
+      }
+
+      await this.channel.assertQueue(queue, queueOptions);
       await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
         persistent: true,
       });

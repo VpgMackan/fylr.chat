@@ -3,7 +3,6 @@ import remarkGfm from 'remark-gfm';
 import remarkDeflist from 'remark-deflist';
 import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export default function MarkdownComponent({ text }: { text: string }) {
   const components: Components = {
@@ -63,7 +62,6 @@ export default function MarkdownComponent({ text }: { text: string }) {
       const match = /language-(\w+)/.exec(className || '');
       return match ? (
         <SyntaxHighlighter
-          style={vscDarkPlus as { [key: string]: React.CSSProperties }}
           language={match[1]}
           PreTag="div"
           className="rounded-2xl my-3"
