@@ -22,8 +22,16 @@ export default function ChatPage({
 
   const [_, setPocketId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
-  const { messages, sources, sendMessage, updateSources, isConnected, status } =
-    useChat(chatId);
+  const {
+    messages,
+    sources,
+    isConnected,
+    status,
+    sendMessage,
+    deleteMessage,
+    updateSources,
+    regenerateMessage,
+  } = useChat(chatId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -90,6 +98,8 @@ export default function ChatPage({
             user={m.role === 'user'}
             text={m.content}
             metadata={m.metadata}
+            onRegenerate={() => regenerateMessage(m.id)}
+            onDelete={() => deleteMessage(m.id)}
           />
         ))}
         <div ref={messagesEndRef} />
