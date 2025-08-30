@@ -157,7 +157,6 @@ export function useChat(chatId: string | null) {
 
             switch (action) {
               case 'statusUpdate':
-                retry;
                 dispatch({ type: 'SET_STATUS', payload: data });
                 break;
               case 'newMessage':
