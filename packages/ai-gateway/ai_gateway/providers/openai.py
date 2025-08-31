@@ -9,7 +9,7 @@ from ..schemas import ChatCompletionResponse
 class OpenaiProvider(BaseProvider):
     def __init__(self):
         self.client = OpenAI(
-            api_key=settings.openai_api_key, base_url="https://litellm.katt.gdn"
+            api_key=settings.openai_api_key, base_url=settings.llm_proxy_url
         )
 
     def generate_text(

@@ -20,7 +20,7 @@ export default function SourcePage({
         <div className="flex h-full gap-x-2">
           <div className="flex-1">
             <iframe
-              src={`http://localhost:3001/source/file/${sourceId}`}
+              src={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${sourceId}`}
               className="w-full h-full"
             />
           </div>
