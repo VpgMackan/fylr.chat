@@ -5,7 +5,7 @@ from typing import Optional
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    ai_gateway_port: str
+    ai_gateway_port: int
 
     openai_api_key: Optional[str] = None
     llm_proxy_url: Optional[str] = None

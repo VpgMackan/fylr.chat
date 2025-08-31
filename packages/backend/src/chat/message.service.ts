@@ -108,7 +108,7 @@ export class MessageService {
     const context = relevantChunks
       .map(
         (chunk) =>
-          `<source id="${chunk.source.id}" pocketId="${chunk.source.pocketId}">\n${chunk.content}\n</source>`,
+          `<source id="${chunk.source.id}" chunkIndex="${chunk.fileId}" pocketId="${chunk.source.pocketId}">\n${chunk.content}\n</source>`,
       )
       .join('\n---\n');
 
@@ -140,6 +140,7 @@ export class MessageService {
               id: c.source.id,
               pocketId: c.source.pocketId,
               name: c.source.name,
+              chunkIndex: c.chunkIndex,
             })),
           },
         },

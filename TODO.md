@@ -5,7 +5,7 @@
 
 ## High priority
 - [x] UI Feedback: Implement real-time file ingestion feedback in the UI using WebSockets.
-- [ ] UI Feedback: Improve chat error/loading/reconnecting states.
+- [x] UI Feedback: Improve chat error/loading/reconnecting states.
 - [ ] Functionality: Implement search functionality on all list pages.
 - [ ] Ops: Implement structured (JSON) logging across all services.
 

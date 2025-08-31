@@ -7,6 +7,7 @@ interface RelatedSource {
   id: string;
   pocketId: string;
   name: string;
+  chunkIndex: number;
 }
 
 export default function Chat({
@@ -58,7 +59,7 @@ export default function Chat({
               <div className="flex flex-wrap gap-2">
                 {relatedSources.map((source) => (
                   <button
-                    key={source.id}
+                    key={`${source.id}---${source.chunkIndex}`}
                     className="flex items-center gap-1.5 bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full hover:bg-gray-300 transition-colors"
                     title={source.name}
                   >

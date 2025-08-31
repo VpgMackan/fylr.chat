@@ -71,7 +71,7 @@ export class LLMService {
   ): Promise<ChatCompletionResponse | NodeJS.ReadableStream> {
     const requestPayload = {
       provider: 'openai',
-      model: 'groq/llama3-70b-8192',
+      model: 'or/qwq-32b',
       ...payload,
       stream,
     };

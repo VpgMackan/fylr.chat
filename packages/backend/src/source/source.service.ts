@@ -128,6 +128,7 @@ export class SourceService {
         v.id,
         v.file_id AS "fileId",
         v.content,
+        v.chunk_index as "chunkIndex",
         s.id AS "source.id",
         s.pocket_id AS "source.pocketId",
         s.name AS "source.name"
@@ -142,6 +143,7 @@ export class SourceService {
       id: item.id,
       fileId: item.fileId,
       content: item.content,
+      chunkIndex: item.chunkIndex,
       source: {
         id: item['source.id'],
         pocketId: item['source.pocketId'],
