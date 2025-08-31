@@ -14,6 +14,7 @@ type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
+  name: string;
   connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
 }
@@ -30,11 +31,13 @@ type ChatAction =
   | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
   | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
   | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
-  | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] };
+  | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] }
+  | { type: 'SET_NAME'; payload: string };
 
 const initialState: ChatState = {
   messages: [],
   sources: [],
+  name: '',
   connectionStatus: 'connecting',
   status: null,
 };
@@ -47,6 +50,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, messages: action.payload };
     case 'SET_SOURCES':
       return { ...state, sources: action.payload };
+    case 'SET_NAME':
+      return { ...state, name: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_MESSAGE':
@@ -140,6 +145,7 @@ export function useChat(chatId: string | null) {
           (history: MessageAndSourceApiResponse) => {
             dispatch({ type: 'SET_HISTORY', payload: history.messages });
             dispatch({ type: 'SET_SOURCES', payload: history.sources });
+            dispatch({ type: 'SET_NAME', payload: history.name });
             dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
           },
         );
@@ -279,6 +285,7 @@ export function useChat(chatId: string | null) {
   return {
     messages: state.messages,
     sources: state.sources,
+    name: state.name,
     connectionStatus: state.connectionStatus,
     status: state.status,
     sendMessage,

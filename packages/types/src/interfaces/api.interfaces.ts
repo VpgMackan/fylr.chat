@@ -53,6 +53,7 @@ export interface SourceApiResponseWithIsActive extends SourceApiResponse {
 export interface MessageAndSourceApiResponse {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
+  name: string;
 }
 
 export interface SummaryEpisodeApiResponse {

@@ -25,6 +25,7 @@ export default function ChatPage({
   const {
     messages,
     sources,
+    name,
     connectionStatus,
     status,
     sendMessage,
@@ -66,7 +67,7 @@ export default function ChatPage({
 
   return (
     <ContentLayout
-      title="What is nine plus ten?"
+      title={name}
       leadingTitleAccessory={
         <Icon icon="weui:back-outlined" onClick={handleBack} />
       }
@@ -91,27 +92,64 @@ export default function ChatPage({
         </>
       }
     >
-      <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4">
-        {messages.map((m) => (
-          <Chat
-            key={m.id}
-            user={m.role === 'user'}
-            text={m.content}
-            metadata={m.metadata}
-            onRegenerate={() => regenerateMessage(m.id)}
-            onDelete={() => deleteMessage(m.id)}
-          />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+      {connectionStatus === 'connected' ? (
+        <>
+          <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4">
+            {messages.map((m) => (
+              <Chat
+                key={m.id}
+                user={m.role === 'user'}
+                text={m.content}
+                metadata={m.metadata}
+                onRegenerate={() => regenerateMessage(m.id)}
+                onDelete={() => deleteMessage(m.id)}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
 
-      {status && (
-        <div className="text-center text-sm text-gray-500 mb-2 animate-pulse">
-          {status.message}
+          {status && (
+            <div className="text-center text-sm text-gray-500 mb-2 animate-pulse">
+              {status.message}
+            </div>
+          )}
+
+          <ChatInput onSend={sendMessage} />
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center flex-grow p-8">
+          {connectionStatus === 'connecting' && (
+            <div className="flex flex-col items-center text-center">
+              <Icon
+                icon="line-md:loading-loop"
+                className="text-4xl text-blue-500 animate-spin mb-4"
+              />
+              <p className="text-lg text-gray-600">Connecting to chat...</p>
+            </div>
+          )}
+          {connectionStatus === 'reconnecting' && (
+            <div className="flex flex-col items-center text-center">
+              <Icon
+                icon="line-md:loading-loop"
+                className="text-4xl text-yellow-500 animate-spin mb-4"
+              />
+              <p className="text-lg text-gray-600">Reconnecting...</p>
+            </div>
+          )}
+          {connectionStatus === 'error' && (
+            <div className="flex flex-col items-center text-center">
+              <Icon
+                icon="mdi:alert-circle"
+                className="text-4xl text-red-500 mb-4"
+              />
+              <p className="text-lg text-gray-600">Connection failed</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Please check your internet connection and try again.
+              </p>
+            </div>
+          )}
         </div>
       )}
-
-      <ChatInput onSend={sendMessage} />
     </ContentLayout>
   );
 }

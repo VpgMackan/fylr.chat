@@ -98,7 +98,12 @@ export class ChatGateway
           conversationId,
           client.user.id,
         );
-        client.emit('conversationHistory', { messages, sources });
+        const conversation = await this.conversationService.getConversation(
+          conversationId,
+          client.user.id,
+        );
+        const name = conversation.title;
+        client.emit('conversationHistory', { messages, sources, name });
         break;
 
       case 'sendMessage':
