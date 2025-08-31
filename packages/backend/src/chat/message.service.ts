@@ -105,22 +105,17 @@ export class MessageService {
         ? await this.sourceService.findByVector(searchQueryEmbedding, sourceIds)
         : [];
 
-    const uniqueSources = Array.from(
-      new Map(
-        relevantChunks.map((chunk) => [chunk.source.id, chunk.source]),
-      ).values(),
-    );
-
-    const sourceReferenceList = uniqueSources.map((source, index) => ({
+    const sourceReferenceList = relevantChunks.map((chunk, index) => ({
       number: index + 1,
-      name: source.name,
+      name: chunk.source.name,
+      chunkIndex: chunk.chunkIndex,
     }));
 
     const context = relevantChunks
-      .map((chunk) => {
-        const sourceIndex =
-          uniqueSources.findIndex((s) => s.id === chunk.source.id) + 1;
-        return `<source id="${sourceIndex}">\n${chunk.content}\n</source>`;
+      .map((chunk, index) => {
+        return `Content from Source Chunk [${index + 1}] (${
+          chunk.source.name
+        }):\n${chunk.content}`;
       })
       .join('\n\n---\n\n');
 
@@ -148,10 +143,12 @@ export class MessageService {
           role: 'assistant',
           content: fullResponse,
           metadata: {
-            relatedSources: uniqueSources.map((s) => ({
-              id: s.id,
-              pocketId: s.pocketId,
-              name: s.name,
+            relatedSources: relevantChunks.map((c) => ({
+              id: c.id,
+              sourceId: c.source.id,
+              pocketId: c.source.pocketId,
+              name: c.source.name,
+              chunkIndex: c.chunkIndex,
             })),
           },
         },

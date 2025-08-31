@@ -4,7 +4,7 @@ version: v1
 description: >
   Final RAG prompt template. Uses provided context and conversation history
   to answer the user query. Encourages concise answers and requires numerical citations
-  from the provided sources.
+  from the provided source chunks.
 form: prompt
 variables:
   - name: context
@@ -22,27 +22,29 @@ variables:
     item_example:
       - number: 1
         name: "document1.pdf"
+        chunkIndex: 0
       - number: 2
-        name: "weblink.com"
+        name: "document1.pdf"
+        chunkIndex: 5
 template: |
-  You are Fylr, a helpful AI assistant. Your goal is to answer the user's query based on the provided sources and conversation history.
+  You are Fylr, a helpful AI assistant. Your goal is to answer the user's query based on the provided source chunks and conversation history.
 
-  First, here are the sources you can use:
-  SOURCES:
+  First, here are the source chunks you can use for your answer:
+  SOURCE CHUNKS:
   {% if sourceReferenceList and sourceReferenceList|length > 0 %}
-  {% for source in sourceReferenceList %}
-  [{{ source.number }}] {{ source.name }}
+  {% for chunk in sourceReferenceList %}
+  [{{ chunk.number }}] From file: {{ chunk.name }}
   {% endfor %}
   {% else %}
-  No sources were found for this query.
+  No source chunks were found for this query.
   {% endif %}
 
   RULES:
-  - Use the provided context from the sources to answer the query.
+  - Use the provided context from the source chunks to answer the query.
   - If the context does not contain the answer, state that you couldn't find the information in the provided documents. Do not use external knowledge.
   - Keep your answers concise and to the point.
-  - When you use information from a source, cite it at the end of the sentence by referencing its number, like this: [1].
-  - You can cite multiple sources like this: [1, 2].
+  - When you use information from a source chunk, cite it at the end of the sentence by referencing its number, like this: [1].
+  - You can cite multiple source chunks like this: [1, 2].
 
   ---
   CONTEXT:

@@ -2,11 +2,14 @@ import MarkdownComponent from '@/components/MarkdownComponents';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { Icon } from '@iconify/react';
+import { useRouter } from 'next/navigation';
 
 interface RelatedSource {
   id: string;
+  sourceId: string;
   pocketId: string;
   name: string;
+  chunkIndex: number;
 }
 
 export default function Chat({
@@ -29,6 +32,7 @@ export default function Chat({
   createdAt?: string;
 }) {
   const t = useTranslations('features.chat');
+  const router = useRouter();
 
   const maxWidthClass = user ? 'max-w-[30%]' : 'max-w-[70%]';
   const justifyContentClass = user ? 'justify-end' : 'justify-start';
@@ -44,7 +48,9 @@ export default function Chat({
       role="listitem"
       aria-label={user ? t('userMessage') : t('assistantMessage')}
     >
-      <div className={`border-2 p-4 rounded-4xl  ${bubbleStyle}`}>
+      <div
+        className={`border-2 p-4 rounded-4xl ${maxWidthClass} ${bubbleStyle}`}
+      >
         <MarkdownComponent text={text} />
       </div>
 
@@ -56,17 +62,22 @@ export default function Chat({
                 {t('sourcesUsed')}
               </p>
               <div className="flex flex-wrap gap-2">
-                {relatedSources.map((source, index) => (
+                {relatedSources.map((chunk, index) => (
                   <button
-                    key={source.id}
+                    key={chunk.id}
+                    onClick={() =>
+                      router.push(
+                        `/pocket/${chunk.pocketId}/source/${chunk.sourceId}`,
+                      )
+                    }
                     className="flex items-center gap-1.5 bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full hover:bg-gray-300 transition-colors"
-                    title={source.name}
+                    title={`${chunk.name} (Chunk starting at index ${chunk.chunkIndex})`}
                   >
                     <span className="font-bold mr-1 bg-gray-300 rounded-full h-4 w-4 flex items-center justify-center text-xs">
                       {index + 1}
                     </span>
                     <Icon icon="mdi:file-document-outline" />
-                    <span className="truncate max-w-24">{source.name}</span>
+                    <span className="truncate max-w-24">{chunk.name}</span>
                   </button>
                 ))}
               </div>

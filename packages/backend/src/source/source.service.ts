@@ -176,4 +176,17 @@ export class SourceService {
       filename: source.name,
     };
   }
+
+  async getVectorsBySourceId(sourceId: string, userId: string) {
+    const source = await this.prisma.source.findFirst({
+      where: { id: sourceId, pocket: { userId } },
+    });
+    if (!source) {
+      throw new NotFoundException('Source not found or not accessible');
+    }
+    return await this.prisma.vector.findMany({
+      where: { fileId: sourceId },
+      orderBy: { chunkIndex: 'asc' },
+    });
+  }
 }
