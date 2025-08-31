@@ -70,8 +70,8 @@ export class LLMService {
     stream: boolean,
   ): Promise<ChatCompletionResponse | NodeJS.ReadableStream> {
     const requestPayload = {
-      provider: 'openai',
-      model: 'or/qwq-32b',
+      provider: 'ollama',
+      model: 'qwen2.5:3b',
       ...payload,
       stream,
     };

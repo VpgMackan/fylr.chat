@@ -7,7 +7,6 @@ interface RelatedSource {
   id: string;
   pocketId: string;
   name: string;
-  chunkIndex: number;
 }
 
 export default function Chat({
@@ -57,12 +56,15 @@ export default function Chat({
                 {t('sourcesUsed')}
               </p>
               <div className="flex flex-wrap gap-2">
-                {relatedSources.map((source) => (
+                {relatedSources.map((source, index) => (
                   <button
-                    key={`${source.id}---${source.chunkIndex}`}
+                    key={source.id}
                     className="flex items-center gap-1.5 bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full hover:bg-gray-300 transition-colors"
                     title={source.name}
                   >
+                    <span className="font-bold mr-1 bg-gray-300 rounded-full h-4 w-4 flex items-center justify-center text-xs">
+                      {index + 1}
+                    </span>
                     <Icon icon="mdi:file-document-outline" />
                     <span className="truncate max-w-24">{source.name}</span>
                   </button>

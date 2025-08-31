@@ -105,19 +105,31 @@ export class MessageService {
         ? await this.sourceService.findByVector(searchQueryEmbedding, sourceIds)
         : [];
 
+    const uniqueSources = Array.from(
+      new Map(
+        relevantChunks.map((chunk) => [chunk.source.id, chunk.source]),
+      ).values(),
+    );
+
+    const sourceReferenceList = uniqueSources.map((source, index) => ({
+      number: index + 1,
+      name: source.name,
+    }));
+
     const context = relevantChunks
-      .map(
-        (chunk) =>
-          `<source id="${chunk.source.id}" chunkIndex="${chunk.fileId}" pocketId="${chunk.source.pocketId}">\n${chunk.content}\n</source>`,
-      )
-      .join('\n---\n');
+      .map((chunk) => {
+        const sourceIndex =
+          uniqueSources.findIndex((s) => s.id === chunk.source.id) + 1;
+        return `<source id="${sourceIndex}">\n${chunk.content}\n</source>`;
+      })
+      .join('\n\n---\n\n');
 
     emitStatus('generation', 'Generating response...');
 
     const stream = this.llmService.generateStream({
       prompt_type: 'final_rag',
       prompt_version: 'v1',
-      prompt_vars: { context, chatHistory, userQuery, relevantChunks },
+      prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
     });
     let fullResponse = '';
 
@@ -136,11 +148,10 @@ export class MessageService {
           role: 'assistant',
           content: fullResponse,
           metadata: {
-            relatedSources: relevantChunks.map((c) => ({
-              id: c.source.id,
-              pocketId: c.source.pocketId,
-              name: c.source.name,
-              chunkIndex: c.chunkIndex,
+            relatedSources: uniqueSources.map((s) => ({
+              id: s.id,
+              pocketId: s.pocketId,
+              name: s.name,
             })),
           },
         },
