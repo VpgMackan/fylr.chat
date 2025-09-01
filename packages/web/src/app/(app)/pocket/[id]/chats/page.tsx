@@ -39,8 +39,15 @@ export default function ChatsPage({
     chats.map(({ id, title }) => <Chat key={id} title={title} id={id} />);
 
   const dataLoader = id
-    ? ({ take, offset }: { take: number; offset: number }) =>
-        getConversationsByPocketId(id, { take, offset })
+    ? ({
+        take,
+        offset,
+        searchTerm,
+      }: {
+        take: number;
+        offset: number;
+        searchTerm: string;
+      }) => getConversationsByPocketId(id, { take, offset, searchTerm })
     : undefined;
 
   const handleConversationCreated = (conversationId: string) => {

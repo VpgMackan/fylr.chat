@@ -37,11 +37,13 @@ export default function PocketPage() {
   const dataLoader = ({
     take,
     offset,
+    searchTerm,
   }: {
     take: number;
     offset: number;
+    searchTerm: string;
   }): Promise<PocketApiResponse[]> => {
-    return getPockets({ take, offset });
+    return getPockets({ take, offset, searchTerm });
   };
 
   return (

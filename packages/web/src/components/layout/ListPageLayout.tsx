@@ -55,6 +55,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
   children,
 }: ListPageLayoutProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [dropdownValue, setDropdownValue] = useState<string | number>('');
 
   const [items, setItems] = useState<T[]>([]);
@@ -63,7 +64,6 @@ export default function ListPageLayout<T extends { id: string | number }>({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
-  const hasFetched = useRef(false);
 
   const loadMore = async () => {
     if (!dataLoader) return;
@@ -72,7 +72,7 @@ export default function ListPageLayout<T extends { id: string | number }>({
       const data = await dataLoader({
         take,
         offset,
-        searchTerm,
+        searchTerm: debouncedSearchTerm,
         dropdownValue,
       });
       setItems((prev) => {
@@ -89,28 +89,53 @@ export default function ListPageLayout<T extends { id: string | number }>({
     }
   };
 
-  useEffect(() => {
-    if (!dataLoader || hasFetched.current) return;
-    hasFetched.current = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await dataLoader({
-          take,
-          offset: 0,
-          searchTerm,
-          dropdownValue,
-        });
+  const fetchData = async (reset = false) => {
+    if (!dataLoader) return;
+    setLoading(true);
+    try {
+      const data = await dataLoader({
+        take,
+        offset: reset ? 0 : offset,
+        searchTerm: debouncedSearchTerm,
+        dropdownValue,
+      });
+      if (reset) {
         setItems(data);
         setOffset(data.length);
+        setHasMore(data.length >= take);
+      } else {
+        setItems((prev) => {
+          const existingIds = new Set(prev.map((item) => item.id));
+          const newItems = data.filter((item) => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        setOffset((o) => o + data.length);
         if (data.length < take) setHasMore(false);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
       }
-    })();
-  }, [dataLoader, take, searchTerm, dropdownValue]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!dataLoader) return;
+    fetchData(true);
+  }, [dataLoader, take]);
+
+  useEffect(() => {
+    if (!dataLoader) return;
+    fetchData(true);
+  }, [debouncedSearchTerm, dropdownValue]);
 
   useEffect(() => {
     if (!dataLoader || !loaderRef.current || !hasMore) return;

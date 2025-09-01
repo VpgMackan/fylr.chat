@@ -14,9 +14,19 @@ export class PocketService {
     id: string,
     take = 10,
     offset = 0,
+    searchTerm = '',
   ): Promise<PocketApiResponse[]> {
     const pockets = await this.prisma.pocket.findMany({
-      where: { userId: id },
+      where: {
+        userId: id,
+        ...(searchTerm && {
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+            { tags: { hasSome: [searchTerm] } },
+          ],
+        }),
+      },
       include: { sources: true },
       orderBy: { createdAt: 'desc' },
       take,

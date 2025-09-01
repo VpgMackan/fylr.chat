@@ -8,6 +8,7 @@ import {
 export const getPockets = async (params: {
   take: number;
   offset: number;
+  searchTerm: string;
 }): Promise<PocketApiResponse[]> => {
   const { data } = await axios.get<PocketApiResponse[]>('pocket', { params });
   return data;

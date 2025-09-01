@@ -3,7 +3,7 @@ import { SummaryApiResponse, CreateSummaryDto } from '@fylr/types';
 
 export const getSummariesByPocketId = async (
   pocketId: string,
-  params: { take: number; offset: number },
+  params: { take: number; offset: number; searchTerm: string },
 ): Promise<SummaryApiResponse[]> => {
   const { data } = await axios.get<SummaryApiResponse[]>(
     `summary/pocket/${pocketId}`,

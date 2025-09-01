@@ -49,12 +49,14 @@ export class ChatController {
     @Request() req: RequestWithUser,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
   ) {
     return this.conversationService.getConversations(
       pocketId,
       req.user.id,
       take,
       offset,
+      searchTerm,
     );
   }
 

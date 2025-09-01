@@ -28,6 +28,7 @@ export class SummaryController {
     @Param('pocketId') pocketId: string,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
     @Request() req: RequestWithUser,
   ) {
     return this.summaryService.getSummariesByPocketId(
@@ -35,6 +36,7 @@ export class SummaryController {
       req.user.id,
       take,
       offset,
+      searchTerm,
     );
   }
 

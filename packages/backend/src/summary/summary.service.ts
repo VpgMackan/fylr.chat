@@ -15,9 +15,16 @@ export class SummaryService {
     userId: string,
     take: number,
     offset: number,
+    searchTerm = '',
   ) {
     const summaries = await this.prisma.summary.findMany({
-      where: { pocketId, pocket: { userId } },
+      where: {
+        pocketId,
+        pocket: { userId },
+        ...(searchTerm && {
+          title: { contains: searchTerm, mode: 'insensitive' },
+        }),
+      },
       take,
       skip: offset,
       orderBy: { createdAt: 'desc' },

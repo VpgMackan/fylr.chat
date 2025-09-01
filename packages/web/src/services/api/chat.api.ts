@@ -19,6 +19,7 @@ export const getConversationsByPocketId = async (
   params: {
     take: number;
     offset: number;
+    searchTerm: string;
   },
 ): Promise<ConversationApiResponse[]> => {
   const { data } = await axios.get<ConversationApiResponse[]>(

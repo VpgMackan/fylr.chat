@@ -54,15 +54,24 @@ export class ConversationService {
     userId: string,
     take = 10,
     offset = 0,
+    searchTerm = '',
   ) {
     const pocket = await this.prisma.pocket.findFirst({
-      where: { id: pocketId, userId },
+      where: {
+        id: pocketId,
+        userId,
+      },
     });
     if (!pocket) {
       throw new NotFoundException(`Pocket not found or access denied.`);
     }
     return this.prisma.conversation.findMany({
-      where: { pocketId },
+      where: {
+        pocketId,
+        ...(searchTerm && {
+          title: { contains: searchTerm, mode: 'insensitive' },
+        }),
+      },
       take,
       skip: offset,
     });

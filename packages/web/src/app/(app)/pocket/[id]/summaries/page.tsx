@@ -40,7 +40,7 @@ export default function SummariePage({
   };
 
   const dataLoader = pocketId
-    ? (params: { take: number; offset: number }) =>
+    ? (params: { take: number; offset: number; searchTerm: string }) =>
         getSummariesByPocketId(pocketId, params)
     : undefined;
 
