@@ -1,18 +1,26 @@
 import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getConversationWsToken } from '@/services/api/chat.api';
-import { MessageApiResponse, WsServerEventPayload } from '@fylr/types';
+import {
+  MessageApiResponse,
+  WsServerEventPayload,
+  MessageAndSourceApiResponse,
+  SourceApiResponseWithIsActive,
+} from '@fylr/types';
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
+type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
 interface ChatState {
   messages: MessageApiResponse[];
-  isConnected: boolean;
+  sources: SourceApiResponseWithIsActive[];
+  name: string;
+  connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
 }
 
 type ChatAction =
-  | { type: 'SET_CONNECTED'; payload: boolean }
+  | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
@@ -22,20 +30,28 @@ type ChatAction =
     }
   | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
   | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
-  | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse };
+  | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
+  | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] }
+  | { type: 'SET_NAME'; payload: string };
 
 const initialState: ChatState = {
   messages: [],
-  isConnected: false,
+  sources: [],
+  name: '',
+  connectionStatus: 'connecting',
   status: null,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'SET_CONNECTED':
-      return { ...state, isConnected: action.payload };
+    case 'SET_CONNECTION_STATUS':
+      return { ...state, connectionStatus: action.payload };
     case 'SET_HISTORY':
       return { ...state, messages: action.payload };
+    case 'SET_SOURCES':
+      return { ...state, sources: action.payload };
+    case 'SET_NAME':
+      return { ...state, name: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_MESSAGE':
@@ -100,11 +116,12 @@ export function useChat(chatId: string | null) {
     const connectSocket = async () => {
       try {
         const { token } = await getConversationWsToken(chatId);
-        const socket = io('http://localhost:3001/chat', { auth: { token } });
+        const socket = io(`${process.env.NEXT_PUBLIC_API_URL}chat`, {
+          auth: { token },
+        });
         socketRef.current = socket;
 
         socket.on('connect', () => {
-          dispatch({ type: 'SET_CONNECTED', payload: true });
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
@@ -112,11 +129,33 @@ export function useChat(chatId: string | null) {
         });
 
         socket.on('disconnect', () =>
-          dispatch({ type: 'SET_CONNECTED', payload: false }),
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'reconnecting' }),
         );
-        socket.on('conversationHistory', (history: MessageApiResponse[]) => {
-          dispatch({ type: 'SET_HISTORY', payload: history });
-        });
+
+        socket.on('connect_error', () =>
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' }),
+        );
+
+        socket.on('reconnect_failed', () =>
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' }),
+        );
+
+        socket.on(
+          'conversationHistory',
+          (history: MessageAndSourceApiResponse) => {
+            dispatch({ type: 'SET_HISTORY', payload: history.messages });
+            dispatch({ type: 'SET_SOURCES', payload: history.sources });
+            dispatch({ type: 'SET_NAME', payload: history.name });
+            dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
+          },
+        );
+
+        socket.on(
+          'sourcesUpdated',
+          (sources: SourceApiResponseWithIsActive[]) => {
+            dispatch({ type: 'SET_SOURCES', payload: sources });
+          },
+        );
 
         socket.on(
           'conversationAction',
@@ -212,6 +251,19 @@ export function useChat(chatId: string | null) {
     [chatId],
   );
 
+  const updateSources = useCallback(
+    (sourcesId: string[]) => {
+      if (socketRef.current && chatId) {
+        socketRef.current.emit('conversationAction', {
+          action: 'updateSources',
+          conversationId: chatId,
+          sourcesId,
+        });
+      }
+    },
+    [chatId],
+  );
+
   const regenerateMessage = useCallback(
     (messageId: string) => {
       if (socketRef.current && chatId) {
@@ -225,13 +277,22 @@ export function useChat(chatId: string | null) {
     [chatId],
   );
 
+  const retryConnection = useCallback(() => {
+    dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
+    socketRef.current?.connect();
+  }, [socketRef]);
+
   return {
     messages: state.messages,
-    isConnected: state.isConnected,
+    sources: state.sources,
+    name: state.name,
+    connectionStatus: state.connectionStatus,
     status: state.status,
     sendMessage,
     deleteMessage,
     updateMessage,
+    updateSources,
     regenerateMessage,
+    retryConnection,
   };
 }

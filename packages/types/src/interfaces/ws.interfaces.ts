@@ -30,11 +30,18 @@ export interface WsJoinConversationPayload {
   conversationId: string;
 }
 
+export interface WsUpdateSourcesPayload {
+  action: 'updateSources';
+  conversationId: string;
+  sourcesId: string[];
+}
+
 export type WsClientActionPayload =
   | WsSendMessagePayload
   | WsJoinConversationPayload
   | WsDeleteMessagePayload
   | WsUpdateMessagePayload
+  | WsUpdateSourcesPayload
   | WsRegenerateMessagePayload;
 
 export interface WsNewMessageEvent {

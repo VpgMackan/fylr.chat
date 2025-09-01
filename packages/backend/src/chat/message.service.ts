@@ -105,19 +105,26 @@ export class MessageService {
         ? await this.sourceService.findByVector(searchQueryEmbedding, sourceIds)
         : [];
 
+    const sourceReferenceList = relevantChunks.map((chunk, index) => ({
+      number: index + 1,
+      name: chunk.source.name,
+      chunkIndex: chunk.chunkIndex,
+    }));
+
     const context = relevantChunks
-      .map(
-        (chunk) =>
-          `<source id="${chunk.source.id}" pocketId="${chunk.source.pocketId}">\n${chunk.content}\n</source>`,
-      )
-      .join('\n---\n');
+      .map((chunk, index) => {
+        return `Content from Source Chunk [${index + 1}] (${
+          chunk.source.name
+        }):\n${chunk.content}`;
+      })
+      .join('\n\n---\n\n');
 
     emitStatus('generation', 'Generating response...');
 
     const stream = this.llmService.generateStream({
       prompt_type: 'final_rag',
       prompt_version: 'v1',
-      prompt_vars: { context, chatHistory, userQuery, relevantChunks },
+      prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
     });
     let fullResponse = '';
 
@@ -125,7 +132,7 @@ export class MessageService {
       fullResponse += chunk;
       server.to(conversationId).emit('conversationAction', {
         action: 'messageChunk',
-        conversationId: conversationId,
+        conversationId,
         data: { content: chunk },
       });
     }
@@ -137,9 +144,11 @@ export class MessageService {
           content: fullResponse,
           metadata: {
             relatedSources: relevantChunks.map((c) => ({
-              id: c.source.id,
+              id: c.id,
+              sourceId: c.source.id,
               pocketId: c.source.pocketId,
               name: c.source.name,
+              chunkIndex: c.chunkIndex,
             })),
           },
         },
@@ -147,7 +156,7 @@ export class MessageService {
       );
       server.to(conversationId).emit('conversationAction', {
         action: 'messageEnd',
-        conversationId: conversationId,
+        conversationId,
         data: assistantMessage,
       });
     } else {

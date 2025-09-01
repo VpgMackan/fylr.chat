@@ -5,10 +5,15 @@ from typing import Optional
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    openai_api_key: Optional[str] = None
-    jina_api_key: Optional[str] = None
+    ai_gateway_port: int
 
+    openai_api_key: Optional[str] = None
+    llm_proxy_url: Optional[str] = None
+
+    jina_api_key: Optional[str] = None
     jina_api_url: str = "https://api.jina.ai/v1"
+    
+    ollama_base_url: str = "http://localhost:11434/v1"
 
 
 settings = Settings()

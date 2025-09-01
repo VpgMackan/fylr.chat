@@ -92,6 +92,31 @@ export class SourceService {
     });
   }
 
+  async getSourcesByConversationId(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, pocket: { userId } },
+      select: { pocketId: true },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or not accessible');
+    }
+    const pocketId = conversation.pocketId;
+    const sources = await this.prisma.source.findMany({
+      where: { pocketId },
+      include: {
+        conversations: {
+          where: { id: conversationId },
+          select: { id: true },
+        },
+      },
+      orderBy: { uploadTime: 'desc' },
+    });
+    return sources.map(({ conversations, ...source }) => ({
+      ...source,
+      isActive: conversations.length > 0,
+    }));
+  }
+
   async findByVector(vector: number[], sourceIds: string[]) {
     if (sourceIds.length === 0) {
       return [];
@@ -103,6 +128,7 @@ export class SourceService {
         v.id,
         v.file_id AS "fileId",
         v.content,
+        v.chunk_index as "chunkIndex",
         s.id AS "source.id",
         s.pocket_id AS "source.pocketId",
         s.name AS "source.name"
@@ -117,6 +143,7 @@ export class SourceService {
       id: item.id,
       fileId: item.fileId,
       content: item.content,
+      chunkIndex: item.chunkIndex,
       source: {
         id: item['source.id'],
         pocketId: item['source.pocketId'],
@@ -148,5 +175,18 @@ export class SourceService {
       contentType: source.type,
       filename: source.name,
     };
+  }
+
+  async getVectorsBySourceId(sourceId: string, userId: string) {
+    const source = await this.prisma.source.findFirst({
+      where: { id: sourceId, pocket: { userId } },
+    });
+    if (!source) {
+      throw new NotFoundException('Source not found or not accessible');
+    }
+    return await this.prisma.vector.findMany({
+      where: { fileId: sourceId },
+      orderBy: { chunkIndex: 'asc' },
+    });
   }
 }

@@ -6,11 +6,16 @@ from ..config import settings
 from ..schemas import ChatCompletionResponse
 
 
-class OpenaiProvider(BaseProvider):
+class OllamaProvider(BaseProvider):
     def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.openai_api_key, base_url=settings.llm_proxy_url
-        )
+        self.client = OpenAI(api_key="ollama", base_url=settings.ollama_base_url)
+
+    def generate_embeddings(self, chunk, model, options):
+        """
+        Generates embeddings using Ollama.
+        """
+        response = self.client.embeddings.create(input=chunk, model=model, **options)
+        return response.model_dump()
 
     def generate_text(
         self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]

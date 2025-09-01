@@ -99,4 +99,12 @@ export class SourceController {
     );
     fileStreamData.stream.pipe(res);
   }
+
+  @Get(':sourceId/vectors')
+  async getVectors(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.getVectorsBySourceId(sourceId, req.user.id);
+  }
 }

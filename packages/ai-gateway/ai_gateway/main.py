@@ -25,6 +25,7 @@ from .schemas import (
     EmbeddingRequest,
     EmbeddingResponse,
 )
+from .config import settings
 from .providers.base import BaseProvider
 import importlib
 
@@ -227,4 +228,9 @@ def read_root():
 
 
 def start():
-    uvicorn.run("ai_gateway.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "ai_gateway.main:app",
+        host="0.0.0.0",
+        port=settings.ai_gateway_port,
+        reload=True,
+    )

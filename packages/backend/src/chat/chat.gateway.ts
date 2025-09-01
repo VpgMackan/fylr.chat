@@ -18,6 +18,8 @@ import {
   WsClientActionPayload,
 } from '@fylr/types';
 import { MessageService } from './message.service';
+import { SourceService } from 'src/source/source.service';
+import { ConversationService } from './conversation.service';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -36,6 +38,8 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly messageService: MessageService,
+    private readonly conversationService: ConversationService,
+    private readonly sourceService: SourceService,
   ) {}
 
   afterInit(server: Server) {
@@ -86,14 +90,24 @@ export class ChatGateway
     }
 
     switch (action) {
-      case 'join':
+      case 'join': {
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
         const messages = await this.messageService.getMessages(conversationId);
-        client.emit('conversationHistory', messages);
+        const sources = await this.sourceService.getSourcesByConversationId(
+          conversationId,
+          client.user.id,
+        );
+        const conversation = await this.conversationService.getConversation(
+          conversationId,
+          client.user.id,
+        );
+        const name = conversation.title;
+        client.emit('conversationHistory', { messages, sources, name });
         break;
+      }
 
-      case 'sendMessage':
+      case 'sendMessage': {
         const { content } = payload as { content: string };
         if (!content) {
           throw new WsException('content is required for sendMessage action');
@@ -112,25 +126,29 @@ export class ChatGateway
           this.server,
         );
         break;
+      }
 
-      case 'deleteMessage':
-        const { messageId: messageIdToDelete } = payload as {
+      case 'deleteMessage': {
+        const { messageId } = payload as {
           messageId: string;
         };
-        await this.messageService.deleteMessage(messageIdToDelete);
+        await this.messageService.deleteMessage(messageId);
         this.server.to(conversationId).emit('conversationAction', {
           action: 'messageDeleted',
           conversationId,
-          data: { messageId: messageIdToDelete },
+          data: { messageId },
         });
         break;
+      }
 
-      case 'updateMessage':
-        const { messageId: messageIdToUpdate, content: newContent } =
-          payload as { messageId: string; content: string };
+      case 'updateMessage': {
+        const { messageId, content: newContent } = payload as {
+          messageId: string;
+          content: string;
+        };
         const updatedMessage = await this.messageService.updateMessage(
           { content: newContent },
-          messageIdToUpdate,
+          messageId,
         );
         this.server.to(conversationId).emit('conversationAction', {
           action: 'messageUpdated',
@@ -138,21 +156,46 @@ export class ChatGateway
           data: updatedMessage,
         });
         break;
+      }
 
-      case 'regenerateMessage':
-        const { messageId: messageIdToRegenerate } = payload as {
+      case 'regenerateMessage': {
+        const { messageId } = payload as {
           messageId: string;
         };
         this.server.to(conversationId).emit('conversationAction', {
           action: 'messageDeleted',
           conversationId,
-          data: { messageId: messageIdToRegenerate },
+          data: { messageId },
         });
         await this.messageService.regenerateAndStreamAiResponse(
-          messageIdToRegenerate,
+          messageId,
           this.server,
         );
         break;
+      }
+
+      case 'updateSources': {
+        const { sourcesId } = payload as { sourcesId: string[] };
+        try {
+          await this.conversationService.updateSources(
+            conversationId,
+            sourcesId,
+            client.user.id,
+          );
+
+          const updatedSources =
+            await this.sourceService.getSourcesByConversationId(
+              conversationId,
+              client.user.id,
+            );
+
+          this.server.to(conversationId).emit('sourcesUpdated', updatedSources);
+          break;
+        } catch (error) {
+          client.emit('error', { message: 'Failed to update sources' });
+          throw new WsException('Failed to update sources');
+        }
+      }
 
       default:
         throw new WsException(`Invalid action: ${action}`);
