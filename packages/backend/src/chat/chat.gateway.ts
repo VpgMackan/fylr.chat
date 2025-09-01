@@ -136,7 +136,7 @@ export class ChatGateway
         this.server.to(conversationId).emit('conversationAction', {
           action: 'messageDeleted',
           conversationId,
-          data: { messageId: messageId },
+          data: { messageId },
         });
         break;
       }

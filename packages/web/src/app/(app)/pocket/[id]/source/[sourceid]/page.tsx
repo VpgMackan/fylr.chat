@@ -54,46 +54,42 @@ export default function SourcePage({
     }
   }, [vectors]);
 
-  return (
-    <>
-      {sourceId ? (
-        <div className="flex h-full gap-x-2">
-          <div className="flex-1">
-            <iframe
-              src={`${process.env.NEXT_PUBLIC_API_URL}source/file/${sourceId}`}
-              className="w-full h-full"
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <p className="p-4">Loading extracted content...</p>
+  return sourceId ? (
+    <div className="flex h-full gap-x-2">
+      <div className="flex-1">
+        <iframe
+          src={`${process.env.NEXT_PUBLIC_API_URL}source/file/${sourceId}`}
+          className="w-full h-full"
+        />
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <p className="p-4">Loading extracted content...</p>
+        ) : (
+          <div>
+            {vectors.length > 0 ? (
+              vectors.map((vector) => (
+                <div
+                  key={vector.id}
+                  id={vector.chunkIndex.toString()}
+                  className="mb-4 p-4 border rounded"
+                >
+                  <p className="text-sm text-gray-600">
+                    Chunk {vector.chunkIndex}
+                  </p>
+                  <MarkdownComponent text={vector.content} />
+                </div>
+              ))
             ) : (
-              <div>
-                {vectors.length > 0 ? (
-                  vectors.map((vector) => (
-                    <div
-                      key={vector.id}
-                      id={vector.chunkIndex.toString()}
-                      className="mb-4 p-4 border rounded"
-                    >
-                      <p className="text-sm text-gray-600">
-                        Chunk {vector.chunkIndex}
-                      </p>
-                      <MarkdownComponent text={vector.content} />
-                    </div>
-                  ))
-                ) : (
-                  <p className="p-4">No extracted content available.</p>
-                )}
-              </div>
+              <p className="p-4">No extracted content available.</p>
             )}
           </div>
-        </div>
-      ) : (
-        <>
-          <h1>Processing</h1>
-        </>
-      )}
+        )}
+      </div>
+    </div>
+  ) : (
+    <>
+      <h1>Processing</h1>
     </>
   );
 }
