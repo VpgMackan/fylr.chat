@@ -12,7 +12,7 @@
 ## Medium priority
 - [ ] Testing (Core): Write unit tests for critical backend services (Auth, Pockets) and E2E tests for the auth flow.
 - [ ] Testing (Expansion): Expand test coverage (E2E for backend, components for frontend).
-- [ ] UI: Make source citations in the chat UI clickable.
+- [x] UI: Make source citations in the chat UI clickable.
 - [ ] RAG: Implement a re-ranking step in the chat pipeline.
 - [ ] Implement podcast generation (Insperation: [Notebook LM](https://notebooklm.google/))
 - [ ] Implement video generation (Insperation: [Notebook LM](https://notebooklm.google/))

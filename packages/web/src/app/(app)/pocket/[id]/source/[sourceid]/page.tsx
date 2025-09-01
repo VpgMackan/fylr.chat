@@ -42,6 +42,18 @@ export default function SourcePage({
     }
   }, [sourceId]);
 
+  useEffect(() => {
+    if (vectors.length > 0 && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash) {
+        const element = document.getElementById(hash.substring(1));
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+  }, [vectors]);
+
   return (
     <>
       {sourceId ? (
@@ -52,17 +64,18 @@ export default function SourcePage({
               className="w-full h-full"
             />
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <p>Loading extracted content...</p>
+              <p className="p-4">Loading extracted content...</p>
             ) : (
               <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  Extracted Vectors
-                </h2>
                 {vectors.length > 0 ? (
                   vectors.map((vector) => (
-                    <div key={vector.id} className="mb-4 p-2 border rounded">
+                    <div
+                      key={vector.id}
+                      id={vector.chunkIndex.toString()}
+                      className="mb-4 p-4 border rounded"
+                    >
                       <p className="text-sm text-gray-600">
                         Chunk {vector.chunkIndex}
                       </p>
@@ -70,7 +83,7 @@ export default function SourcePage({
                     </div>
                   ))
                 ) : (
-                  <p>No extracted content available.</p>
+                  <p className="p-4">No extracted content available.</p>
                 )}
               </div>
             )}

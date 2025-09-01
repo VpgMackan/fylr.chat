@@ -67,7 +67,7 @@ export default function Chat({
                     key={chunk.id}
                     onClick={() =>
                       router.push(
-                        `/pocket/${chunk.pocketId}/source/${chunk.sourceId}`,
+                        `/pocket/${chunk.pocketId}/source/${chunk.sourceId}#${chunk.chunkIndex}`,
                       )
                     }
                     className="flex items-center gap-1.5 bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full hover:bg-gray-300 transition-colors"
