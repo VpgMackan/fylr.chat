@@ -132,7 +132,7 @@ export class MessageService {
       fullResponse += chunk;
       server.to(conversationId).emit('conversationAction', {
         action: 'messageChunk',
-        conversationId: conversationId,
+        conversationId,
         data: { content: chunk },
       });
     }
@@ -156,7 +156,7 @@ export class MessageService {
       );
       server.to(conversationId).emit('conversationAction', {
         action: 'messageEnd',
-        conversationId: conversationId,
+        conversationId,
         data: assistantMessage,
       });
     } else {
