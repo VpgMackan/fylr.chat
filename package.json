@@ -2,7 +2,6 @@
   "name": "fylr.chat",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "workspaces": [
     "packages/*"
   ],
