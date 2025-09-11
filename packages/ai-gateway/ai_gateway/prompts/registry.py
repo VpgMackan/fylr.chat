@@ -1,13 +1,13 @@
 # ai_gateway/prompts/registry.py
 import os
-import logging
+import structlog
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, Template, StrictUndefined, meta
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 class PromptNotFound(Exception):
@@ -71,7 +71,11 @@ class PromptRegistry:
         Read all .yml/.yaml files in the prompts_dir and compile templates.
         Called at startup to avoid disk reads during requests.
         """
-        logger.info("Loading prompts from %s", str(self.prompts_dir))
+        log.info(
+            "Loading prompts from %s",
+            str(self.prompts_dir),
+            method="_load_all_into_memory",
+        )
         for p in sorted(self.prompts_dir.glob("*.yml")) + sorted(
             self.prompts_dir.glob("*.yaml")
         ):
@@ -89,15 +93,29 @@ class PromptRegistry:
                     )
                 key = entry.key()
                 if key in self._store:
-                    logger.warning(
-                        "Duplicate prompt key %s found (file %s); overwriting", key, p
+                    log.warning(
+                        "Duplicate prompt key %s found (file %s); overwriting",
+                        key,
+                        p,
+                        method="_load_all_into_memory",
                     )
                 self._store[key] = entry
-                logger.debug("Loaded prompt %s from %s", key, p)
+                log.debug(
+                    "Loaded prompt %s from %s", key, p, method="_load_all_into_memory"
+                )
             except Exception as exc:
-                logger.exception("Failed loading prompt file %s: %s", p, exc)
+                log.exception(
+                    "Failed loading prompt file %s: %s",
+                    p,
+                    exc,
+                    method="_load_all_into_memory",
+                )
 
-        logger.info("Loaded %d prompt templates into memory", len(self._store))
+        log.info(
+            "Loaded %d prompt templates into memory",
+            len(self._store),
+            method="_load_all_into_memory",
+        )
 
     def list_prompts(self) -> List[str]:
         return sorted(self._store.keys())
@@ -220,7 +238,12 @@ class PromptRegistry:
         except PromptValidationError:
             raise
         except Exception as exc:
-            logger.exception("Failed to render prompt %s: %s", entry.key(), exc)
+            log.exception(
+                "Failed to render prompt %s: %s",
+                entry.key(),
+                exc,
+                method="render",
+            )
             raise PromptRenderError(
                 f"Failed to render prompt {entry.key()}: {exc}"
             ) from exc

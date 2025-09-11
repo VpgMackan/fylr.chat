@@ -12,6 +12,11 @@ from openai import APIStatusError
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 
+import logging
+from .logging_config import configure_logging
+import structlog
+from asgi_correlation_id import CorrelationIdMiddleware
+
 from .prompts.registry import (
     PromptRegistry,
     PromptRenderError,
@@ -37,6 +42,11 @@ app = FastAPI(
 
 PROMPTS_DIR = Path(__file__).parent / "prompts" / "config"
 app.state.prompt_registry = None
+app.add_middleware(CorrelationIdMiddleware)
+
+
+configure_logging(log_level="INFO", json_logs=False)
+log = structlog.get_logger()
 
 
 @app.on_event("startup")
