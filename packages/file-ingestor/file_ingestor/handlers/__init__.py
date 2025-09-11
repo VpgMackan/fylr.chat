@@ -1,8 +1,8 @@
-import logging
+import structlog
 import importlib.util
 from pathlib import Path
 
-logging = logging.getLogger(__name__)
+log = structlog.getLogger(__name__)
 
 
 class HandlerManager:
@@ -23,8 +23,9 @@ class HandlerManager:
         Dynamically imports all valid handler modules from this package,
         supporting both 'name_handler.py' and 'name.handler.py' conventions.
         """
-        logging.info(
-            f"Discovering handlers in directory: {self._handler_dir.resolve()}"
+        log.info(
+            f"Discovering handlers in directory: {self._handler_dir.resolve()}",
+            method="_discover_handlers",
         )
 
         for file_path in self._handler_dir.glob("*.py"):
@@ -48,22 +49,28 @@ class HandlerManager:
                     if hasattr(module, "supported_types") and hasattr(module, "handle"):
                         for ftype in module.supported_types:
                             if ftype in self._handlers:
-                                logging.warning(
+                                log.warning(
                                     f"Handler for '{ftype}' already registered. "
-                                    "Overwriting with the latest handler."
+                                    "Overwriting with the latest handler.",
+                                    method="_discover_handlers",
                                 )
                             self._handlers[ftype] = module.handle
-                            logging.info(
-                                f"Registered handler for '{ftype}' from {file_path.name}"
+                            log.info(
+                                f"Registered handler for '{ftype}' from {file_path.name}",
+                                method="_discover_handlers",
                             )
                 else:
-                    logging.warning(
+                    log.warning(
                         f"Could not create a loader for {file_path.name}. "
-                        "Ensure the file is a valid Python module."
+                        "Ensure the file is a valid Python module.",
+                        method="_discover_handlers",
                     )
 
             except Exception as e:
-                logging.error(f"Error importing handler {file_path.name}: {e}")
+                log.error(
+                    f"Error importing handler {file_path.name}: {e}",
+                    method="_discover_handlers",
+                )
 
     def process_data(
         self, file_type: str, buffer: bytes, job_key: str, info_callback: callable

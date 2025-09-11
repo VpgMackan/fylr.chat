@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import logging
 from typing import Tuple
 
 import pika
@@ -13,16 +12,21 @@ from .handlers import manager
 
 from .vector.saver import save_text_chunks_as_vectors, update_source_status
 
+from .logging_config import configure_logging
+import structlog
+
+configure_logging(log_level="INFO", json_logs=False)
+
 
 class FileIngestor:
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = structlog.get_logger()
         self.s3_bucket = None
         self.channel = None
 
     def info(self, message: str, job_key: str = None, payload: object = None) -> None:
         """Log info and send status update if job_key is provided."""
-        self.logger.info(message)
+        self.logger.info(message, method="info")
         if job_key:
             self.status_update(job_key, payload or {"message": message})
 
@@ -44,19 +48,23 @@ class FileIngestor:
             pika.ConnectionParameters(os.getenv("RABBITMQ_HOST", "localhost"))
         )
         self.channel = connection.channel()
-        dlx_name = 'fylr-dlx'
-        dlq_name = 'file-processing.dlq'
-        self.channel.exchange_declare(exchange=dlx_name, exchange_type='direct', durable=True)
+        dlx_name = "fylr-dlx"
+        dlq_name = "file-processing.dlq"
+        self.channel.exchange_declare(
+            exchange=dlx_name, exchange_type="direct", durable=True
+        )
         self.channel.queue_declare(queue=dlq_name, durable=True)
-        self.channel.queue_bind(queue=dlq_name, exchange=dlx_name, routing_key='file-processing')
+        self.channel.queue_bind(
+            queue=dlq_name, exchange=dlx_name, routing_key="file-processing"
+        )
 
         self.channel.queue_declare(
             "file-processing",
             durable=True,
             arguments={
                 "x-dead-letter-exchange": dlx_name,
-                "x-dead-letter-routing-key": 'file-processing'
-            }
+                "x-dead-letter-routing-key": "file-processing",
+            },
         )
 
     def parse_message_body(self, body: bytes) -> Tuple[str, str, str]:
@@ -105,7 +113,7 @@ class FileIngestor:
             )
 
             self.info(
-                "Fetching file from S3...", 
+                "Fetching file from S3...",
                 job_key=job_key,
                 payload={"stage": "FETCHING", "message": "Retrieving file..."},
             )
@@ -129,10 +137,13 @@ class FileIngestor:
             self.info(
                 "Passing chunks to vector saver...",
                 job_key=job_key,
-                payload={"stage": "VECTORIZING", "message": f"Generating embeddings for {len(docs)} chunks..."},
+                payload={
+                    "stage": "VECTORIZING",
+                    "message": f"Generating embeddings for {len(docs)} chunks...",
+                },
             )
             save_text_chunks_as_vectors(docs, source_id, job_key, self.info)
-            
+
             self.info(
                 f"Successfully processed file: {file_key}",
                 job_key=job_key,
@@ -143,9 +154,11 @@ class FileIngestor:
 
         except Exception as e:
             error_message = f"Fatal error processing message {body}: {e}"
-            self.logger.error(error_message)
+            self.logger.error(error_message, method="process_file_message")
             if job_key:
-                self.status_update(job_key, {"stage": "FAILED", "message": str(e), "error": True})
+                self.status_update(
+                    job_key, {"stage": "FAILED", "message": str(e), "error": True}
+                )
             if source_id:
                 update_source_status(source_id, "FAILED", str(e))
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
@@ -158,12 +171,14 @@ class FileIngestor:
             auto_ack=False,
         )
 
-        self.logger.info("Waiting for messages. To exit press CTRL+C")
+        self.logger.info(
+            "Waiting for messages. To exit press CTRL+C", method="start_consuming"
+        )
         self.channel.start_consuming()
 
     def run(self) -> None:
         """Main entry point for the file ingestor."""
-        self.logger.info("Starting file ingestor...")
+        self.logger.info("Starting file ingestor...", method="run")
         load_dotenv()
 
         self.setup_s3_client()
@@ -180,20 +195,17 @@ class FileIngestor:
             body=json.dumps({"eventName": "jobStatusUpdate", "payload": payload}),
             properties=pika.BasicProperties(delivery_mode=2),
         )
-        self.logger.info(f"Status update sent for job {job_key}: {payload}")
+        self.logger.info(
+            f"Status update sent for job {job_key}: {payload}", method="status_update"
+        )
 
 
 def main():
     """Main function to run the file ingestor."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
     try:
         ingestor = FileIngestor()
         ingestor.run()
     except KeyboardInterrupt:
-        print("Interrupted")
         sys.exit(0)
 
 
