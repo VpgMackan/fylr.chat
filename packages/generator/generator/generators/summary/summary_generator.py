@@ -1,4 +1,4 @@
-import logging
+import structlog
 import uuid
 import json
 from typing import List, Dict, Any
@@ -13,7 +13,7 @@ from ...entity import Summary, Source, DocumentVector
 from ..base_generator import BaseGenerator
 from ...services.ai_gateway_service import ai_gateway_service
 
-logger = logging.getLogger(__name__)
+log = structlog.getLogger(__name__)
 
 
 class SummaryGenerator(BaseGenerator):
@@ -39,10 +39,13 @@ class SummaryGenerator(BaseGenerator):
                     delivery_mode=2,
                 ),
             )
-            logger.info(f"Published status to {routing_key}: {payload.get('stage')}")
+            log.info(
+                f"Published status to {routing_key}: {payload.get('stage')}", method=""
+            )
         except Exception as e:
-            logger.error(
-                f"Failed to publish status update for summary {summary_id}: {e}"
+            log.error(
+                f"Failed to publish status update for summary {summary_id}: {e}",
+                method="",
             )
 
     def _fetch_all_documents(
@@ -51,7 +54,10 @@ class SummaryGenerator(BaseGenerator):
         """
         Fetches and consolidates content from all sources within a pocket.
         """
-        logger.info(f"Fetching sources for pocket_id: {pocket_id}")
+        log.info(
+            f"Fetching sources for pocket_id: {pocket_id}",
+            method="_fetch_all_documents",
+        )
 
         sources = (
             db.query(Source)
@@ -72,8 +78,9 @@ class SummaryGenerator(BaseGenerator):
                 {"id": source.id, "name": source.name, "content": full_content}
             )
 
-        logger.info(
-            f"Found {len(documents)} documents with content for pocket {pocket_id}"
+        log.info(
+            f"Found {len(documents)} documents with content for pocket {pocket_id}",
+            method="_fetch_all_documents",
         )
         return documents
 
@@ -92,8 +99,9 @@ class SummaryGenerator(BaseGenerator):
         Returns:
             List of dictionaries containing document content and metadata
         """
-        logger.info(
-            f"Performing vector search for query: '{query_text}' in pocket {pocket_id}"
+        log.info(
+            f"Performing vector search for query: '{query_text}' in pocket {pocket_id}",
+            method="_fetch_related_documents",
         )
 
         try:
@@ -134,16 +142,26 @@ class SummaryGenerator(BaseGenerator):
                     }
                 )
 
-            logger.info(f"Found {len(related_docs)} related documents")
+            log.info(
+                f"Found {len(related_docs)} related documents",
+                method="_fetch_related_documents",
+            )
             return related_docs
 
         except Exception as e:
-            logger.error(f"Error during vector search: {e}", exc_info=True)
+            log.error(
+                f"Error during vector search: {e}",
+                exc_info=True,
+                method="_fetch_related_documents",
+            )
             return []
 
     def _create_summary(self, db: Session, channel: BlockingChannel, summary: Summary):
         """Generates summary content using the AI Gateway and updates the database."""
-        logger.info(f"Generating summary for '{summary.title}' (ID: {summary.id})")
+        log.info(
+            f"Generating summary for '{summary.title}' (ID: {summary.id})",
+            method="_create_summary",
+        )
         self._publish_status(
             channel,
             summary.id,
@@ -157,7 +175,9 @@ class SummaryGenerator(BaseGenerator):
             generated_episodes = []
 
             for episode in summary.episodes:
-                logger.info(f"Processing episode: '{episode.title}'")
+                log.info(
+                    f"Processing episode: '{episode.title}'", method="_create_summary"
+                )
                 self._publish_status(
                     channel,
                     summary.id,
@@ -182,7 +202,10 @@ class SummaryGenerator(BaseGenerator):
                     q.strip() for q in search_queries_text.split("\n") if q.strip()
                 ]
 
-                logger.info(f"Generated search queries: {search_queries}")
+                log.info(
+                    f"Generated search queries: {search_queries}",
+                    method="_create_summary",
+                )
 
                 all_related_docs = []
                 for query in search_queries[:3]:
@@ -222,8 +245,9 @@ class SummaryGenerator(BaseGenerator):
                     )
 
                     episode.content = episode_content
-                    logger.info(
-                        f"Generated content for episode '{episode.title}' ({len(episode_content)} characters)"
+                    log.info(
+                        f"Generated content for episode '{episode.title}' ({len(episode_content)} characters)",
+                        method="_create_summary",
                     )
 
                     self._publish_status(
@@ -249,8 +273,9 @@ class SummaryGenerator(BaseGenerator):
                         }
                     )
                 else:
-                    logger.warning(
-                        f"No relevant content found for episode '{episode.title}'"
+                    log.warning(
+                        f"No relevant content found for episode '{episode.title}'",
+                        method="_create_summary",
                     )
                     episode.content = f"No relevant content found for the topic '{episode.title}' in the available documents."
                     self._publish_status(
@@ -269,12 +294,15 @@ class SummaryGenerator(BaseGenerator):
             # Mark summary as generated (boolean flag)
             if generated_episodes:
                 summary.generated = "COMPLETED"
-                logger.info(
-                    f"Successfully generated content for {len(generated_episodes)} episodes"
+                log.info(
+                    f"Successfully generated content for {len(generated_episodes)} episodes",
+                    method="_create_summary",
                 )
             else:
                 summary.generated = "FAILED"
-                logger.warning("No content generated for any episodes")
+                log.warning(
+                    "No content generated for any episodes", method="_create_summary"
+                )
 
             self._publish_status(
                 channel,
@@ -287,10 +315,17 @@ class SummaryGenerator(BaseGenerator):
             )
 
             db.commit()
-            logger.info(f"Successfully saved summary episodes to database")
+            log.info(
+                f"Successfully saved summary episodes to database",
+                method="_create_summary",
+            )
 
         except Exception as e:
-            logger.error(f"Error generating summary content: {e}", exc_info=True)
+            log.error(
+                f"Error generating summary content: {e}",
+                exc_info=True,
+                method="_create_summary",
+            )
             summary.generated = "FAILED"
             db.commit()
             self._publish_status(
@@ -319,13 +354,14 @@ class SummaryGenerator(BaseGenerator):
             summary_id = json.loads(body_str)  # This will remove the extra quotes
             uuid.UUID(summary_id)
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
-            logger.error(
-                f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}"
+            log.error(
+                f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}",
+                method="generate",
             )
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
 
-        logger.info(f"Processing summary request for ID: {summary_id}")
+        log.info(f"Processing summary request for ID: {summary_id}", method="generate")
 
         try:
             summary = (
@@ -335,19 +371,26 @@ class SummaryGenerator(BaseGenerator):
                 .first()
             )
             if not summary:
-                logger.warning(f"Summary with ID {summary_id} not found in database.")
+                log.warning(
+                    f"Summary with ID {summary_id} not found in database.",
+                    method="generate",
+                )
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
 
             self._create_summary(db, channel, summary)
 
-            logger.info(f"Successfully processed and updated summary ID: {summary_id}")
+            log.info(
+                f"Successfully processed and updated summary ID: {summary_id}",
+                method="generate",
+            )
             channel.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
-            logger.error(
+            log.error(
                 f"Error during summary processing for ID {summary_id}: {e}",
                 exc_info=True,
+                method="generate",
             )
             # Requeueing might cause loops if the error is persistent
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)

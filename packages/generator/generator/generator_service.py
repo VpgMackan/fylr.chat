@@ -1,12 +1,12 @@
 import importlib
 import json
-import logging
+import structlog
 from pathlib import Path
 from typing import Dict, Type
 
 from .generators.base_generator import BaseGenerator
 
-logger = logging.getLogger(__name__)
+log = structlog.getLogger(__name__)
 
 
 class GeneratorService:
@@ -21,7 +21,10 @@ class GeneratorService:
 
     def _load_generators(self):
         """Loads generator classes from the configuration file."""
-        logger.info(f"Loading generator configurations from {self.config_path}")
+        log.info(
+            f"Loading generator configurations from {self.config_path}",
+            method="_load_generators",
+        )
         try:
             with open(self.config_path) as f:
                 config = json.load(f)
@@ -31,22 +34,35 @@ class GeneratorService:
                 class_name = gen_config.get("class")
 
                 if not module_path or not class_name:
-                    logger.warning(f"Skipping invalid generator config for '{name}'")
+                    log.warning(
+                        f"Skipping invalid generator config for '{name}'",
+                        method="_load_generators",
+                    )
                     continue
 
                 try:
                     module = importlib.import_module(module_path)
                     generator_class = getattr(module, class_name)
                     self._generators[name] = generator_class
-                    logger.info(
-                        f"Successfully loaded generator '{name}' -> {module_path}.{class_name}"
+                    log.info(
+                        f"Successfully loaded generator '{name}' -> {module_path}.{class_name}",
+                        method="_load_generators",
                     )
                 except (ImportError, AttributeError) as e:
-                    logger.error(f"Failed to load generator '{name}': {e}")
+                    log.error(
+                        f"Failed to load generator '{name}': {e}",
+                        method="_load_generators",
+                    )
         except FileNotFoundError:
-            logger.error(f"Generator config file not found at {self.config_path}")
+            log.error(
+                f"Generator config file not found at {self.config_path}",
+                method="_load_generators",
+            )
         except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {self.config_path}")
+            log.error(
+                f"Error decoding JSON from {self.config_path}",
+                method="_load_generators",
+            )
 
     def get_generator_class(self, generator_name: str) -> Type[BaseGenerator] | None:
         """Returns the class for a given generator name."""
