@@ -13,6 +13,7 @@ psycopg2-binary = "^2.9.10"
 sqlalchemy = "^2.0.41"
 pgvector = "^0.4.1"
 httpx = "^0.28.1"
+structlog = "^24.1.0"
 
 [tool.poetry.scripts]
 generator = "generator.main:main"

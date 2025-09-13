@@ -1,17 +1,20 @@
 import httpx
-import logging
+import structlog
 from typing import Dict, Any, List, Union
 
 from ..config import settings
 
-logger = logging.getLogger(__name__)
+log = structlog.getLogger(__name__)
 
 
 class AIGatewayService:
     def __init__(self):
         self.base_url = settings.ai_gateway_url
         self.client = httpx.Client(base_url=self.base_url, timeout=120.0)
-        logger.info(f"AI Gateway Service initialized for URL: {self.base_url}")
+        log.info(
+            f"AI Gateway Service initialized for URL: {self.base_url}",
+            method="__init__",
+        )
 
     def generate_embeddings(
         self, text: str, model: str = "jina-clip-v2"
@@ -33,7 +36,10 @@ class AIGatewayService:
             data = response.json()
 
             if "data" not in data or not isinstance(data["data"], list):
-                logger.error(f"Unexpected response structure: {data}")
+                log.error(
+                    f"Unexpected response structure: {data}",
+                    method="generate_embeddings",
+                )
                 raise ValueError("Invalid response structure from AI Gateway")
 
             if not data["data"] or "embedding" not in data["data"][0]:
@@ -42,13 +48,15 @@ class AIGatewayService:
             return data["data"][0]["embedding"]
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"HTTP error calling AI Gateway for embeddings: {e.response.status_code} - {e.response.text}"
+            log.error(
+                f"HTTP error calling AI Gateway for embeddings: {e.response.status_code} - {e.response.text}",
+                method="generate_embeddings",
             )
             raise
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred while generating embeddings: {e}"
+            log.error(
+                f"An unexpected error occurred while generating embeddings: {e}",
+                method="generate_embeddings",
             )
             raise
 
@@ -81,18 +89,24 @@ class AIGatewayService:
 
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             if not content:
-                logger.warning("AI Gateway returned an empty response.")
+                log.warning(
+                    "AI Gateway returned an empty response.", method="generate_text"
+                )
                 return ""
 
             return content
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"HTTP error calling AI Gateway: {e.response.status_code} - {e.response.text}"
+            log.error(
+                f"HTTP error calling AI Gateway: {e.response.status_code} - {e.response.text}",
+                method="generate_text",
             )
             raise
         except Exception as e:
-            logger.error(f"An unexpected error occurred while calling AI Gateway: {e}")
+            log.error(
+                f"An unexpected error occurred while calling AI Gateway: {e}",
+                method="generate_text",
+            )
             raise
 
 

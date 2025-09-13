@@ -1,4 +1,4 @@
-import logging
+import structlog
 import requests
 import os
 from typing import List, Dict, Any, Optional, Generator
@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .entity import DocumentVector, Source
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+log = structlog.getLogger(__name__)
 load_dotenv()
 
 
@@ -36,7 +36,7 @@ try:
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
+    log.error(f"Failed to initialize database: {e}")
     raise
 
 
@@ -94,7 +94,10 @@ def fetch_embeddings_from_ai_gateway(
         response_data = response.json()
 
         if "data" not in response_data or not isinstance(response_data["data"], list):
-            logger.error(f"Unexpected response structure: {response_data}")
+            log.error(
+                f"Unexpected response structure: {response_data}",
+                method="fetch_embeddings_from_ai_gateway",
+            )
             raise ValueError("Invalid response structure from AI Gateway")
 
         embeddings = []
@@ -109,15 +112,18 @@ def fetch_embeddings_from_ai_gateway(
     except requests.exceptions.RequestException as e:
         error_msg = f"AI Gateway request failed: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
-        logger.error(error_msg)
+        log.error(error_msg, method="fetch_embeddings_from_ai_gateway")
         raise
     except Exception as e:
         error_msg = f"Unexpected error during AI Gateway call: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
-        logger.error(error_msg)
+        log.error(error_msg, method="fetch_embeddings_from_ai_gateway")
         raise
 
-def update_source_status(source_id: str, status: str, error_message: Optional[str] = None):
+
+def update_source_status(
+    source_id: str, status: str, error_message: Optional[str] = None
+):
     """Updates the status of a source record."""
     with get_db_session() as session:
         try:
@@ -125,12 +131,22 @@ def update_source_status(source_id: str, status: str, error_message: Optional[st
             if source:
                 source.status = status
                 # You could add an error message column to the Source model if desired
-                logger.info(f"Updated status for source {source_id} to {status}")
+                log.info(
+                    f"Updated status for source {source_id} to {status}",
+                    method="update_source_status",
+                )
             else:
-                logger.warning(f"Could not find source {source_id} to update status.")
+                log.warning(
+                    f"Could not find source {source_id} to update status.",
+                    method="update_source_status",
+                )
         except SQLAlchemyError as e:
-            logger.error(f"Database error updating source status: {e}")
+            log.error(
+                f"Database error updating source status: {e}",
+                method="update_source_status",
+            )
             raise
+
 
 def vectorize_text(
     chunks: List[str], job_key: str, info_callback: callable
@@ -178,16 +194,16 @@ def save_text_chunks_as_vectors(
             info_callback(
                 message, job_key, {"saved_vectors": len(vectors), "message": message}
             )
-            logger.info(message)
+            log.info(message, method="save_text_chunks_as_vectors")
             return vectors
 
     except SQLAlchemyError as e:
         error_msg = f"Database error while saving vectors: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
-        logger.error(error_msg)
+        log.error(error_msg, method="save_text_chunks_as_vectors")
         raise
     except Exception as e:
         error_msg = f"Failed to save vectors: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
-        logger.error(error_msg)
+        log.error(error_msg, method="save_text_chunks_as_vectors")
         raise

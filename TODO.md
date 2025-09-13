@@ -7,7 +7,7 @@
 - [x] UI Feedback: Implement real-time file ingestion feedback in the UI using WebSockets.
 - [x] UI Feedback: Improve chat error/loading/reconnecting states.
 - [x] Functionality: Implement search functionality on all list pages.
-- [ ] Ops: Implement structured (JSON) logging across all services.
+- [x] Ops: Implement structured (JSON) logging across all services.
 
 ## Medium priority
 - [ ] Testing (Core): Write unit tests for critical backend services (Auth, Pockets) and E2E tests for the auth flow.
