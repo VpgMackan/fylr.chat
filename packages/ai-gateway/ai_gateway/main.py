@@ -9,6 +9,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from .config import settings
 from .routes.chat import router as chat_router
 from .routes.embedding import router as embedding_router
+from .routes.tts import router as tts_router
 
 app = FastAPI(
     title="AI Gateway",
@@ -25,6 +26,7 @@ log = structlog.get_logger()
 # --- API Endpoints ---
 app.include_router(chat_router)
 app.include_router(embedding_router)
+app.include_router(tts_router)
 
 
 @app.get("/")

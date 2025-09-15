@@ -21,6 +21,15 @@ class OpenaiCompatibleProvider(BaseProvider):
             http_client=httpx.AsyncClient(transport=async_transport),
         )
 
+    def generate_text_to_speech(self, text, model, voice, options):
+        """
+        Generates text-to-speech audio.
+        """
+        response = self.client.audio.speech.create(
+            model=model, input=text, voice=voice, **options
+        )
+        return response.content
+
     def generate_text(
         self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]
     ):

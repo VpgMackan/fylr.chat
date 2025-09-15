@@ -9,6 +9,11 @@ class BaseProvider(ABC):
     def generate_embeddings(self, chunk, model, options):
         log.warn("provider_unsupported_method", method="generate_embeddings")
 
+    def generate_text_to_speech(
+        self, text: str, model: str, voice: str, options: Dict[str, Any]
+    ):
+        log.warn("provider_unsupported_method", method="generate_text_to_speech")
+
     def generate_text(
         self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]
     ):
