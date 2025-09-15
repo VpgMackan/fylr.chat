@@ -1,15 +1,25 @@
-from openai import OpenAI
+import httpx
+from openai import OpenAI, AsyncOpenAI
 from typing import List, Dict, Any, AsyncGenerator
 
 from .base import BaseProvider
-from ..config import settings
-from ..schemas import ChatCompletionResponse
 
 
 class OpenaiCompatibleProvider(BaseProvider):
-
     def __init__(self, api_key, base_url):
-        self.client = OpenAI(api_key, base_url)
+        sync_transport = httpx.HTTPTransport(retries=3)
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=httpx.Client(transport=sync_transport),
+        )
+
+        async_transport = httpx.AsyncHTTPTransport(retries=3)
+        self.async_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=httpx.AsyncClient(transport=async_transport),
+        )
 
     def generate_text(
         self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]
@@ -28,10 +38,10 @@ class OpenaiCompatibleProvider(BaseProvider):
         """
         Generates a streaming chat completion.
         """
-        stream = self.client.chat.completions.create(
+        stream = await self.async_client.chat.completions.create(
             model=model, messages=messages, stream=True, **options
         )
-        for chunk in stream:
+        async for chunk in stream:
             content = chunk.choices[0].delta.content
             if content:
                 yield content

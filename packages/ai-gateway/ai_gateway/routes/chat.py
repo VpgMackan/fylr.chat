@@ -2,12 +2,11 @@ import json
 import time
 import uuid
 from pathlib import Path
-from typing import AsyncGenerator
-
+from typing import AsyncGenerator, Optional
 
 from openai import APIStatusError
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 
 from ..prompts.registry import (
@@ -135,3 +134,23 @@ async def create_chat_completion(request: ChatCompletionRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"An error occurred with the '{request.provider}' provider: {e}",
             )
+
+
+@router.get("/v1/prompts")
+async def list_prompts():
+    """Lists all available prompt templates."""
+    return {"prompts": prompt_registry.list_prompts()}
+
+
+@router.get("/v1/prompts/{prompt_id}")
+async def inspect_prompt(
+    prompt_id: str,
+    version: Optional[str] = None,
+):
+    """
+    Inspects a specific prompt template, showing its metadata and variables.
+    """
+    try:
+        return prompt_registry.inspect(prompt_id, version)
+    except PromptNotFound as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
