@@ -327,49 +327,13 @@ class SummaryGenerator(BaseGenerator):
         body: bytes,
     ) -> None:
         """Processes a summary generation request."""
-        try:
-            # Decode the body and parse JSON since the backend sends JSON.stringify(data)
-            body_str = body.decode("utf-8")
-            summary_id = json.loads(body_str)  # This will remove the extra quotes
-            uuid.UUID(summary_id)
-        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
-            log.error(
-                f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}",
-                method="generate",
-            )
-            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-            return
-
-        log.info(f"Processing summary request for ID: {summary_id}", method="generate")
-
-        try:
-            summary = (
-                db.query(Summary)
-                .options(joinedload(Summary.episodes))
-                .filter(Summary.id == summary_id)
-                .first()
-            )
-            if not summary:
-                log.warning(
-                    f"Summary with ID {summary_id} not found in database.",
-                    method="generate",
-                )
-                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-                return
-
-            self._create_summary(db, channel, summary)
-
-            log.info(
-                f"Successfully processed and updated summary ID: {summary_id}",
-                method="generate",
-            )
-            channel.basic_ack(delivery_tag=method.delivery_tag)
-
-        except Exception as e:
-            log.error(
-                f"Error during summary processing for ID {summary_id}: {e}",
-                exc_info=True,
-                method="generate",
-            )
-            # Requeueing might cause loops if the error is persistent
-            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        self._process_message(
+            db,
+            channel,
+            method,
+            properties,
+            body,
+            Summary,
+            self._create_summary,
+            "summary",
+        )

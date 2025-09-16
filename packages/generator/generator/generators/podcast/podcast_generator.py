@@ -9,7 +9,7 @@ from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 import pika
 
-from ...entity import Source, DocumentVector
+from ...entity import Podcast, Source, DocumentVector
 from ..base_generator import BaseGenerator
 from ...services.ai_gateway_service import ai_gateway_service
 
@@ -31,7 +31,7 @@ class PodcastGenerator(BaseGenerator):
     ) -> List[Dict[str, Any]]:
         pass
 
-    def _create_podcast(self, db: Session, channel: BlockingChannel):
+    def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
         pass
 
     def generate(
@@ -43,4 +43,13 @@ class PodcastGenerator(BaseGenerator):
         body: bytes,
     ) -> None:
         """Processes a podcast generation request."""
-        pass
+        self._process_message(
+            db,
+            channel,
+            method,
+            properties,
+            body,
+            Podcast,
+            self._create_podcast,
+            "podcast",
+        )

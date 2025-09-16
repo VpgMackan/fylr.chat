@@ -1,8 +1,8 @@
-import json
+import json, uuid
 import structlog
 
 from abc import ABC, abstractmethod
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
@@ -37,6 +37,63 @@ class BaseGenerator(ABC):
                 f"Failed to publish status update for {entity_type} {entity_id}: {e}",
                 method="",
             )
+
+    def _process_message(
+        self,
+        db: Session,
+        channel: BlockingChannel,
+        method: Basic.Deliver,
+        properties: BasicProperties,
+        body: bytes,
+        model,
+        create_fn,
+        log_label: str,
+    ) -> None:
+        """Generic message processor for DB objects with UUID IDs."""
+        try:
+            body_str = body.decode("utf-8")
+            obj_id = json.loads(body_str)
+            uuid.UUID(obj_id)
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
+            log.error(
+                f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}",
+                method=log_label,
+            )
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            return
+
+        log.info(f"Processing {log_label} request for ID: {obj_id}", method=log_label)
+
+        try:
+            obj = (
+                db.query(model)
+                .options(joinedload(getattr(model, "episodes", None)))  # optional
+                .filter(model.id == obj_id)
+                .first()
+            )
+            if not obj:
+                log.warning(
+                    f"{log_label.capitalize()} with ID {obj_id} not found in database.",
+                    method=log_label,
+                )
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
+
+            create_fn(db, channel, obj)
+
+            log.info(
+                f"Successfully processed and updated {log_label} ID: {obj_id}",
+                method=log_label,
+            )
+            channel.basic_ack(delivery_tag=method.delivery_tag)
+
+        except Exception as e:
+            log.error(
+                f"Error during {log_label} processing for ID {obj_id}: {e}",
+                exc_info=True,
+                method=log_label,
+            )
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     @abstractmethod
     def generate(
