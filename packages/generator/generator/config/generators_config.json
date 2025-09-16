@@ -1,8 +1,0 @@
-{
-  "generators": {
-    "summary": {
-      "module": "generator.generators.summary.summary_generator",
-      "class": "SummaryGenerator"
-    }
-  }
-}
