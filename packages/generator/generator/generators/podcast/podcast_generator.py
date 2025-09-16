@@ -21,33 +21,6 @@ class PodcastGenerator(BaseGenerator):
         """This generator expects a simple string body, so this method is not used."""
         return True
 
-    def _publish_status(
-        self,
-        channel: BlockingChannel,
-        podcast_id: str,
-        payload: dict,
-    ):
-        """Publishes a status update message to the events exchange."""
-        routing_key = f"podcast.{podcast_id}.status"
-        try:
-            channel.basic_publish(
-                exchange="fylr-events",
-                routing_key=routing_key,
-                body=json.dumps(payload),
-                properties=pika.BasicProperties(
-                    content_type="application/json",
-                    delivery_mode=2,
-                ),
-            )
-            log.info(
-                f"Published status to {routing_key}: {payload.get('stage')}", method=""
-            )
-        except Exception as e:
-            log.error(
-                f"Failed to publish status update for podcast {podcast_id}: {e}",
-                method="",
-            )
-
     def _fetch_all_documents(
         self, db: Session, pocket_id: uuid.UUID
     ) -> List[Dict[str, Any]]:

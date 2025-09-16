@@ -109,5 +109,42 @@ class AIGatewayService:
             )
             raise
 
+    def generate_tts(
+        self,
+        text: str,
+        model: str = "tts-1",
+        voice: str = "alloy",
+        provider: str = "openai",
+    ) -> bytes:
+        """
+        Generates text-to-speech audio using the AI Gateway.
+        """
+        request_payload = {
+            "provider": provider,
+            "text": text,
+            "model": model,
+            "voice": voice,
+            "options": {},
+        }
+
+        try:
+            response = self.client.post("/v1/tts", json=request_payload)
+            response.raise_for_status()
+
+            return response.content
+
+        except httpx.HTTPStatusError as e:
+            log.error(
+                f"HTTP error calling AI Gateway for TTS: {e.response.status_code} - {e.response.text}",
+                method="generate_tts",
+            )
+            raise
+        except Exception as e:
+            log.error(
+                f"An unexpected error occurred while generating TTS: {e}",
+                method="generate_tts",
+            )
+            raise
+
 
 ai_gateway_service = AIGatewayService()

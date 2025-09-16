@@ -21,33 +21,6 @@ class SummaryGenerator(BaseGenerator):
         """This generator expects a simple string body, so this method is not used."""
         return True
 
-    def _publish_status(
-        self,
-        channel: BlockingChannel,
-        summary_id: str,
-        payload: dict,
-    ):
-        """Publishes a status update message to the events exchange."""
-        routing_key = f"summary.{summary_id}.status"
-        try:
-            channel.basic_publish(
-                exchange="fylr-events",
-                routing_key=routing_key,
-                body=json.dumps(payload),
-                properties=pika.BasicProperties(
-                    content_type="application/json",
-                    delivery_mode=2,
-                ),
-            )
-            log.info(
-                f"Published status to {routing_key}: {payload.get('stage')}", method=""
-            )
-        except Exception as e:
-            log.error(
-                f"Failed to publish status update for summary {summary_id}: {e}",
-                method="",
-            )
-
     def _fetch_all_documents(
         self, db: Session, pocket_id: uuid.UUID
     ) -> List[Dict[str, Any]]:
@@ -169,6 +142,7 @@ class SummaryGenerator(BaseGenerator):
                 "stage": "starting",
                 "message": f"Starting summary generation for '{summary.title}'...",
             },
+            "summary",
         )
 
         try:
@@ -186,6 +160,7 @@ class SummaryGenerator(BaseGenerator):
                         "message": f"Generating content for episode: '{episode.title}'...",
                         "episodeId": episode.id,
                     },
+                    "summary",
                 )
 
                 search_queries_text = ai_gateway_service.generate_text(
@@ -263,6 +238,7 @@ class SummaryGenerator(BaseGenerator):
                                 "createdAt": episode.created_at.isoformat(),
                             },
                         },
+                        "summary",
                     )
 
                     generated_episodes.append(
@@ -289,6 +265,7 @@ class SummaryGenerator(BaseGenerator):
                                 "title": episode.title,
                             },
                         },
+                        "summary",
                     )
 
             # Mark summary as generated (boolean flag)
@@ -312,6 +289,7 @@ class SummaryGenerator(BaseGenerator):
                     "message": "Summary generation finished.",
                     "finalStatus": summary.generated,
                 },
+                "summary",
             )
 
             db.commit()
@@ -335,6 +313,7 @@ class SummaryGenerator(BaseGenerator):
                     "stage": "error",
                     "message": "An error occurred during summary generation.",
                 },
+                "summary",
             )
             db.rollback()
             raise
