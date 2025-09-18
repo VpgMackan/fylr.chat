@@ -8,11 +8,14 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import normalize
 
+from ..entity import Source
+
 log = structlog.getLogger(__name__)
 
 
 class VectorHelper(ABC):
     def _cluster_vectors_auto(
+        self,
         vectors,
         k_min=2,
         k_max=20,
@@ -34,7 +37,10 @@ class VectorHelper(ABC):
             vectors = normalize(vectors, axis=1)
 
         if reduce_dim and n_features > dim:
-            pca = PCA(n_components=dim, random_state=random_state)
+            # Ensure n_components doesn't exceed min(n_samples, n_features)
+            max_components = min(n_samples, n_features)
+            actual_dim = min(dim, max_components)
+            pca = PCA(n_components=actual_dim, random_state=random_state)
             vectors = pca.fit_transform(vectors)
 
         best_score = -np.inf
@@ -71,8 +77,55 @@ class VectorHelper(ABC):
         # fallback: if silhouette never computed, fit k_min and return that
         if best_k is None:
             fallback_k = min(k_min, n_samples)
-            fallback_kmeans = KMeans(n_clusters=fallback_k, random_state=random_state, n_init=n_init)
+            fallback_kmeans = KMeans(
+                n_clusters=fallback_k, random_state=random_state, n_init=n_init
+            )
             fallback_labels = fallback_kmeans.fit_predict(vectors)
             return fallback_labels, fallback_kmeans, fallback_k
 
         return best_labels, best_kmeans, best_k
+
+    def _cluster_source_vector(self, sources: list[Source]):
+        """
+        Cluster sources based on their vectors and return grouped vectors.
+
+        Args:
+            sources: List of Source objects with vectors
+
+        Returns:
+            List of lists, where each inner list contains vectors belonging to the same cluster
+        """
+        if not sources:
+            return []
+
+        all_vectors = []
+        vector_to_source_map = []
+
+        for source in sources:
+            if source.vectors:
+                for vector in source.vectors:
+                    if vector.embedding is not None:
+                        all_vectors.append(vector.embedding)
+                        vector_to_source_map.append(vector)
+
+        if len(all_vectors) < 2:
+            return [vector_to_source_map] if vector_to_source_map else []
+
+        vectors_array = np.array(all_vectors)
+
+        labels, kmeans, best_k = self._cluster_vectors_auto(
+            vectors_array,
+            k_min=2,
+            k_max=min(20, len(all_vectors)),
+            reduce_dim=True,
+            dim=50,
+            normalize_vectors=True,
+        )
+
+        clusters = {}
+        for i, label in enumerate(labels):
+            if label not in clusters:
+                clusters[label] = []
+            clusters[label].append(vector_to_source_map[i])
+
+        return list(clusters.values())

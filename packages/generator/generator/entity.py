@@ -66,10 +66,10 @@ class Summary(Base):
 
 
 class PodcastEpisode(Base):
-    __tablename__ = "PodcastEpisodes"
+    __tablename__ = "PodcastEpisode"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    podcast_id = Column(String, ForeignKey("Podcasts.id"), nullable=False)
+    podcast_id = Column(String, ForeignKey("Podcast.id"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     title = Column(String, nullable=False)
@@ -80,7 +80,7 @@ class PodcastEpisode(Base):
 
 
 class Podcast(Base):
-    __tablename__ = "Podcasts"
+    __tablename__ = "Podcast"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
@@ -89,7 +89,7 @@ class Podcast(Base):
     length = Column(BigInteger, nullable=False)
     generated = Column(Text, nullable=True)
 
-    pocket = relationship("Pocket", back_populates="podcasts")
+    pocket = relationship("Pocket", back_populates="podcast")
     episodes = relationship("PodcastEpisode", back_populates="podcast")
 
 
@@ -106,4 +106,4 @@ class Pocket(Base):
 
     sources = relationship("Source", back_populates="pocket")
     summaries = relationship("Summary", back_populates="pocket")
-    podcasts = relationship("Podcast", back_populates="pocket")
+    podcast = relationship("Podcast", back_populates="pocket")

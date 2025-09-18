@@ -120,3 +120,34 @@ class DatabaseHelper(ABC):
                 method="_fetch_related_documents",
             )
             return []
+
+    def _fetch_sources_with_vectors(
+        self, db: Session, pocket_id: uuid.UUID
+    ) -> List[Source]:
+        """
+        Fetches all sources with their vectors for a given pocket.
+
+        Args:
+            db: Database session
+            pocket_id: The pocket ID to fetch sources for
+
+        Returns:
+            List of Source objects with loaded vectors
+        """
+        log.info(
+            f"Fetching sources with vectors for pocket_id: {pocket_id}",
+            method="_fetch_sources_with_vectors",
+        )
+
+        sources = (
+            db.query(Source)
+            .options(joinedload(Source.vectors))
+            .filter(Source.pocket_id == pocket_id)
+            .all()
+        )
+
+        log.info(
+            f"Found {len(sources)} sources for pocket {pocket_id}",
+            method="_fetch_sources_with_vectors",
+        )
+        return sources

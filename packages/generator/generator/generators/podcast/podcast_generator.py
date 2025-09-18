@@ -7,11 +7,12 @@ from pika.spec import Basic, BasicProperties
 from ...entity import Podcast
 from ..base_generator import BaseGenerator
 from ..vector_helper import VectorHelper
+from ..database_helper import DatabaseHelper
 
 log = structlog.getLogger(__name__)
 
 
-class PodcastGenerator(BaseGenerator, VectorHelper):
+class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
     def validate_input(self, input_data: dict) -> bool:
         """This generator expects a simple string body, so this method is not used."""
         return True
@@ -32,7 +33,10 @@ class PodcastGenerator(BaseGenerator, VectorHelper):
             "podcast",
         )
 
-        vectors = self._fetch_all_documents(db, podcast.pocket_id)
+        sources = self._fetch_sources_with_vectors(db, podcast.pocket_id)
+        groups = self._cluster_source_vector(sources)
+
+        print(groups)
 
     def generate(
         self,
