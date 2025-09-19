@@ -1,7 +1,7 @@
 import httpx
-from .base import BaseProvider
-from ..config import settings
-from ..schemas import EmbeddingResponse
+from ..base import BaseProvider
+from ...config import settings
+from ...schemas import EmbeddingResponse
 
 
 class JinaProvider(BaseProvider):

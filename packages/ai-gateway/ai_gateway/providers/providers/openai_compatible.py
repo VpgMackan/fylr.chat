@@ -2,7 +2,8 @@ import httpx
 from openai import OpenAI, AsyncOpenAI
 from typing import List, Dict, Any, AsyncGenerator
 
-from .base import BaseProvider
+from ..base import BaseProvider
+from ...schemas import ChatCompletionRequest
 
 
 class OpenaiCompatibleProvider(BaseProvider):
@@ -31,24 +32,34 @@ class OpenaiCompatibleProvider(BaseProvider):
         return response.content
 
     def generate_text(
-        self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]
+        self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
     ):
         """
         Generates a non-streaming chat completion.
         """
+        if not request.model:
+            raise ValueError(
+                "A model must be specified for the OpenaiCompatibleProvider."
+            )
+
         response = self.client.chat.completions.create(
-            model=model, messages=messages, stream=False, **options
+            model=request.model, messages=messages, stream=False, **request.options
         )
         return response.model_dump()
 
     async def generate_text_stream(
-        self, messages: List[Dict[str, Any]], model: str, options: Dict[str, Any]
+        self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
     ) -> AsyncGenerator[str, None]:
         """
         Generates a streaming chat completion.
         """
+        if not request.model:
+            raise ValueError(
+                "A model must be specified for the OpenaiCompatibleProvider."
+            )
+
         stream = await self.async_client.chat.completions.create(
-            model=model, messages=messages, stream=True, **options
+            model=request.model, messages=messages, stream=True, **request.options
         )
         async for chunk in stream:
             content = chunk.choices[0].delta.content

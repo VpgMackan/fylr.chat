@@ -1,9 +1,11 @@
-from .openai_compatible import OpenaiCompatibleProvider
-from .jina import JinaProvider
+from .providers.openai_compatible import OpenaiCompatibleProvider
+from .providers.jina import JinaProvider
+from .providers.auto import AutoProvider
 
 from ..config import settings
 
-providers = {
+# Create base providers first
+_base_providers = {
     "ollama": OpenaiCompatibleProvider(
         api_key="ollama", base_url=settings.ollama_base_url
     ),
@@ -11,4 +13,10 @@ providers = {
         api_key=settings.openai_api_key, base_url=settings.llm_proxy_url
     ),
     "jina": JinaProvider(),
+}
+
+# Create auto provider with reference to base providers
+providers = {
+    **_base_providers,
+    "auto": AutoProvider(_base_providers),
 }

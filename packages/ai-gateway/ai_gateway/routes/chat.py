@@ -10,11 +10,11 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 
 from ..prompts.registry import (
-    PromptRegistry,
     PromptRenderError,
     PromptNotFound,
     PromptValidationError,
 )
+from ..prompts import prompt_registry
 
 from ..schemas import (
     ChatCompletionRequest,
@@ -23,9 +23,7 @@ from ..schemas import (
 from ..providers.base import BaseProvider
 from ai_gateway.providers import providers
 
-PROMPTS_DIR = Path(__file__).parent.parent / "prompts" / "config"
 router = APIRouter()
-prompt_registry = PromptRegistry(PROMPTS_DIR)
 
 
 async def stream_provider_response(
@@ -39,7 +37,7 @@ async def stream_provider_response(
 
     try:
         async for chunk_content in provider.generate_text_stream(
-            messages=messages_dict, model=request.model, options=request.options
+            messages=messages_dict, request=request
         ):
             chunk_data = {
                 "id": completion_id,
@@ -107,7 +105,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
     else:
         try:
             response_data = providers[request.provider].generate_text(
-                messages=messages_dict, model=request.model, options=request.options
+                messages=messages_dict, request=request
             )
 
             if "usage" in response_data:
