@@ -33,6 +33,7 @@ class JinaProvider(BaseProvider):
                 response_data = response.json()
 
                 return EmbeddingResponse(
+                    provider="jina",
                     model=response_data.get("model"),
                     data=response_data.get("data"),
                     usage=response_data.get("usage"),

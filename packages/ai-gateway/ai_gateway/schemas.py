@@ -56,8 +56,8 @@ class ChatCompletionResponse(BaseModel):
 
 
 class EmbeddingRequest(BaseModel):
-    provider: str
-    model: str
+    provider: Optional[str] = None
+    model: Optional[str] = None
     input: Union[str, List[str]]
     options: Dict[str, Any] = Field(default_factory=dict)
 
@@ -65,5 +65,6 @@ class EmbeddingRequest(BaseModel):
 class EmbeddingResponse(BaseModel):
     object: str = "list"
     data: List[Dict[str, Any]]
+    provider: str
     model: str
     usage: Dict[str, int]

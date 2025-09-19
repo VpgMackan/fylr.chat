@@ -12,8 +12,11 @@ class Settings(BaseSettings):
 
     jina_api_key: Optional[str] = None
     jina_api_url: str = "https://api.jina.ai/v1"
-    
+
     ollama_base_url: str = "http://localhost:11434/v1"
+
+    default_embedding_provider: str = "jina"
+    default_embedding_model: str = "jina-clip-v2"
 
 
 settings = Settings()

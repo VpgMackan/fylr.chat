@@ -93,11 +93,8 @@ export class MessageService {
     });
 
     emitStatus('retrieval', 'Searching relevant sources...');
-    const searchQueryEmbedding = await this.vectorService.search(
-      hypotheticalAnswer,
-      'jina-clip-v2',
-      {},
-    );
+    const searchQueryEmbedding =
+      await this.vectorService.search(hypotheticalAnswer);
 
     const sourceIds = conversation.sources.map((s) => s.id);
     const relevantChunks =
