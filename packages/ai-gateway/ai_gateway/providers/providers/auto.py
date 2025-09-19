@@ -67,9 +67,9 @@ class AutoProvider(BaseProvider):
         Selects a model and delegates the non-streaming call.
         """
         provider_name, model_name, provider_instance = self._select_model(request)
-        return provider_instance.generate_text(
-            messages=messages, model=model_name, options=request.options
-        )
+        request.model = model_name
+
+        return provider_instance.generate_text(messages=messages, request=request)
 
     async def generate_text_stream(
         self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
@@ -79,6 +79,6 @@ class AutoProvider(BaseProvider):
         """
         provider_name, model_name, provider_instance = self._select_model(request)
         async for chunk in provider_instance.generate_text_stream(
-            messages=messages, model=model_name, options=request.options
+            messages=messages, request=request
         ):
             yield chunk

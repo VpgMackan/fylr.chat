@@ -39,7 +39,7 @@ class OpenaiCompatibleProvider(BaseProvider):
         """
         if not request.model:
             raise ValueError(
-                "A model must be specified for the OpenaiCompatibleProvider."
+                "A model must be psecified for the OpenaiCompatibleProvider."
             )
 
         response = self.client.chat.completions.create(

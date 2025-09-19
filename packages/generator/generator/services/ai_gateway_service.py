@@ -75,8 +75,7 @@ class AIGatewayService:
             payload = prompt_or_options
 
         request_payload = {
-            "provider": "openai",
-            "model": model,
+            "provider": "auto",
             "stream": False,
             **payload,
         }

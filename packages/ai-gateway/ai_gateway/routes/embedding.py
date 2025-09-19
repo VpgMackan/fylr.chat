@@ -14,14 +14,14 @@ router = APIRouter()
 async def create_embedding(request: EmbeddingRequest):
     provider_name = request.provider or settings.default_embedding_provider
     model_name = request.model or settings.default_embedding_model
-    
+
     try:
-        response = providers[request.provider].generate_embeddings(
-            input_text=request.input, model=request.model, options=request.options
+        response = providers[provider_name].generate_embeddings(
+            input_text=request.input, model=model_name, options=request.options
         )
         return response.model_dump()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred with the '{request.provider}' provider: {e}",
+            detail=f"An error occurred with the '{provider_name}' provider: {e}",
         )
