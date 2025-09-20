@@ -174,6 +174,51 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
 
         return episode_segments
 
+    def _porcess_segments(self, episode_segments, db, podcast: Podcast):
+        script_segments = []
+
+        for segment in episode_segments:
+            search_queries = segment.get("keynotes", [])
+            all_related_docs = []
+            for query in search_queries[:3]:
+                related_docs = self._fetch_related_documents(
+                    db, query, podcast.pocket_id, limit=5
+                )
+                all_related_docs.extend(related_docs)
+
+            seen_ids = set()
+            unique_docs = []
+            for doc in all_related_docs:
+                if doc["vector_id"] not in seen_ids:
+                    seen_ids.add(doc["vector_id"])
+                    unique_docs.append(doc)
+
+            unique_docs.sort(key=lambda x: x["similarity_distance"])
+            top_docs = unique_docs[:10]
+            if top_docs:
+                context_content = "\n\n".join(
+                    [
+                        f"Source: {doc['source_name']}\nContent: {doc['content']}"
+                        for doc in top_docs
+                    ]
+                )
+                context_facts = "\n".join(
+                    [f"- {fact}" for fact in segment.get("facts", [])]
+                )
+                episode_content = ai_gateway_service.generate_text(
+                    {
+                        "prompt_type": "podcast_script",
+                        "prompt_version": "v1",
+                        "prompt_vars": {
+                            "context_content": context_content,
+                            "facts": context_facts,
+                        },
+                    }
+                )
+                script_segments.append(episode_content)
+
+        return script_segments
+
     def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
         """Generates podcast using the AI Gateway and updates the database."""
         log.info(
@@ -196,62 +241,32 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
         episode_segments = self._process_groups(groups, channel, podcast)
 
         if episode_segments:
-            # The using the facts from episode_segments, and the vectors create a podcast episode for each segment.
-            for segment in episode_segments:
-                search_queries = segment.get("keynotes", [])
-                all_related_docs = []
-                for query in search_queries[:3]:
-                    related_docs = self._fetch_related_documents(
-                        db, query, podcast.pocket_id, limit=5
-                    )
-                    all_related_docs.extend(related_docs)
+            script_segments = self._porcess_segments(episode_segments, db, podcast)
 
-                seen_ids = set()
-                unique_docs = []
-                for doc in all_related_docs:
-                    if doc["vector_id"] not in seen_ids:
-                        seen_ids.add(doc["vector_id"])
-                        unique_docs.append(doc)
+            # Handle script combinations. Either by passing all episodes to the llm and asking it to combine or passing a few at a time depending on amount.
 
-                unique_docs.sort(key=lambda x: x["similarity_distance"])
-                top_docs = unique_docs[:10]
-                if top_docs:
-                    context_content = "\n\n".join(
-                        [
-                            f"Source: {doc['source_name']}\nContent: {doc['content']}"
-                            for doc in top_docs
-                        ]
-                    )
-                    context_facts = "\n".join(
-                        [f"- {fact}" for fact in segment.get("facts", [])]
-                    )
-                    episode_content = ai_gateway_service.generate_text(
-                        {
-                            "prompt_type": "podcast_script",
-                            "prompt_version": "v1",
-                            "prompt_vars": {
-                                "context_content": context_content,
-                                "facts": context_facts,
-                            },
-                        }
-                    )
-                    log.info(episode_content)
+            # Than run tts production.
+            # Split script in to chunks based on speaker and run it through tts.
+            # Combine the chunks with logic from colab document.
+            # Do some post processing
+            # Upload chunks and the full script to s3
+            # Save to database and then notify user about finished
 
-            # log.info(
-            #     f"Successfully generated {len(episode_segments)} segments for podcast ID {podcast.id}",
-            #     method="_create_podcast",
-            # )
-            # log.info(episode_segments)
-            # self._publish_status(
-            #     channel,
-            #     podcast.id,
-            #     {
-            #         "stage": "completed",
-            #         "message": f"Podcast generation completed with {len(episode_segments)} segments",
-            #         "segments": episode_segments,
-            #     },
-            #     "podcast",
-            # )
+            log.info(
+                f"Successfully generated {len(episode_segments)} segments for podcast ID {podcast.id}",
+                method="_create_podcast",
+            )
+            log.info(episode_segments)
+            self._publish_status(
+                channel,
+                podcast.id,
+                {
+                    "stage": "completed",
+                    "message": f"Podcast generation completed with {len(episode_segments)} segments",
+                    "segments": episode_segments,
+                },
+                "podcast",
+            )
         else:
             log.error(
                 f"No valid segments generated for podcast ID {podcast.id}",
