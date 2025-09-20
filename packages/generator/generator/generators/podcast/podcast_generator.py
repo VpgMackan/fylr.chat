@@ -79,31 +79,14 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
 
         return {"valid": len(errors) == 0, "errors": errors}
 
-    def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
-        """Generates podcast using the AI Gateway and updates the database."""
-        log.info(
-            f"Generating podcast for '{podcast.title}' (ID: {podcast.id})",
-            method="_create_podcast",
-        )
-        self._publish_status(
-            channel,
-            podcast.id,
-            {
-                "stage": "starting",
-                "message": f"Starting podcast generation for '{podcast.title}'...",
-            },
-            "podcast",
-        )
-
-        sources = self._fetch_sources_with_vectors(db, podcast.pocket_id)
-        groups = self._cluster_source_vector(sources)
-
+    def _process_groups(self, groups, channel: BlockingChannel, podcast: Podcast):
+        """Processes grouped sources and returns validated podcast segments."""
         episode_segments = []
 
         for group_index, group in enumerate(groups):
             log.info(
                 f"Processing group {group_index + 1}/{len(groups)} with {len(group)} sources",
-                method="_create_podcast",
+                method="_process_groups",
             )
 
             self._publish_status(
@@ -135,7 +118,7 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 if not validation_result["valid"]:
                     log.error(
                         f"Validation failed for podcast ID {podcast.id}, group {group_index + 1}: {validation_result['errors']}",
-                        method="_create_podcast",
+                        method="_process_groups",
                     )
                     self._publish_status(
                         channel,
@@ -155,13 +138,13 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
 
                 log.info(
                     f"Successfully processed group {group_index + 1} for podcast ID {podcast.id}: {podcast_data['title']}",
-                    method="_create_podcast",
+                    method="_process_groups",
                 )
 
             except json.JSONDecodeError as e:
                 log.error(
                     f"Failed to parse AI response as JSON for podcast ID {podcast.id}, group {group_index + 1}: {e}",
-                    method="_create_podcast",
+                    method="_process_groups",
                 )
                 self._publish_status(
                     channel,
@@ -176,7 +159,7 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             except Exception as e:
                 log.error(
                     f"Unexpected error processing group {group_index + 1} for podcast ID {podcast.id}: {e}",
-                    method="_create_podcast",
+                    method="_process_groups",
                 )
                 self._publish_status(
                     channel,
@@ -189,22 +172,86 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 )
                 continue
 
+        return episode_segments
+
+    def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
+        """Generates podcast using the AI Gateway and updates the database."""
+        log.info(
+            f"Generating podcast for '{podcast.title}' (ID: {podcast.id})",
+            method="_create_podcast",
+        )
+        self._publish_status(
+            channel,
+            podcast.id,
+            {
+                "stage": "starting",
+                "message": f"Starting podcast generation for '{podcast.title}'...",
+            },
+            "podcast",
+        )
+
+        sources = self._fetch_sources_with_vectors(db, podcast.pocket_id)
+        groups = self._cluster_source_vector(sources)
+
+        episode_segments = self._process_groups(groups, channel, podcast)
+
         if episode_segments:
-            log.info(
-                f"Successfully generated {len(episode_segments)} segments for podcast ID {podcast.id}",
-                method="_create_podcast",
-            )
-            log.info(episode_segments)
-            self._publish_status(
-                channel,
-                podcast.id,
-                {
-                    "stage": "completed",
-                    "message": f"Podcast generation completed with {len(episode_segments)} segments",
-                    "segments": episode_segments,
-                },
-                "podcast",
-            )
+            # The using the facts from episode_segments, and the vectors create a podcast episode for each segment.
+            for segment in episode_segments:
+                search_queries = segment.get("keynotes", [])
+                all_related_docs = []
+                for query in search_queries[:3]:
+                    related_docs = self._fetch_related_documents(
+                        db, query, podcast.pocket_id, limit=5
+                    )
+                    all_related_docs.extend(related_docs)
+
+                seen_ids = set()
+                unique_docs = []
+                for doc in all_related_docs:
+                    if doc["vector_id"] not in seen_ids:
+                        seen_ids.add(doc["vector_id"])
+                        unique_docs.append(doc)
+
+                unique_docs.sort(key=lambda x: x["similarity_distance"])
+                top_docs = unique_docs[:10]
+                if top_docs:
+                    context_content = "\n\n".join(
+                        [
+                            f"Source: {doc['source_name']}\nContent: {doc['content']}"
+                            for doc in top_docs
+                        ]
+                    )
+                    context_facts = "\n".join(
+                        [f"- {fact}" for fact in segment.get("facts", [])]
+                    )
+                    episode_content = ai_gateway_service.generate_text(
+                        {
+                            "prompt_type": "podcast_script",
+                            "prompt_version": "v1",
+                            "prompt_vars": {
+                                "context_content": context_content,
+                                "facts": context_facts,
+                            },
+                        }
+                    )
+                    log.info(episode_content)
+
+            # log.info(
+            #     f"Successfully generated {len(episode_segments)} segments for podcast ID {podcast.id}",
+            #     method="_create_podcast",
+            # )
+            # log.info(episode_segments)
+            # self._publish_status(
+            #     channel,
+            #     podcast.id,
+            #     {
+            #         "stage": "completed",
+            #         "message": f"Podcast generation completed with {len(episode_segments)} segments",
+            #         "segments": episode_segments,
+            #     },
+            #     "podcast",
+            # )
         else:
             log.error(
                 f"No valid segments generated for podcast ID {podcast.id}",
