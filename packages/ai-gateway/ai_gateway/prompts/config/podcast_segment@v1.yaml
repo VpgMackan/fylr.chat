@@ -1,0 +1,45 @@
+# podcast_segment@v1.yaml
+id: podcast_segment
+version: v1
+description: >
+  Analyzes text snippets from related documents and creates structured content for a podcast episode segment.
+  Generates an engaging title, key insights, and interesting facts in JSON format.
+form: prompt
+variables:
+  - name: content_snippets
+    required: true
+    type: string
+    description: "Text snippets from related documents separated by delimiters"
+template: |
+  You are an expert podcast content creator. Analyze the following text snippets from related documents and create structured content for a podcast episode segment.
+
+  CONTENT TO ANALYZE:
+  {{ content_snippets }}
+
+  REQUIREMENTS:
+  1. Create an engaging, descriptive title for this podcast segment (15-80 characters)
+  2. Extract 3-7 key insights or takeaways that would be valuable to listeners
+  3. Identify 2-5 interesting, surprising, or important facts from the content
+  4. Ensure all content is accurate and directly derived from the provided text
+
+  OUTPUT FORMAT (must be valid JSON):
+  {
+      "title": "Compelling segment title that captures the main theme",
+      "keynotes": [
+          "Clear, actionable insight #1",
+          "Important takeaway #2",
+          "Key learning point #3"
+      ],
+      "facts": [
+          "Specific, verifiable fact #1",
+          "Interesting statistic or finding #2"
+      ]
+  }
+
+  CONSTRAINTS:
+  - Title must be between 15-80 characters
+  - Keynotes should be 10-100 characters each
+  - Facts should be 10-150 characters each
+  - All arrays must contain at least 2 items
+  - Content must be derived from the provided text snippets only
+  - Response must be valid JSON only, no additional text
