@@ -1,4 +1,3 @@
-import time
 import httpx
 import structlog
 from typing import Dict, Any, List, Union
@@ -91,7 +90,6 @@ class AIGatewayService:
         try:
             response = self.client.post("/v1/tts", json=request_payload, timeout=60.0)
             response.raise_for_status()
-            time.sleep(20)
             return response.content
         except httpx.HTTPStatusError as e:
             log.error(

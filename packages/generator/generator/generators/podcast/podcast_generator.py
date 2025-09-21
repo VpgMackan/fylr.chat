@@ -6,6 +6,7 @@ import tempfile
 import shutil
 import io
 import uuid
+import time
 from typing import List, Tuple, Dict, Any
 
 import boto3
@@ -237,6 +238,8 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 with open(file_path, "wb") as f:
                     f.write(audio_bytes)
                 audio_files.append(file_path)
+
+                time.sleep(5)
 
             self._publish_status(
                 channel,
