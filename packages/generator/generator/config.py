@@ -13,5 +13,12 @@ class Settings(BaseSettings):
 
     ai_gateway_url: str = "http://localhost:8000"
 
+    s3_endpoint: Optional[str] = None
+    s3_port: Optional[str] = None
+    s3_key_id: Optional[str] = None
+    s3_secret_key: Optional[str] = None
+    s3_region: str = "garage"
+    s3_bucket_podcast_audio: str = "fylr.chat-podcasts"
+
 
 settings = Settings()

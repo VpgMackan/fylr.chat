@@ -1,10 +1,26 @@
 import structlog
 import json
+import re
+import os
+import tempfile
+import shutil
+import io
+import uuid
+from typing import List, Tuple, Dict, Any
+
+import boto3
+from botocore.client import Config
+from botocore.exceptions import BotoCoreError, ClientError
+
+import numpy as np
+import librosa
+from pydub import AudioSegment
 
 from sqlalchemy.orm import Session
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
+from ...config import settings
 from ...entity import Podcast
 from ..base_generator import BaseGenerator
 from ..vector_helper import VectorHelper
@@ -15,212 +31,142 @@ log = structlog.getLogger(__name__)
 
 
 class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
+    HOST_VOICES = {
+        "Host A": "Aaliyah-PlayAI",
+        "Host B": "Basil-PlayAI",
+    }
+
     def validate_input(self, input_data: dict) -> bool:
-        """This generator expects a simple string body, so this method is not used."""
         return True
 
-    def _validate_podcast_data(self, data: dict) -> dict:
-        """Validates the structure and content of generated podcast data."""
-        errors = []
+    def _parse_script(self, script: str) -> List[Tuple[str, str]]:
+        pattern = re.compile(r"\[(Host\s[AB])\]:\s*(.*)")
+        lines = script.strip().split("\n")
+        parsed_script = []
+        for line in lines:
+            match = pattern.match(line)
+            if match:
+                speaker, dialogue = match.groups()
+                if dialogue.strip():
+                    parsed_script.append((speaker.strip(), dialogue.strip()))
+        return parsed_script
 
-        # Check required fields
-        required_fields = ["title", "keynotes", "facts"]
-        for field in required_fields:
-            if field not in data:
-                errors.append(f"Missing required field: {field}")
-                continue
+    def _combine_audio_chunks(
+        self, file_paths: List[str], pause_ms: int = 250, top_db: int = 20
+    ) -> bytes:
+        podcast = AudioSegment.empty()
+        log.info(f"Combining {len(file_paths)} audio chunks...")
+        for file_path in sorted(file_paths):
+            try:
+                y, sr = librosa.load(file_path, sr=None)
+                if len(y) == 0:
+                    continue
+                y_trimmed, _ = librosa.effects.trim(y, top_db=top_db)
+                y_trimmed_int = (y_trimmed * 32767).astype(np.int16)
+                sound = AudioSegment(
+                    y_trimmed_int.tobytes(),
+                    frame_rate=sr,
+                    sample_width=y_trimmed_int.dtype.itemsize,
+                    channels=1,
+                )
+                podcast += sound
+                podcast += AudioSegment.silent(duration=pause_ms)
+            except Exception as e:
+                log.error(
+                    f"Error processing audio file {file_path}: {e}",
+                    method="_combine_audio_chunks",
+                )
+        buffer = io.BytesIO()
+        podcast.export(buffer, format="wav")
+        buffer.seek(0)
+        return buffer.read()
 
-            if not data[field]:
-                errors.append(f"Field '{field}' cannot be empty")
+    def _upload_to_s3(self, data: bytes, key: str) -> str:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.s3_key_id,
+            aws_secret_access_key=settings.s3_secret_key,
+            endpoint_url=f"http://{settings.s3_endpoint}:{settings.s3_port}",
+            region_name=settings.s3_region,
+            config=Config(s3={"addressing_style": "path"}),
+        )
+        bucket = settings.s3_bucket_podcast_audio
+        try:
+            s3_client.upload_fileobj(io.BytesIO(data), bucket, key)
+            log.info(f"Successfully uploaded audio to s3://{bucket}/{key}")
+            return key
+        except (BotoCoreError, ClientError) as e:
+            log.error(f"Failed to upload audio to S3: {e}", method="_upload_to_s3")
+            raise
 
-        # Validate title
-        if "title" in data and data["title"]:
-            title = data["title"].strip()
-            if len(title) < 15:
-                errors.append("Title must be at least 15 characters long")
-            elif len(title) > 80:
-                errors.append("Title must be 80 characters or less")
-            elif not title:
-                errors.append("Title cannot be empty or whitespace only")
-
-        # Validate keynotes
-        if "keynotes" in data:
-            if not isinstance(data["keynotes"], list):
-                errors.append("Keynotes must be a list")
-            elif len(data["keynotes"]) < 2:
-                errors.append("Must have at least 2 keynotes")
-            elif len(data["keynotes"]) > 7:
-                errors.append("Cannot have more than 7 keynotes")
-            else:
-                for i, keynote in enumerate(data["keynotes"]):
-                    if not isinstance(keynote, str):
-                        errors.append(f"Keynote {i+1} must be a string")
-                    elif len(keynote.strip()) < 10:
-                        errors.append(f"Keynote {i+1} must be at least 10 characters")
-                    elif len(keynote.strip()) > 100:
-                        errors.append(f"Keynote {i+1} must be 100 characters or less")
-
-        # Validate facts
-        if "facts" in data:
-            if not isinstance(data["facts"], list):
-                errors.append("Facts must be a list")
-            elif len(data["facts"]) < 2:
-                errors.append("Must have at least 2 facts")
-            elif len(data["facts"]) > 5:
-                errors.append("Cannot have more than 5 facts")
-            else:
-                for i, fact in enumerate(data["facts"]):
-                    if not isinstance(fact, str):
-                        errors.append(f"Fact {i+1} must be a string")
-                    elif len(fact.strip()) < 10:
-                        errors.append(f"Fact {i+1} must be at least 10 characters")
-                    elif len(fact.strip()) > 150:
-                        errors.append(f"Fact {i+1} must be 150 characters or less")
-
-        return {"valid": len(errors) == 0, "errors": errors}
-
-    def _process_groups(self, groups, channel: BlockingChannel, podcast: Podcast):
-        """Processes grouped sources and returns validated podcast segments."""
-        episode_segments = []
-
-        for group_index, group in enumerate(groups):
-            log.info(
-                f"Processing group {group_index + 1}/{len(groups)} with {len(group)} sources",
-                method="_process_groups",
-            )
-
+    def _generate_segment_summaries(
+        self, groups: List[List[Any]], channel: BlockingChannel, podcast_id: str
+    ) -> List[Dict]:
+        """Processes vector groups to generate high-level segment summaries."""
+        summaries = []
+        total_groups = len(groups)
+        for i, group in enumerate(groups):
             self._publish_status(
                 channel,
-                podcast.id,
+                podcast_id,
                 {
-                    "stage": "processing",
-                    "message": f"Analyzing content group {group_index + 1} of {len(groups)}...",
+                    "stage": "summarizing_segments",
+                    "message": f"Summarizing content segment {i + 1} of {total_groups}...",
                 },
                 "podcast",
             )
-
             content_snippets = "\n\n---\n\n".join(
-                [source.content for source in group[:5]]
+                [vector.content for vector in group[:15]]
             )
-
-            response = ai_gateway_service.generate_text(
-                {
-                    "prompt_type": "podcast_segment",
-                    "prompt_version": "v1",
-                    "prompt_vars": {"content_snippets": content_snippets},
-                }
-            )
-
             try:
-                podcast_data = json.loads(response)
-
-                validation_result = self._validate_podcast_data(podcast_data)
-                if not validation_result["valid"]:
-                    log.error(
-                        f"Validation failed for podcast ID {podcast.id}, group {group_index + 1}: {validation_result['errors']}",
-                        method="_process_groups",
-                    )
-                    self._publish_status(
-                        channel,
-                        podcast.id,
-                        {
-                            "stage": "error",
-                            "message": f"Generated content validation failed: {', '.join(validation_result['errors'])}",
-                        },
-                        "podcast",
-                    )
-                    continue
-
-                podcast_data["group_index"] = group_index + 1
-                podcast_data["source_count"] = len(group)
-
-                episode_segments.append(podcast_data)
-
-                log.info(
-                    f"Successfully processed group {group_index + 1} for podcast ID {podcast.id}: {podcast_data['title']}",
-                    method="_process_groups",
-                )
-
-            except json.JSONDecodeError as e:
-                log.error(
-                    f"Failed to parse AI response as JSON for podcast ID {podcast.id}, group {group_index + 1}: {e}",
-                    method="_process_groups",
-                )
-                self._publish_status(
-                    channel,
-                    podcast.id,
+                response_str = ai_gateway_service.generate_text(
                     {
-                        "stage": "error",
-                        "message": f"Invalid JSON response from AI for group {group_index + 1}",
-                    },
-                    "podcast",
-                )
-                continue
-            except Exception as e:
-                log.error(
-                    f"Unexpected error processing group {group_index + 1} for podcast ID {podcast.id}: {e}",
-                    method="_process_groups",
-                )
-                self._publish_status(
-                    channel,
-                    podcast.id,
-                    {
-                        "stage": "error",
-                        "message": f"Unexpected error processing group {group_index + 1}: {str(e)}",
-                    },
-                    "podcast",
-                )
-                continue
-
-        return episode_segments
-
-    def _porcess_segments(self, episode_segments, db, podcast: Podcast):
-        script_segments = []
-
-        for segment in episode_segments:
-            search_queries = segment.get("keynotes", [])
-            all_related_docs = []
-            for query in search_queries[:3]:
-                related_docs = self._fetch_related_documents(
-                    db, query, podcast.pocket_id, limit=5
-                )
-                all_related_docs.extend(related_docs)
-
-            seen_ids = set()
-            unique_docs = []
-            for doc in all_related_docs:
-                if doc["vector_id"] not in seen_ids:
-                    seen_ids.add(doc["vector_id"])
-                    unique_docs.append(doc)
-
-            unique_docs.sort(key=lambda x: x["similarity_distance"])
-            top_docs = unique_docs[:10]
-            if top_docs:
-                context_content = "\n\n".join(
-                    [
-                        f"Source: {doc['source_name']}\nContent: {doc['content']}"
-                        for doc in top_docs
-                    ]
-                )
-                context_facts = "\n".join(
-                    [f"- {fact}" for fact in segment.get("facts", [])]
-                )
-                episode_content = ai_gateway_service.generate_text(
-                    {
-                        "prompt_type": "podcast_script",
+                        "prompt_type": "podcast_segment",
                         "prompt_version": "v1",
-                        "prompt_vars": {
-                            "context_content": context_content,
-                            "facts": context_facts,
-                        },
+                        "prompt_vars": {"content_snippets": content_snippets},
                     }
                 )
-                script_segments.append(episode_content)
+                segment_data = json.loads(response_str)
+                summaries.append(segment_data)
+            except (json.JSONDecodeError, Exception) as e:
+                log.error(
+                    f"Failed to generate or parse segment summary for group {i}: {e}"
+                )
+        return summaries
 
-        return script_segments
+    def _generate_final_script(
+        self, summaries: List[Dict], channel: BlockingChannel, podcast_id: str
+    ) -> str:
+        """Generates the final, cohesive script from segment summaries."""
+        self._publish_status(
+            channel,
+            podcast_id,
+            {
+                "stage": "writing_final_script",
+                "message": "Writing the final podcast script...",
+            },
+            "podcast",
+        )
+
+        summaries_text = ""
+        for i, summary in enumerate(summaries):
+            summaries_text += f"Segment {i + 1}:\n"
+            summaries_text += f"  Title: {summary.get('title', 'N/A')}\n"
+            summaries_text += "  Keynotes:\n"
+            for keynote in summary.get("keynotes", []):
+                summaries_text += f"    - {keynote}\n"
+            summaries_text += "\n"
+
+        final_script = ai_gateway_service.generate_text(
+            {
+                "prompt_type": "podcast_script_combiner",
+                "prompt_version": "v1",
+                "prompt_vars": {"segment_summaries": summaries_text},
+            }
+        )
+        return final_script
 
     def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
-        """Generates podcast using the AI Gateway and updates the database."""
         log.info(
             f"Generating podcast for '{podcast.title}' (ID: {podcast.id})",
             method="_create_podcast",
@@ -228,59 +174,106 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
         self._publish_status(
             channel,
             podcast.id,
-            {
-                "stage": "starting",
-                "message": f"Starting podcast generation for '{podcast.title}'...",
-            },
+            {"stage": "starting", "message": "Starting podcast generation..."},
             "podcast",
         )
 
+        episode = podcast.episodes[0]
+
+        self._publish_status(
+            channel,
+            podcast.id,
+            {"stage": "fetching_vectors", "message": "Gathering content..."},
+            "podcast",
+        )
         sources = self._fetch_sources_with_vectors(db, podcast.pocket_id)
-        groups = self._cluster_source_vector(sources)
+        if not sources:
+            raise ValueError("No sources with content found in this pocket.")
 
-        episode_segments = self._process_groups(groups, channel, podcast)
+        self._publish_status(
+            channel,
+            podcast.id,
+            {"stage": "clustering", "message": "Analyzing and grouping content..."},
+            "podcast",
+        )
+        vector_groups = self._cluster_source_vector(sources)
+        log.info(f"Clustered content into {len(vector_groups)} thematic groups.")
 
-        if episode_segments:
-            script_segments = self._porcess_segments(episode_segments, db, podcast)
-
-            # Handle script combinations. Either by passing all episodes to the llm and asking it to combine or passing a few at a time depending on amount.
-
-            # Than run tts production.
-            # Split script in to chunks based on speaker and run it through tts.
-            # Combine the chunks with logic from colab document.
-            # Do some post processing
-            # Upload chunks and the full script to s3
-            # Save to database and then notify user about finished
-
-            log.info(
-                f"Successfully generated {len(episode_segments)} segments for podcast ID {podcast.id}",
-                method="_create_podcast",
+        segment_summaries = self._generate_segment_summaries(
+            vector_groups, channel, podcast.id
+        )
+        if not segment_summaries:
+            raise ValueError(
+                "Failed to generate any valid segment summaries from the content."
             )
-            log.info(episode_segments)
+
+        final_script = self._generate_final_script(
+            segment_summaries, channel, podcast.id
+        )
+        parsed_script = self._parse_script(final_script)
+        if not parsed_script:
+            raise ValueError(
+                "Failed to generate a valid final script from segment summaries."
+            )
+
+        log.info(f"Generated final script with {len(parsed_script)} lines.")
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            self._publish_status(
+                channel,
+                podcast.id,
+                {
+                    "stage": "generating_audio",
+                    "message": f"Recording dialogue for {len(parsed_script)} lines...",
+                },
+                "podcast",
+            )
+            audio_files = []
+            for i, (speaker, line) in enumerate(parsed_script):
+                voice = self.HOST_VOICES.get(speaker, "default_voice")
+                audio_bytes = ai_gateway_service.generate_tts(text=line, voice=voice)
+                file_path = os.path.join(temp_dir, f"line_{i:04d}.wav")
+                with open(file_path, "wb") as f:
+                    f.write(audio_bytes)
+                audio_files.append(file_path)
+
+            self._publish_status(
+                channel,
+                podcast.id,
+                {"stage": "combining_audio", "message": "Editing and mixing audio..."},
+                "podcast",
+            )
+            final_audio_bytes = self._combine_audio_chunks(audio_files)
+
+            self._publish_status(
+                channel,
+                podcast.id,
+                {"stage": "uploading", "message": "Uploading final podcast..."},
+                "podcast",
+            )
+            audio_key = f"{podcast.id}/{uuid.uuid4()}.wav"
+            self._upload_to_s3(final_audio_bytes, audio_key)
+
+            episode.content = final_script
+            episode.audio_key = audio_key
+            podcast.generated = "COMPLETED"
+            db.commit()
+
             self._publish_status(
                 channel,
                 podcast.id,
                 {
                     "stage": "completed",
-                    "message": f"Podcast generation completed with {len(episode_segments)} segments",
-                    "segments": episode_segments,
+                    "message": "Podcast is ready!",
+                    "audioKey": audio_key,
                 },
                 "podcast",
             )
-        else:
-            log.error(
-                f"No valid segments generated for podcast ID {podcast.id}",
-                method="_create_podcast",
-            )
-            self._publish_status(
-                channel,
-                podcast.id,
-                {
-                    "stage": "error",
-                    "message": "No valid content segments could be generated",
-                },
-                "podcast",
-            )
+            log.info(f"Successfully completed podcast generation for ID: {podcast.id}")
+
+        finally:
+            shutil.rmtree(temp_dir)
 
     def generate(
         self,
@@ -290,7 +283,6 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
         properties: BasicProperties,
         body: bytes,
     ) -> None:
-        """Processes a podcast generation request."""
         self._process_message(
             db,
             channel,
