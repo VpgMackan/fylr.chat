@@ -52,7 +52,11 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
         return parsed_script
 
     def _combine_audio_chunks(
-        self, file_paths: List[str], pause_ms: int = 250, top_db: int = 20
+        self,
+        file_paths: List[str],
+        pause_ms: int = 250,
+        top_db: int = 20,
+        post_speech_buffer_ms: int = 200,
     ) -> bytes:
         podcast = AudioSegment.empty()
         log.info(f"Combining {len(file_paths)} audio chunks...")
@@ -61,8 +65,19 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 y, sr = librosa.load(file_path, sr=None)
                 if len(y) == 0:
                     continue
-                y_trimmed, _ = librosa.effects.trim(y, top_db=top_db)
-                y_trimmed_int = (y_trimmed * 32767).astype(np.int16)
+
+                y_trimmed, index = librosa.effects.trim(y, top_db=top_db)
+
+                if len(index) >= 2:
+                    speech_end_frame = index[1]
+                    buffer_frames = int((post_speech_buffer_ms / 1000) * sr)
+                    extended_end_frame = min(speech_end_frame + buffer_frames, len(y))
+
+                    y_with_buffer = y[index[0] : extended_end_frame]
+                else:
+                    y_with_buffer = y_trimmed
+
+                y_trimmed_int = (y_with_buffer * 32767).astype(np.int16)
                 sound = AudioSegment(
                     y_trimmed_int.tobytes(),
                     frame_rate=sr,
