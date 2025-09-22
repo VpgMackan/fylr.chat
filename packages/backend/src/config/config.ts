@@ -40,6 +40,9 @@ class EnvironmentVariables {
   S3_BUCKET_USER_FILE: string;
 
   @IsString()
+  S3_BUCKET_PODCAST_AUDIO: string;
+
+  @IsString()
   JWT_SECRET: string;
 
   @IsString()

@@ -1,0 +1,86 @@
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Param,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
+  Request,
+  Response,
+  StreamableFile,
+} from '@nestjs/common';
+import { Response as ExpressResponse } from 'express';
+
+import { PodcastService } from './podcast.service';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { CreatePodcastDto } from '@fylr/types';
+import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
+
+@UseGuards(AuthGuard)
+@Controller('podcast')
+export class PodcastController {
+  constructor(private podcastService: PodcastService) {}
+
+  @Get('pocket/:pocketId')
+  getPodcastsByPocketId(
+    @Param('pocketId') pocketId: string,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.getPodcastsByPocketId(
+      pocketId,
+      req.user.id,
+      take,
+      offset,
+      searchTerm,
+    );
+  }
+
+  @Post('pocket/:pocketId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  createPodcast(
+    @Param('pocketId') pocketId: string,
+    @Body() createPodcastDto: CreatePodcastDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.createPodcast(
+      pocketId,
+      req.user.id,
+      createPodcastDto,
+    );
+  }
+
+  @Get('/:podcastId')
+  getPodcastById(
+    @Param('podcastId') podcastId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.getPodcastById(podcastId, req.user.id);
+  }
+
+  @Get('/:podcastId/audio')
+  async streamPodcastAudio(
+    @Param('podcastId') podcastId: string,
+    @Request() req: RequestWithUser,
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const audioStream = await this.podcastService.streamPodcastAudio(
+      podcastId,
+      req.user.id,
+    );
+
+    res.set({
+      'Content-Type': 'audio/wav',
+      'Content-Disposition': 'inline',
+    });
+
+    return new StreamableFile(audioStream);
+  }
+}
