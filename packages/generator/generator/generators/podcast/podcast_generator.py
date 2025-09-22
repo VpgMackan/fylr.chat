@@ -6,7 +6,6 @@ import tempfile
 import shutil
 import io
 import uuid
-import time
 from typing import List, Tuple, Dict, Any
 
 import boto3
@@ -33,8 +32,8 @@ log = structlog.getLogger(__name__)
 
 class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
     HOST_VOICES = {
-        "Host A": "Aaliyah-PlayAI",
-        "Host B": "Basil-PlayAI",
+        "Host A": "21m00Tcm4TlvDq8ikWAM",
+        "Host B": "IKne3meq5aSn9XLyUdCD",
     }
 
     def validate_input(self, input_data: dict) -> bool:
@@ -238,8 +237,6 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 with open(file_path, "wb") as f:
                     f.write(audio_bytes)
                 audio_files.append(file_path)
-
-                time.sleep(5)
 
             self._publish_status(
                 channel,
