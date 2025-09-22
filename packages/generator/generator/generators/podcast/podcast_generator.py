@@ -32,8 +32,8 @@ log = structlog.getLogger(__name__)
 
 class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
     HOST_VOICES = {
-        "Host A": "21m00Tcm4TlvDq8ikWAM",
-        "Host B": "IKne3meq5aSn9XLyUdCD",
+        "Host A": "Aaliyah-PlayAI",
+        "Host B": "Basil-PlayAI",
     }
 
     def validate_input(self, input_data: dict) -> bool:

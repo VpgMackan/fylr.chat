@@ -17,7 +17,6 @@ class GroqProvider(BaseProvider):
             self.client = None
             self.async_client = None
         else:
-            # Create httpx clients explicitly to avoid proxy configuration issues
             sync_transport = httpx.HTTPTransport(retries=3)
             sync_http_client = httpx.Client(transport=sync_transport)
 
@@ -77,3 +76,35 @@ class GroqProvider(BaseProvider):
         except Exception as e:
             log.error("groq_stream_generation_error", error=str(e))
             raise Exception(f"Groq stream generation error: {e}") from e
+
+    def generate_text_to_speech(self, text, model, voice, options):
+        """
+        Generates text-to-speech audio using Groq.
+        """
+        if not self.client:
+            raise ValueError("Groq API key is not configured")
+
+        try:
+            response_format = options.get("response_format", "wav")
+
+            cleaned_options = {
+                k: v for k, v in options.items() if k != "response_format"
+            }
+
+            response = self.client.audio.speech.create(
+                model=model,
+                voice=voice,
+                input=text,
+                response_format=response_format,
+                **cleaned_options,
+            )
+
+            audio_bytes = b""
+            for chunk in response.iter_bytes():
+                audio_bytes += chunk
+
+            return audio_bytes
+
+        except Exception as e:
+            log.error("groq_tts_error", error=str(e))
+            raise Exception(f"Groq TTS error: {e}") from e
