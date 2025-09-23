@@ -14,7 +14,7 @@
 - [ ] Testing (Expansion): Expand test coverage (E2E for backend, components for frontend).
 - [x] UI: Make source citations in the chat UI clickable.
 - [ ] RAG: Implement a re-ranking step in the chat pipeline.
-- [ ] Implement podcast generation (Insperation: [Notebook LM](https://notebooklm.google/))
+- [x] Implement podcast generation (Insperation: [Notebook LM](https://notebooklm.google/))
 - [ ] Implement video generation (Insperation: [Notebook LM](https://notebooklm.google/))
 
 ## Low priority
