@@ -17,6 +17,10 @@ _base_providers = {
     "jina": JinaProvider(),
     "elevenlabs": ElevenLabsProvider(),
     "groq": GroqProvider(),
+    "colab": OpenaiCompatibleProvider(
+        api_key="colab",
+        base_url="https://gertrude-unsignifiable-unfibrously.ngrok-free.dev/v1",
+    ),
 }
 
 # Create auto provider with reference to base providers

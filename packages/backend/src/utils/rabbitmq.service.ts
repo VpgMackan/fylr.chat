@@ -36,6 +36,11 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
           'x-dead-letter-exchange': 'fylr-dlx',
           'x-dead-letter-routing-key': 'summary-generator',
         };
+      } else if (queue === 'podcast-generator') {
+        queueOptions.arguments = {
+          'x-dead-letter-exchange': 'fylr-dlx',
+          'x-dead-letter-routing-key': 'podcast-generator',
+        };
       }
 
       await this.channel.assertQueue(queue, queueOptions);
