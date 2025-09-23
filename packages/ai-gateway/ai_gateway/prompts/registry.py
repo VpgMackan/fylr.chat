@@ -37,6 +37,7 @@ class PromptEntry:
         self.template_text: Optional[str] = raw.get("template")
         self.messages_template_text: Optional[str] = raw.get("messages_template")
         self.variables: List[Dict[str, Any]] = raw.get("variables", [])
+        self.meta: Dict[str, Any] = raw.get("meta", {})
         self._compiled_template: Optional[Template] = None
         self._compiled_messages_template: Optional[Template] = None
 

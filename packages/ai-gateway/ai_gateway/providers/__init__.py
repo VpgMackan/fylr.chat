@@ -1,0 +1,30 @@
+from .providers.openai_compatible import OpenaiCompatibleProvider
+from .providers.jina import JinaProvider
+from .providers.auto import AutoProvider
+from .providers.elevenlabs import ElevenLabsProvider
+from .providers.groq import GroqProvider
+
+from ..config import settings
+
+# Create base providers first
+_base_providers = {
+    "ollama": OpenaiCompatibleProvider(
+        api_key="ollama", base_url=settings.ollama_base_url
+    ),
+    "openai": OpenaiCompatibleProvider(
+        api_key=settings.openai_api_key, base_url=settings.llm_proxy_url
+    ),
+    "jina": JinaProvider(),
+    "elevenlabs": ElevenLabsProvider(),
+    "groq": GroqProvider(),
+    "colab": OpenaiCompatibleProvider(
+        api_key="colab",
+        base_url="https://gertrude-unsignifiable-unfibrously.ngrok-free.dev/v1",
+    ),
+}
+
+# Create auto provider with reference to base providers
+providers = {
+    **_base_providers,
+    "auto": AutoProvider(_base_providers),
+}

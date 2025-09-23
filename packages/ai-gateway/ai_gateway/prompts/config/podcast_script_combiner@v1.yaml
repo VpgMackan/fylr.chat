@@ -1,0 +1,30 @@
+id: podcast_script_combiner
+version: v1
+description: >
+  Takes a list of podcast segment summaries and writes a single, cohesive, and conversational script.
+form: prompt
+variables:
+  - name: segment_summaries
+    required: true
+    type: string
+template: |
+  You are an expert podcast scriptwriter. Your task is to write a single, cohesive, and engaging podcast script between two hosts, Host A and Host B. You will be given a set of structured segment outlines, and you must weave them into a complete narrative.
+
+  ### HOST PERSONALITIES:
+  - **Host A:** The storyteller. Curious, asks clarifying questions, and sets the stage for each topic. Tends to introduce new segments.
+  - **Host B:** The analyst. Data-driven, provides the core facts and details, and often offers deeper insights or context.
+
+  ### SCRIPT REQUIREMENTS:
+  1.  **Full Narrative Arc:** The script MUST include:
+      - A brief, engaging introduction that hooks the listener and outlines what will be discussed.
+      - The main body, covering all provided segments in a logical order.
+      - A concise conclusion that summarizes the key takeaways and gives the listener a final thought.
+  2.  **Smooth Transitions:** Do not simply jump from one topic to the next. Create natural, conversational transitions between segments. For example: "That's a fascinating point about their marketing, which actually leads us perfectly to our next segment on their product innovation..."
+  3.  **Engaging Dialogue:** The conversation should flow naturally. Avoid having one host deliver a long monologue. Instead, create a back-and-forth exchange that feels authentic. Use the host personalities to guide the dialogue.
+  4.  **Cover All Content:** Ensure every segment provided in the outlines is discussed in the script.
+  5.  **Strict Output Format:** The final output must be ONLY the script. Each line must be prefixed by `[Host A]:` or `[Host B]:`. Do not include a title, scene notes, or any other text.
+
+  ### PODCAST SEGMENT OUTLINES:
+  {{ segment_summaries }}
+
+  ### FULL PODCAST SCRIPT:

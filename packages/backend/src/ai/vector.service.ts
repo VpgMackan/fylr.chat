@@ -15,16 +15,19 @@ export class AiVectorService {
 
   private async _fetchEmbeddingsFromAiGateway(
     text: string,
-    model: string,
-    options: Record<string, unknown>,
+    model?: string,
+    options: Record<string, unknown> = {},
     task?: string,
   ): Promise<number[]> {
     const requestPayload: Record<string, unknown> = {
-      provider: 'jina',
-      model,
       input: [text],
       options,
     };
+
+    if (model) {
+      requestPayload.provider = 'jina';
+      requestPayload.model = model;
+    }
 
     if (task) {
       requestPayload.options = { ...options, task };
@@ -80,16 +83,16 @@ export class AiVectorService {
 
   async generate(
     text: string,
-    model: string,
-    options: Record<string, unknown>,
+    model?: string,
+    options: Record<string, unknown> = {},
   ): Promise<number[]> {
     return this._fetchEmbeddingsFromAiGateway(text, model, options);
   }
 
   async search(
     text: string,
-    model: string,
-    options: Record<string, unknown>,
+    model?: string,
+    options: Record<string, unknown> = {},
   ): Promise<number[]> {
     return this._fetchEmbeddingsFromAiGateway(
       text,

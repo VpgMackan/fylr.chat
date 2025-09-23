@@ -11,6 +11,7 @@ import { EventsModule } from './events/events.module';
 import { validate } from './config/config';
 import { ChatModule } from './chat/chat.module';
 import { SummaryModule } from './summary/summary.module';
+import { PodcastModule } from './podcast/podcast.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SummaryModule } from './summary/summary.module';
     EventsModule,
     ChatModule,
     SummaryModule,
+    PodcastModule,
   ],
 })
 export class AppModule {}

@@ -58,7 +58,7 @@ def fetch_embeddings_from_ai_gateway(
     chunks: List[str],
     job_key: str,
     info_callback: callable,
-    model: str = "jina-clip-v2",
+    model: Optional[str] = None,
     options: Optional[Dict[str, Any]] = None,
 ) -> List[List[float]]:
     """
@@ -69,8 +69,6 @@ def fetch_embeddings_from_ai_gateway(
 
     options = options or {}
     request_payload = {
-        "provider": "jina",
-        "model": model,
         "input": chunks,
         "options": options,
     }
@@ -156,9 +154,7 @@ def vectorize_text(
         raise ValueError("No chunks provided for vectorization")
 
     info_callback("Starting vectorization process...", job_key)
-    return fetch_embeddings_from_ai_gateway(
-        chunks, job_key, info_callback, "jina-clip-v2", {}
-    )
+    return fetch_embeddings_from_ai_gateway(chunks, job_key, info_callback)
 
 
 def save_text_chunks_as_vectors(
