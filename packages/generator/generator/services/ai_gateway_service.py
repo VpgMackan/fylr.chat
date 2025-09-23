@@ -77,8 +77,8 @@ class AIGatewayService:
         self,
         text: str,
         voice: str,
-        model: str = "playai-tts",
-        provider: str = "groq",
+        model: str = "xtts-v2",
+        provider: str = "colab",
     ) -> bytes:
         request_payload = {
             "provider": provider,
