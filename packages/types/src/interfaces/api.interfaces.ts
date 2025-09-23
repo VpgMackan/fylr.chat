@@ -70,3 +70,20 @@ export interface SummaryApiResponse {
   createdAt: string;
   generated: string | null;
 }
+
+export interface PodcastEpisodeApiResponse {
+  id: string;
+  title: string;
+  focus?: string;
+  content: string;
+  createdAt: string;
+  audioKey?: string;
+}
+
+export interface PodcastApiResponse {
+  id: string;
+  title: string;
+  createdAt: string;
+  generated: string | null;
+  episodes: PodcastEpisodeApiResponse[];
+}

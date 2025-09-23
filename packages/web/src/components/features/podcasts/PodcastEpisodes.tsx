@@ -1,18 +1,20 @@
 import { Icon } from '@iconify/react';
-import { Checkbox } from '@headlessui/react';
 
 export default function PodcastEpisodes({
   fileName,
-  fileType,
+  fileType = 'episode',
   selected = false,
+  onClick = () => {},
 }: {
   fileName: string;
-  fileType: string;
+  fileType?: string;
   selected?: boolean;
+  onClick?: () => void;
 }) {
   const fileIcon: Record<string, string> = {
     pdf: 'proicons:pdf-2',
     web: 'mdi:web',
+    episode: 'ph:microphone-fill',
   };
   const color = selected
     ? 'bg-blue-400 hover:bg-blue-300'
@@ -20,6 +22,7 @@ export default function PodcastEpisodes({
 
   return (
     <div
+      onClick={onClick}
       className={`flex ${color} transition-colors duration-150 rounded-lg border border-blue-400 p-3 justify-between items-center cursor-pointer`}
     >
       <Icon

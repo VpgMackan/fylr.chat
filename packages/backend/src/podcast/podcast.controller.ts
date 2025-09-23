@@ -68,17 +68,23 @@ export class PodcastController {
   @Get('/:podcastId/audio')
   async streamPodcastAudio(
     @Param('podcastId') podcastId: string,
+    @Query('episodeId') episodeId: string,
     @Request() req: RequestWithUser,
     @Response({ passthrough: true }) res: ExpressResponse,
   ) {
     const audioStream = await this.podcastService.streamPodcastAudio(
       podcastId,
+      episodeId,
       req.user.id,
     );
 
     res.set({
       'Content-Type': 'audio/wav',
       'Content-Disposition': 'inline',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
     });
 
     return new StreamableFile(audioStream);

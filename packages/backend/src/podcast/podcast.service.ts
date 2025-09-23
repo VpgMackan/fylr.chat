@@ -91,7 +91,11 @@ export class PodcastService {
     return newPodcast;
   }
 
-  async streamPodcastAudio(podcastId: string, userId: string) {
+  async streamPodcastAudio(
+    podcastId: string,
+    episodeId: string,
+    userId: string,
+  ) {
     const podcast = await this.prisma.podcast.findFirst({
       where: {
         id: podcastId,
@@ -112,9 +116,15 @@ export class PodcastService {
       throw new NotFoundException(`No episode found in this podcast.`);
     }
 
-    const episode = podcast.episodes[0];
+    const episode = podcast.episodes.find((ep) => ep.id === episodeId);
+    if (!episode) {
+      throw new NotFoundException(
+        `Episode with ID "${episodeId}" not found in this podcast.`,
+      );
+    }
+
     if (!episode.audioKey) {
-      throw new NotFoundException(`Audio not available for this podcast.`);
+      throw new NotFoundException(`Audio not available for this episode.`);
     }
 
     const bucket = this.configService.get<string>('S3_BUCKET_PODCAST_AUDIO');
