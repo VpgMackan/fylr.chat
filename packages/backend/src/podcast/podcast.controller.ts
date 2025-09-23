@@ -81,10 +81,6 @@ export class PodcastController {
     res.set({
       'Content-Type': 'audio/wav',
       'Content-Disposition': 'inline',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': 'true',
     });
 
     return new StreamableFile(audioStream);

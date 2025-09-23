@@ -110,17 +110,39 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
             if "usage" in response_data:
                 usage = response_data["usage"]
+
+                def safe_int_convert(value, default=0):
+                    """Safely convert a value to int, handling dicts and non-numeric values."""
+                    if value is None:
+                        return default
+                    if isinstance(value, dict):
+                        # If it's a dict, try to extract a reasonable numeric value
+                        # Common patterns: {"total": 123} or {"value": 123}
+                        for key in ["total", "value", "count", "tokens"]:
+                            if key in value and isinstance(
+                                value[key], (int, float, str)
+                            ):
+                                try:
+                                    return int(float(value[key]))
+                                except (ValueError, TypeError):
+                                    continue
+                        return default
+                    try:
+                        return int(float(value))
+                    except (ValueError, TypeError):
+                        return default
+
                 response_data["usage"] = {
-                    "completion_tokens_details": int(
-                        usage.get("completion_tokens_details") or 0
+                    "completion_tokens_details": safe_int_convert(
+                        usage.get("completion_tokens_details")
                     ),
-                    "prompt_tokens_details": int(
-                        usage.get("prompt_tokens_details") or 0
+                    "prompt_tokens_details": safe_int_convert(
+                        usage.get("prompt_tokens_details")
                     ),
-                    "queue_time": int(float(usage.get("queue_time") or 0)),
-                    "prompt_time": int(float(usage.get("prompt_time") or 0)),
-                    "completion_time": int(float(usage.get("completion_time") or 0)),
-                    "total_time": int(float(usage.get("total_time") or 0)),
+                    "queue_time": safe_int_convert(usage.get("queue_time")),
+                    "prompt_time": safe_int_convert(usage.get("prompt_time")),
+                    "completion_time": safe_int_convert(usage.get("completion_time")),
+                    "total_time": safe_int_convert(usage.get("total_time")),
                 }
 
             return ChatCompletionResponse(**response_data)

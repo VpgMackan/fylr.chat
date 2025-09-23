@@ -27,7 +27,7 @@ class AutoProvider(BaseProvider):
         """
 
         MODEL_MAP = {
-            "default": ("openai", "or/deephermes-3-llama-3-8b"),
+            "default": ("openai", "x-ai/grok-4-fast:free"),
         }
 
         if request.prompt_type:
@@ -78,6 +78,8 @@ class AutoProvider(BaseProvider):
         Selects a model and delegates the streaming call.
         """
         provider_name, model_name, provider_instance = self._select_model(request)
+        request.model = model_name
+
         async for chunk in provider_instance.generate_text_stream(
             messages=messages, request=request
         ):

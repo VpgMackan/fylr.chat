@@ -27,7 +27,7 @@ export default function SourcePage({
   useEffect(() => {
     if (sourceId) {
       setLoading(true);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}source/${sourceId}/vectors`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/source/${sourceId}/vectors`, {
         credentials: 'include',
       })
         .then((res) => res.json())
@@ -58,7 +58,7 @@ export default function SourcePage({
     <div className="flex h-full gap-x-2">
       <div className="flex-1">
         <iframe
-          src={`${process.env.NEXT_PUBLIC_API_URL}source/file/${sourceId}`}
+          src={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${sourceId}`}
           className="w-full h-full"
         />
       </div>

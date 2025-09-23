@@ -36,6 +36,7 @@ export default function PodcastIdPage({
   const [playing, setPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
+  const [volume, setVolume] = useState<number>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const router = useRouter();
@@ -172,6 +173,7 @@ export default function PodcastIdPage({
 
           if (audioRef.current) {
             audioRef.current.src = blobUrl;
+            audioRef.current.volume = volume;
           }
         }
 
@@ -192,6 +194,14 @@ export default function PodcastIdPage({
     }
   };
 
+  const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = Number(event.target.value);
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
@@ -201,6 +211,7 @@ export default function PodcastIdPage({
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      audioRef.current.volume = volume;
     }
   };
 
@@ -327,23 +338,41 @@ export default function PodcastIdPage({
             </div>
           </div>
 
-          {/* Audio Progress Bar */}
-          <div className="flex items-center gap-2 flex-col">
-            <div className="flex justify-between w-full">
-              <span className="text-s text-left">
-                {formatTime(currentTime)}
-              </span>
-              <span className="text-s text-right">{formatTime(duration)}</span>
+          {/* Audio Progress Bar and Volume Controls */}
+          <div className="flex items-center gap-4 bg-blue-200 rounded-2xl p-2">
+            {/* Progress Bar Section */}
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="flex justify-between">
+                <span className="text-s text-left">
+                  {formatTime(currentTime)}
+                </span>
+                <span className="text-s text-right">
+                  {formatTime(duration)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={duration || 0}
+                value={currentTime}
+                onChange={handleSeek}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+              />
             </div>
 
-            <input
-              type="range"
-              min="0"
-              max={duration || 0}
-              value={currentTime}
-              onChange={handleSeek}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-            />
+            {/* Volume Controls Section */}
+            <div className="flex items-center gap-2 min-w-fit">
+              <Icon icon="fluent:speaker-2-20-filled" width="20" height="20" />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+              />
+            </div>
           </div>
 
           {/* Hidden Audio Element */}

@@ -116,7 +116,7 @@ export function useChat(chatId: string | null) {
     const connectSocket = async () => {
       try {
         const { token } = await getConversationWsToken(chatId);
-        const socket = io(`${process.env.NEXT_PUBLIC_API_URL}chat`, {
+        const socket = io(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
           auth: { token },
         });
         socketRef.current = socket;
