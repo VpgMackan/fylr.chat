@@ -28,6 +28,7 @@ class AutoProvider(BaseProvider):
 
         MODEL_MAP = {
             "default": ("openai", "x-ai/grok-4-fast:free"),
+            "code": ("openai", "x-ai/grok-4-fast:free"),
         }
 
         if request.prompt_type:

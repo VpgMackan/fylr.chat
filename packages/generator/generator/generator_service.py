@@ -4,6 +4,7 @@ from typing import Dict, Type
 from .generators.base_generator import BaseGenerator
 from .generators.summary.summary_generator import SummaryGenerator
 from .generators.podcast.podcast_generator import PodcastGenerator
+from .generators.video.video_generator import VideoGenerator
 
 log = structlog.getLogger(__name__)
 
@@ -20,12 +21,18 @@ class GeneratorService:
             "dlq_name": "podcast-generator.dlq",
             "routing_key": "podcast-generator",
         },
+        "video": {
+            "queue_name": "video-generator",
+            "dlq_name": "video-generator.dlq",
+            "routing_key": "video-generator",
+        },
     }
 
     def __init__(self):
         self._generators: Dict[str, Type[BaseGenerator]] = {
             "summary": SummaryGenerator,
             "podcast": PodcastGenerator,
+            "video": VideoGenerator,
         }
 
     def get_generator_class(self, generator_name: str) -> Type[BaseGenerator] | None:

@@ -78,6 +78,38 @@ class VideoGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 )
         return summaries
 
+    def _generate_final_script(
+        self, summaries: List[Dict], channel: BlockingChannel, video_id: str
+    ) -> str:
+        """Generates the final, cohesive script from segment summaries."""
+        self._publish_status(
+            channel,
+            video_id,
+            {
+                "stage": "writing_final_script",
+                "message": "Writing the final video script...",
+            },
+            "video",
+        )
+
+        summaries_text = ""
+        for i, summary in enumerate(summaries):
+            summaries_text += f"Segment {i + 1}:\n"
+            summaries_text += f"  Title: {summary.get('title', 'N/A')}\n"
+            summaries_text += "  Keynotes:\n"
+            for keynote in summary.get("keynotes", []):
+                summaries_text += f"    - {keynote}\n"
+            summaries_text += "\n"
+
+        final_script = ai_gateway_service.generate_text(
+            {
+                "prompt_type": "video_script_combiner",
+                "prompt_version": "v1",
+                "prompt_vars": {"segment_summaries": summaries_text},
+            }
+        )
+        return final_script
+
     def _create_video(self, db: Session, channel: BlockingChannel, video: Video):
         log.info(
             f"Generating video for '{video.title}' (ID: {video.id})",
@@ -117,7 +149,10 @@ class VideoGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
                 "Failed to generate any valid segment summaries from the content."
             )
 
-        log.info(f"Generated {len(segment_summaries)} segment summaries.")
+        final_script = self._generate_final_script(segment_summaries, channel, video.id)
+        print(final_script)
+
+        log.info(f"Generated final script with {len(final_script)} lines.")
 
         # How me do the video generation????????
         # Me think I get the segments and ask for a json video overview.
