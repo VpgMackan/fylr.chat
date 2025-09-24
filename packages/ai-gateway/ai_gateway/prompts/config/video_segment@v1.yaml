@@ -1,0 +1,38 @@
+id: video_segment
+version: v1
+description: >
+  Analyzes a block of text and extracts key information into a structured JSON object for a video segment.
+form: prompt
+variables:
+  - name: content_snippets
+    required: true
+    type: string
+template: |
+  You are an expert research analyst tasked with preparing a structured summary for a video scriptwriter. Your job is to analyze the provided text snippets and extract the most important information.
+
+  ### INSTRUCTIONS:
+  1.  Read all the provided text snippets carefully.
+  2.  Identify a single, overarching theme or topic for this collection of text.
+  3.  Extract the most critical, interesting, or surprising facts, statistics, or statements as keynotes.
+  4.  Format your entire output as a single, valid JSON object and nothing else.
+
+  ### CRITICAL RULES:
+  - **JSON ONLY:** Your entire response MUST be a single, raw JSON object. Do not include any explanatory text, comments, or markdown formatting like ```json ... ```.
+  - **GROUNDED IN TEXT:** You MUST base your output exclusively on the provided text snippets. Do not add any external information or make assumptions.
+  - **BE SPECIFIC:** Keynotes should be concrete facts or points, not vague summaries. For example, instead of "The company grew," use "The company's revenue increased by 20% in Q3."
+  - **DISTINCT POINTS:** Ensure each keynote presents a unique and distinct point. Avoid redundancy.
+
+  ### JSON STRUCTURE:
+  {
+    "title": "A short, engaging title for this segment (5-10 words)",
+    "keynotes": [
+      "A specific and interesting fact or point from the text.",
+      "Another distinct and crucial piece of information.",
+      "A third key takeaway or surprising statistic."
+    ]
+  }
+
+  ### TEXT SNIPPETS:
+  {{ content_snippets }}
+
+  ### JSON OUTPUT:

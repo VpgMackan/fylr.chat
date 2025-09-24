@@ -119,6 +119,20 @@ class VideoGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
 
         log.info(f"Generated {len(segment_summaries)} segment summaries.")
 
+        # How me do the video generation????????
+        # Me think I get the segments and ask for a json video overview.
+        # HERM.... something like
+        # example = [
+        #     {
+        #         "section_title": "Overview",
+        #         "script": "TTS text line",
+        #         "video_content": "manim script",
+        #     }
+        # ]
+        # Than we loop through every section... Run tts and render video?
+        # Sound simple. Probably not :(
+        # Haven't tried it yet. Don't wanna
+
         # TODO: Implement video generation logic here
         video.generated = "COMPLETED"
         db.commit()
