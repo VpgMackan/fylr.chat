@@ -34,6 +34,7 @@ model Pocket {
   conversations Conversation[]
   Summary       Summary[]
   Podcast       Podcast[]
+  Video         Video[]
 
   @@map("Pockets")
 }
@@ -115,6 +116,32 @@ model PodcastEpisode {
   podcast   Podcast  @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
   @@map("PodcastEpisode")
+}
+
+model Video {
+  id        String         @id @default(uuid())
+  pocketId  String         @map("pocket_id")
+  title     String
+  createdAt DateTime       @default(now()) @map("created_at")
+  length    Int
+  generated String?        @db.Text
+  pocket    Pocket         @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  episodes  VideoEpisode[]
+
+  @@map("Video")
+}
+
+model VideoEpisode {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  title     String
+  focus     String?  @db.Text
+  videoKey  String?  @map("video_key") @db.Text
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("VideoEpisode")
 }
 
 model Conversation {

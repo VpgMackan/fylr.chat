@@ -93,6 +93,34 @@ class Podcast(Base):
     episodes = relationship("PodcastEpisode", back_populates="podcast")
 
 
+class VideoEpisode(Base):
+    __tablename__ = "VideoEpisode"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    video_id = Column(String, ForeignKey("Video.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    title = Column(String, nullable=False)
+    focus = Column(Text, nullable=True)
+    video_key = Column(String, nullable=True)
+
+    video = relationship("Video", back_populates="episodes")
+
+
+class Video(Base):
+    __tablename__ = "Video"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
+    title = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    length = Column(BigInteger, nullable=False)
+    generated = Column(Text, nullable=True)
+
+    pocket = relationship("Pocket", back_populates="video")
+    episodes = relationship("VideoEpisode", back_populates="video")
+
+
 class Pocket(Base):
     __tablename__ = "Pockets"
 
@@ -107,3 +135,4 @@ class Pocket(Base):
     sources = relationship("Source", back_populates="pocket")
     summaries = relationship("Summary", back_populates="pocket")
     podcast = relationship("Podcast", back_populates="pocket")
+    video = relationship("Video", back_populates="pocket")
