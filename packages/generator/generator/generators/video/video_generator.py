@@ -1,7 +1,7 @@
 import structlog
 import json
 import io
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import boto3
 from botocore.client import Config
@@ -24,6 +24,23 @@ log = structlog.getLogger(__name__)
 class VideoGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
     def validate_input(self, input_data: dict) -> bool:
         return True
+
+    def _parse_script(self, script: str) -> List[Dict[str, str]]:
+        """Parse the JSON script string and return the structured data."""
+        try:
+            data = json.loads(script)
+            # Validate that data is a list and log video content for debugging
+            if isinstance(data, list):
+                for section in data:
+                    if isinstance(section, dict) and "video_content" in section:
+                        log.debug(f"Video content: {section['video_content']}")
+                return data
+            else:
+                log.error("Parsed script is not a list format")
+                return []
+        except json.JSONDecodeError as e:
+            log.error(f"Failed to parse script JSON: {e}")
+            return []
 
     def _upload_to_s3(self, data: bytes, key: str) -> str:
         s3_client = boto3.client(
@@ -150,23 +167,14 @@ class VideoGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             )
 
         final_script = self._generate_final_script(segment_summaries, channel, video.id)
-        print(final_script)
+        parsed_script = self._parse_script(final_script)
+        if not parsed_script:
+            raise ValueError(
+                "Failed to generate a valid final script from segment summaries."
+            )
+        print(parsed_script)
 
         log.info(f"Generated final script with {len(final_script)} lines.")
-
-        # How me do the video generation????????
-        # Me think I get the segments and ask for a json video overview.
-        # HERM.... something like
-        # example = [
-        #     {
-        #         "section_title": "Overview",
-        #         "script": "TTS text line",
-        #         "video_content": "manim script",
-        #     }
-        # ]
-        # Than we loop through every section... Run tts and render video?
-        # Sound simple. Probably not :(
-        # Haven't tried it yet. Don't wanna
 
         # TODO: Implement video generation logic here
         video.generated = "COMPLETED"
