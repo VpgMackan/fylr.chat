@@ -6,9 +6,12 @@ import { Icon } from '@iconify/react';
 export default function Conversation({
   name,
   selected,
+  onClick,
 }: {
   name: string;
   selected: boolean;
+
+  onClick?: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -19,6 +22,7 @@ export default function Conversation({
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={onClick}
     >
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-800 truncate pr-2">{name}</p>
