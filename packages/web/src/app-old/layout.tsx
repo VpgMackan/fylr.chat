@@ -26,9 +26,9 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={`${inter.variable}`}>
-      <body className="font-montserrat bg-blue-50 text-gray-900 h-screen">
+      <body className="p-16 font-montserrat bg-blue-50 text-gray-900 h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Toaster position="top-right" reverseOrder={false} />
+          <Toaster position='top-right' reverseOrder={false} />
           {children}
         </NextIntlClientProvider>
       </body>
