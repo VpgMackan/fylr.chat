@@ -40,8 +40,11 @@ export interface PocketWithRecentActivityApiResponse extends PocketApiResponse {
 export interface MessageApiResponse {
   id: string;
   conversationId: string;
-  role: 'user' | 'assistant';
-  content: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string | null; // Can be null for thoughts that only contain reasoning/tool_calls
+  reasoning: string | null;
+  toolCalls: any | null; // Can be more specific if you define a ToolCall type
+  toolCallId: string | null;
   createdAt: string;
   metadata: object;
 }

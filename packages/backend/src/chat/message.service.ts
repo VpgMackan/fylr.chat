@@ -201,32 +201,153 @@ export class MessageService {
   }
 
   async generateAndStreamAiResponseWithTools(
-    userMessage,
+    userMessage: any,
     server: Server,
   ): Promise<void> {
-    const { conversationId, content: userQuery } = userMessage;
-
-    const emitStatus = (stage: string, message: string) => {
-      server.to(conversationId).emit('conversationAction', {
-        action: 'statusUpdate',
-        conversationId,
-        data: { stage, message },
-      });
-    };
+    const { conversationId } = userMessage;
+    const MAX_ITERATIONS = 5;
+    let currentIteration = 0;
 
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { sources: true },
     });
     if (!conversation) {
       throw new NotFoundException(
         `Conversation with ID "${conversationId}" not found.`,
       );
     }
-
-    const recentMessages = await this.prisma.message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
+    });
+
+    const llmMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      tool_calls: m.toolCalls,
+    }));
+
+    while (currentIteration < MAX_ITERATIONS) {
+      currentIteration++;
+
+      const llmResponse = await this.llmService.generateWithTools(
+        llmMessages,
+        tools,
+      );
+
+      const responseMessage = llmResponse.choices[0].message;
+
+      const thoughtMessage = await this.createMessage(
+        {
+          role: 'assistant',
+          reasoning: responseMessage.content,
+          toolCalls: responseMessage.tool_calls,
+        },
+        conversationId,
+      );
+
+      server.to(conversationId).emit('conversationAction', {
+        action: 'agentThought',
+        data: thoughtMessage,
+      });
+
+      if (
+        !responseMessage.tool_calls ||
+        responseMessage.tool_calls.length === 0
+      ) {
+        break;
+      }
+
+      const finalAnswerCall = responseMessage.tool_calls.find(
+        (tc) => tc.function.name === 'provide_final_answer',
+      );
+      if (finalAnswerCall) {
+        await this.synthesizeAndStreamFinalAnswer(
+          llmMessages,
+          conversationId,
+          server,
+        );
+        return;
+      }
+
+      const toolResults = await Promise.all(
+        responseMessage.tool_calls.map(async (toolCall) => {
+          try {
+            const result = await this.executeTool(
+              toolCall.function.name,
+              JSON.parse(toolCall.function.arguments),
+              conversation.pocketId,
+              conversationId,
+            );
+            return {
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(result),
+            };
+          } catch (error) {
+            return {
+              tool_call_id: toolCall.id,
+              content: `Error executing tool: ${error.message}`,
+            };
+          }
+        }),
+      );
+
+      for (const result of toolResults) {
+        await this.createMessage(
+          {
+            role: 'tool',
+            toolCallId: result.tool_call_id,
+            content: result.content,
+          },
+          conversationId,
+        );
+        llmMessages.push({ role: 'tool', ...result, tool_calls: null });
+      }
+    }
+    await this.synthesizeAndStreamFinalAnswer(
+      llmMessages,
+      conversationId,
+      server,
+      "I seem to have finished my thought process without a final conclusion. Here's a summary of my findings.",
+    );
+  }
+
+  private async synthesizeAndStreamFinalAnswer(
+    messages: any[],
+    conversationId: string,
+    server: Server,
+    overrideQuery?: string,
+  ) {
+    const synthesisPrompt = `
+        Based on the entire conversation history, including all thoughts and tool results, provide a final, comprehensive answer to the initial user query.
+        The user's final query was: "${messages.find((m) => m.role === 'user').content}".
+        Synthesize the information you've gathered. Cite sources if applicable using markdown format.
+        ${overrideQuery || ''}
+      `;
+
+    messages.push({ role: 'user', content: synthesisPrompt });
+
+    const stream = this.llmService.generateStream({
+      prompt_type: 'synthesis',
+      prompt_vars: { messages },
+    });
+
+    let fullResponse = '';
+    for await (const chunk of stream) {
+      fullResponse += chunk;
+      server.to(conversationId).emit('conversationAction', {
+        action: 'messageChunk',
+        data: { content: chunk },
+      });
+    }
+
+    const finalAssistantMessage = await this.createMessage(
+      { role: 'assistant', content: fullResponse },
+      conversationId,
+    );
+    server.to(conversationId).emit('conversationAction', {
+      action: 'messageEnd',
+      data: finalAssistantMessage,
     });
   }
 

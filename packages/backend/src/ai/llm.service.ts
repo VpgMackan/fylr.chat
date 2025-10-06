@@ -13,6 +13,15 @@ interface ChatCompletionChoice {
   message: {
     role: string;
     content: string;
+    tool_calls?: {
+      id: string;
+      function: {
+        name: string;
+        arguments: any;
+      };
+      type: string;
+    }[];
+    reasoning?: string;
   };
   finish_reason: string | null;
 }
@@ -50,12 +59,12 @@ type TemplatePayload = {
   prompt_type: string;
   prompt_vars: Record<string, unknown>;
   prompt_version?: string;
-  messages?: { role: string; content: string }[];
+  messages?: any[];
   tools?: any[];
 };
 
 type MessagePayload = {
-  messages: { role: string; content: string }[];
+  messages: any[];
   tools?: any[];
 };
 
@@ -130,9 +139,9 @@ export class LLMService {
   }
 
   async generateWithTools(
-    messages: { role: string; content: string }[],
+    messages: any[],
     tools: any[],
-  ): Promise<string> {
+  ): Promise<ChatCompletionResponse> {
     const payload = {
       provider: 'auto',
 
@@ -147,7 +156,7 @@ export class LLMService {
       payload,
       false,
     )) as ChatCompletionResponse;
-    return response.choices[0]?.message?.content || '';
+    return response;
   }
 
   async *generateStream(

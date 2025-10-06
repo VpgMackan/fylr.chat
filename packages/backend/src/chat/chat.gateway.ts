@@ -121,7 +121,7 @@ export class ChatGateway
           conversationId,
           data: userMessage,
         });
-        this.messageService.generateAndStreamAiResponse(
+        this.messageService.generateAndStreamAiResponseWithTools(
           userMessage,
           this.server,
         );
