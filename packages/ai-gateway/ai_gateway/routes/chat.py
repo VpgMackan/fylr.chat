@@ -31,14 +31,28 @@ async def stream_provider_response(
 ) -> AsyncGenerator[str, None]:
     """
     Calls the provider's streaming method and formats the output as SSE.
+    Supports both text content and tool calls.
     """
     completion_id = f"chatcmpl-{uuid.uuid4()}"
     created_time = int(time.time())
 
     try:
-        async for chunk_content in provider.generate_text_stream(
+        async for chunk_data_raw in provider.generate_text_stream(
             messages=messages_dict, request=request
         ):
+            # Build the delta object from the chunk
+            delta = {}
+            finish_reason = chunk_data_raw.get("finish_reason")
+
+            if "content" in chunk_data_raw:
+                delta["content"] = chunk_data_raw["content"]
+
+            if "tool_calls" in chunk_data_raw:
+                delta["tool_calls"] = chunk_data_raw["tool_calls"]
+
+            if "role" in chunk_data_raw:
+                delta["role"] = chunk_data_raw["role"]
+
             chunk_data = {
                 "id": completion_id,
                 "object": "chat.completion.chunk",
@@ -47,8 +61,8 @@ async def stream_provider_response(
                 "choices": [
                     {
                         "index": 0,
-                        "delta": {"content": chunk_content},
-                        "finish_reason": None,
+                        "delta": delta,
+                        "finish_reason": finish_reason,
                     }
                 ],
             }

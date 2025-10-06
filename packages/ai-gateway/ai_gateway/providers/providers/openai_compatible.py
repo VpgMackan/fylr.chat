@@ -42,26 +42,68 @@ class OpenaiCompatibleProvider(BaseProvider):
                 "A model must be psecified for the OpenaiCompatibleProvider."
             )
 
-        response = self.client.chat.completions.create(
-            model=request.model, messages=messages, stream=False, **request.options
-        )
+        # Prepare the request parameters
+        params = {
+            "model": request.model,
+            "messages": messages,
+            "stream": False,
+            **request.options,
+        }
+
+        # Add tool-related parameters if provided
+        if request.tools:
+            params["tools"] = [tool.model_dump() for tool in request.tools]
+        if request.tool_choice:
+            params["tool_choice"] = request.tool_choice
+
+        response = self.client.chat.completions.create(**params)
         return response.model_dump()
 
     async def generate_text_stream(
         self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generates a streaming chat completion.
+        Yields dict with 'content' and optionally 'tool_calls'.
         """
         if not request.model:
             raise ValueError(
                 "A model must be specified for the OpenaiCompatibleProvider."
             )
 
-        stream = await self.async_client.chat.completions.create(
-            model=request.model, messages=messages, stream=True, **request.options
-        )
+        # Prepare the request parameters
+        params = {
+            "model": request.model,
+            "messages": messages,
+            "stream": True,
+            **request.options,
+        }
+
+        # Add tool-related parameters if provided
+        if request.tools:
+            params["tools"] = [tool.model_dump() for tool in request.tools]
+        if request.tool_choice:
+            params["tool_choice"] = request.tool_choice
+
+        stream = await self.async_client.chat.completions.create(**params)
         async for chunk in stream:
-            content = chunk.choices[0].delta.content
-            if content:
-                yield content
+            delta = chunk.choices[0].delta
+
+            # Build response chunk
+            chunk_data = {}
+
+            if delta.content:
+                chunk_data["content"] = delta.content
+
+            if delta.tool_calls:
+                chunk_data["tool_calls"] = [tc.model_dump() for tc in delta.tool_calls]
+
+            if delta.role:
+                chunk_data["role"] = delta.role
+
+            if chunk.choices[0].finish_reason:
+                chunk_data["finish_reason"] = chunk.choices[0].finish_reason
+
+            # Only yield if there's actual data
+            if chunk_data:
+                yield chunk_data

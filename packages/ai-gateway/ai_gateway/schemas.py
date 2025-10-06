@@ -4,9 +4,34 @@ from typing import List, Dict, Any, Union, Optional
 # --- Chat Completion ---
 
 
+class FunctionDefinition(BaseModel):
+    """Function definition for tool calling."""
+
+    name: str
+    description: Optional[str] = None
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolDefinition(BaseModel):
+    """Tool definition following OpenAI's format."""
+
+    type: str = "function"
+    function: FunctionDefinition
+
+
+class ToolCall(BaseModel):
+    """Represents a tool call made by the model."""
+
+    id: str
+    type: str = "function"
+    function: Dict[str, Any]  # Contains 'name' and 'arguments'
+
+
 class ChatMessage(BaseModel):
     role: str
-    content: str
+    content: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = None
+    tool_call_id: Optional[str] = None  # For tool response messages
 
 
 class ChatCompletionRequest(BaseModel):
@@ -19,6 +44,12 @@ class ChatCompletionRequest(BaseModel):
     prompt_type: Optional[str] = None
     prompt_version: Optional[str] = None
     prompt_vars: Optional[Dict[str, Any]] = None
+
+    # Tool calling support
+    tools: Optional[List[ToolDefinition]] = None
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = (
+        None  # "auto", "none", or specific tool
+    )
 
     @model_validator(mode="before")
     @classmethod
