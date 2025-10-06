@@ -50,10 +50,13 @@ type TemplatePayload = {
   prompt_type: string;
   prompt_vars: Record<string, unknown>;
   prompt_version?: string;
+  messages?: { role: string; content: string }[];
+  tools?: any[];
 };
 
 type MessagePayload = {
   messages: { role: string; content: string }[];
+  tools?: any[];
 };
 
 @Injectable()
@@ -119,6 +122,27 @@ export class LLMService {
       typeof promptOrOptions === 'string'
         ? { messages: [{ role: 'user', content: promptOrOptions }] }
         : promptOrOptions;
+    const response = (await this._fetchChatCompletionFromAiGateway(
+      payload,
+      false,
+    )) as ChatCompletionResponse;
+    return response.choices[0]?.message?.content || '';
+  }
+
+  async generateWithTools(
+    messages: { role: string; content: string }[],
+    tools: any[],
+  ): Promise<string> {
+    const payload = {
+      provider: 'auto',
+
+      prompt_type: 'agentic_system',
+
+      messages: messages,
+
+      tools,
+      stream: false,
+    };
     const response = (await this._fetchChatCompletionFromAiGateway(
       payload,
       false,

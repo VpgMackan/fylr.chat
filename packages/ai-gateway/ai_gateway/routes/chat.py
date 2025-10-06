@@ -83,10 +83,11 @@ async def stream_provider_response(
 @router.post("/v1/chat/completions")
 async def create_chat_completion(request: ChatCompletionRequest):
     """
-    Generates a chat completion through the specified provider.
-    Supports both streaming and non-streaming responses.
+    Generates a chat completion. Now supports combining a `prompt_type`
+    (as a system prompt) with a list of `messages`.
     """
-    messages_dict = []
+    base_messages = []
+    user_messages = []
 
     if request.prompt_type:
         try:
@@ -96,14 +97,18 @@ async def create_chat_completion(request: ChatCompletionRequest):
                 vars=request.prompt_vars,
             )
             if rendered.get("form") == "messages":
-                messages_dict = rendered["messages"]
+                base_messages = rendered["messages"]
             else:
-                messages_dict = [{"role": "user", "content": rendered["prompt"]}]
+                base_messages = [{"role": "user", "content": rendered["prompt"]}]
         except (PromptNotFound, PromptRenderError, PromptValidationError) as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    elif request.messages:
-        messages_dict = [msg.model_dump() for msg in request.messages]
-    else:
+
+    if request.messages:
+        user_messages = [msg.model_dump() for msg in request.messages]
+
+    messages_dict = base_messages + user_messages
+
+    if not messages_dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either 'messages' or 'prompt_type' must be provided.",

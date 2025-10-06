@@ -131,13 +131,21 @@ model Conversation {
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String       @map("conversation_id")
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
   role           String
-  content        String       @db.Text
-  createdAt      DateTime     @default(now()) @map("created_at")
-  metadata       Json
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  content    String? @db.Text
+  reasoning  String? @db.Text
+  toolCalls  Json?   @map("tool_calls")
+  toolResult Json?   @map("tool_result")
+
+  toolCallId String? @map("tool_call_id")
+
+  metadata Json?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("Messages")
 }

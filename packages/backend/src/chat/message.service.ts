@@ -12,6 +12,8 @@ import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
 
+import { tools } from './tool';
+
 @Injectable()
 export class MessageService {
   constructor(
@@ -20,6 +22,43 @@ export class MessageService {
     private readonly vectorService: AiVectorService,
     private sourceService: SourceService,
   ) {}
+
+  private async executeTool(
+    name: string,
+    args: any,
+    pocketId: string,
+    conversationId: string,
+  ): Promise<any> {
+    console.log(`Executing tool: ${name} with args:`, args);
+    switch (name) {
+      case 'search_documents':
+        const embedding = await this.vectorService.search(args.query);
+        const sourceIds =
+          args.source_ids ||
+          (
+            await this.sourceService.getSourcesByPocketId(
+              pocketId,
+              'some_user_id_placeholder',
+            )
+          ).map((s) => s.id);
+        return this.sourceService.findByVector(embedding, sourceIds);
+
+      case 'list_sources_in_pocket':
+        const conversation = await this.prisma.conversation.findUnique({
+          where: { id: conversationId },
+          include: { pocket: true },
+        });
+        if (!conversation)
+          throw new NotFoundException('No conversation found.');
+        return this.sourceService.getSourcesByPocketId(
+          pocketId,
+          conversation.pocket.userId,
+        );
+
+      default:
+        throw new Error(`Tool "${name}" not found.`);
+    }
+  }
 
   async getMessages(conversationId: string) {
     try {
@@ -159,6 +198,36 @@ export class MessageService {
     } else {
       // Handle no response
     }
+  }
+
+  async generateAndStreamAiResponseWithTools(
+    userMessage,
+    server: Server,
+  ): Promise<void> {
+    const { conversationId, content: userQuery } = userMessage;
+
+    const emitStatus = (stage: string, message: string) => {
+      server.to(conversationId).emit('conversationAction', {
+        action: 'statusUpdate',
+        conversationId,
+        data: { stage, message },
+      });
+    };
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { sources: true },
+    });
+    if (!conversation) {
+      throw new NotFoundException(
+        `Conversation with ID "${conversationId}" not found.`,
+      );
+    }
+
+    const recentMessages = await this.prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   async regenerateAndStreamAiResponse(
