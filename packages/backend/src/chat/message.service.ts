@@ -28,6 +28,7 @@ export class MessageService {
     args: any,
     pocketId: string,
     conversationId: string,
+    userId?: string,
   ): Promise<any> {
     console.log(`Executing tool: ${name} with args:`, args);
     switch (name) {
@@ -38,7 +39,7 @@ export class MessageService {
           (
             await this.sourceService.getSourcesByPocketId(
               pocketId,
-              'some_user_id_placeholder',
+              userId || '',
             )
           ).map((s) => s.id);
         return this.sourceService.findByVector(embedding, sourceIds);
@@ -210,6 +211,7 @@ export class MessageService {
 
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
+      include: { pocket: true },
     });
     if (!conversation) {
       throw new NotFoundException(
@@ -278,6 +280,7 @@ export class MessageService {
               JSON.parse(toolCall.function.arguments),
               conversation.pocketId,
               conversationId,
+              conversation.pocket.userId,
             );
             return {
               tool_call_id: toolCall.id,
@@ -337,6 +340,7 @@ export class MessageService {
       fullResponse += chunk;
       server.to(conversationId).emit('conversationAction', {
         action: 'messageChunk',
+        conversationId,
         data: { content: chunk },
       });
     }
@@ -347,6 +351,7 @@ export class MessageService {
     );
     server.to(conversationId).emit('conversationAction', {
       action: 'messageEnd',
+      conversationId,
       data: finalAssistantMessage,
     });
   }

@@ -7,12 +7,12 @@ description: >
 form: messages
 messages_template: |
   {% for message in messages %}
-  - role: {{ message.role }}
-    content: {{ message.content }}
-    {% if message.tool_calls %}
-    tool_calls: {{ message.tool_calls | tojson }}
+  - role: {{ message.role | tojson }}
+    content: {{ message.content | tojson }}
+    {% if message.get('tool_calls') %}
+    tool_calls: {{ message.get('tool_calls') | tojson }}
     {% endif %}
-    {% if message.tool_call_id %}
-    tool_call_id: {{ message.tool_call_id }}
+    {% if message.get('tool_call_id') %}
+    tool_call_id: {{ message.get('tool_call_id') | tojson }}
     {% endif %}
   {% endfor %}
