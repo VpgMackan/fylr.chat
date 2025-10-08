@@ -7,7 +7,7 @@ import {
 } from '@fylr/types';
 
 @Injectable()
-export class PocketService {
+export class LibraryService {
   constructor(private prisma: PrismaService) {}
 
   async findMultipleByUserId(
@@ -16,7 +16,7 @@ export class PocketService {
     offset = 0,
     searchTerm = '',
   ): Promise<PocketApiResponse[]> {
-    const pockets = await this.prisma.pocket.findMany({
+    const libraries = await this.prisma.library.findMany({
       where: {
         userId: id,
         ...(searchTerm && {
@@ -33,12 +33,12 @@ export class PocketService {
       skip: offset,
     });
 
-    if (!pockets || pockets.length === 0)
+    if (!libraries || libraries.length === 0)
       throw new NotFoundException(
-        `Pockets owned by user ID "${id}" could not be located in database`,
+        `Libraries owned by user ID "${id}" could not be located in database`,
       );
 
-    return pockets.map((p) => {
+    return libraries.map((p) => {
       const { createdAt, sources, ...rest } = p;
       return {
         ...rest,
@@ -53,33 +53,32 @@ export class PocketService {
   }
 
   async findOneById(id: string, userId: string) {
-    const pocket = await this.prisma.pocket.findFirst({
+    const library = await this.prisma.library.findFirst({
       where: { id, userId },
-      include: { conversations: true, sources: true },
+      include: { sources: true },
     });
-    if (!pocket)
+    if (!library)
       throw new NotFoundException(
-        `Pocket with the ID "${id}" could not be located in database`,
+        `library with the ID "${id}" could not be located in database`,
       );
 
-    const { conversations, ...pocketData } = pocket;
-    return { ...pocketData, recentActivity: conversations };
+    return { library };
   }
 
-  async createPocket(data: CreatePocketDto) {
-    return await this.prisma.pocket.create({ data });
+  async createLibrary(data: CreatePocketDto) {
+    return await this.prisma.library.create({ data });
   }
 
-  async updatePocket(id: string, updateData: UpdatePocketDto, userId: string) {
-    return await this.prisma.pocket.update({
+  async updateLibrary(id: string, updateData: UpdatePocketDto, userId: string) {
+    return await this.prisma.library.update({
       where: { id, userId },
       data: updateData,
     });
   }
 
-  async deletePocket(id: string, userId: string) {
+  async deleteLibrary(id: string, userId: string) {
     await this.findOneById(id, userId);
-    return await this.prisma.pocket.delete({
+    return await this.prisma.library.delete({
       where: { id },
     });
   }

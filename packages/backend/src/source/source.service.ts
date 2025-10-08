@@ -30,17 +30,17 @@ export class SourceService {
 
   async createSource(
     file: Express.Multer.File,
-    pocketId: string,
+    libraryId: string,
     userId: string,
   ) {
-    const pocket = await this.prisma.pocket.findFirst({
-      where: { id: pocketId, userId },
+    const library = await this.prisma.library.findFirst({
+      where: { id: libraryId, userId },
     });
 
-    if (!pocket) {
+    if (!library) {
       await fs.unlink(file.path);
       throw new NotFoundException(
-        `Pocket with ID "${pocketId}" not found or you do not have permission to access it.`,
+        `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
       );
     }
 
@@ -60,7 +60,7 @@ export class SourceService {
     await fs.unlink(file.path);
 
     const data: Prisma.SourceCreateInput = {
-      pocket: { connect: { id: pocketId } },
+      library: { connect: { id: libraryId } },
       name: file.originalname,
       type: file.mimetype,
       url: s3Key,
@@ -85,24 +85,24 @@ export class SourceService {
     };
   }
 
-  async getSourcesByPocketId(pocketId: string, userId: string) {
+  async getSourcesByLibraryId(libraryId: string, userId: string) {
     return await this.prisma.source.findMany({
-      where: { pocketId, pocket: { userId } },
+      where: { libraryId, library: { userId } },
       orderBy: { uploadTime: 'desc' },
     });
   }
 
   async getSourcesByConversationId(conversationId: string, userId: string) {
     const conversation = await this.prisma.conversation.findFirst({
-      where: { id: conversationId, pocket: { userId } },
-      select: { pocketId: true },
+      where: { id: conversationId, library: { userId } },
+      select: { libraryId: true },
     });
     if (!conversation) {
       throw new NotFoundException('Conversation not found or not accessible');
     }
-    const pocketId = conversation.pocketId;
+    const libraryId = conversation.libraryId;
     const sources = await this.prisma.source.findMany({
-      where: { pocketId },
+      where: { libraryId },
       include: {
         conversations: {
           where: { id: conversationId },
@@ -130,7 +130,7 @@ export class SourceService {
         v.content,
         v.chunk_index as "chunkIndex",
         s.id AS "source.id",
-        s.pocket_id AS "source.pocketId",
+        s.library_id AS "source.libraryId",
         s.name AS "source.name"
       FROM "Vectors" v
       INNER JOIN "Sources" s ON s.id = v.file_id
@@ -146,7 +146,7 @@ export class SourceService {
       chunkIndex: item.chunkIndex,
       source: {
         id: item['source.id'],
-        pocketId: item['source.pocketId'],
+        libraryId: item['source.libraryId'],
         name: item['source.name'],
       },
     }));
@@ -154,7 +154,7 @@ export class SourceService {
 
   async getSourceURL(sourceId: string, userId: string) {
     return this.prisma.source.findFirst({
-      where: { id: sourceId, pocket: { userId } },
+      where: { id: sourceId, library: { userId } },
     });
   }
 
@@ -162,7 +162,7 @@ export class SourceService {
     const source = await this.prisma.source.findFirst({
       where: {
         id: fileId,
-        pocket: {
+        library: {
           userId: userId,
         },
       },
@@ -179,7 +179,7 @@ export class SourceService {
 
   async getVectorsBySourceId(sourceId: string, userId: string) {
     const source = await this.prisma.source.findFirst({
-      where: { id: sourceId, pocket: { userId } },
+      where: { id: sourceId, library: { userId } },
     });
     if (!source) {
       throw new NotFoundException('Source not found or not accessible');

@@ -18,27 +18,32 @@ import {
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
-import { PocketService } from './pocket.service';
+import { LibraryService } from './library.service';
 import { UpdatePocketDto, CreatePocketDtoApiRequest } from '@fylr/types';
 
 @UseGuards(AuthGuard)
-@Controller('pocket')
-export class PocketController {
-  constructor(private pocketService: PocketService) {}
+@Controller('library')
+export class LibraryController {
+  constructor(private libraryService: LibraryService) {}
 
   @Get()
-  getPockets(
+  getLibraries(
     @Request() req: RequestWithUser,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
   ) {
-    return this.pocketService.findMultipleByUserId(req.user.id, take, offset, searchTerm);
+    return this.libraryService.findMultipleByUserId(
+      req.user.id,
+      take,
+      offset,
+      searchTerm,
+    );
   }
 
   @Get('/:id')
-  getPocketById(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.pocketService.findOneById(id, req.user.id);
+  getLibarById(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.libraryService.findOneById(id, req.user.id);
   }
 
   @Patch('/:id')
@@ -49,28 +54,28 @@ export class PocketController {
       skipMissingProperties: true,
     }),
   )
-  updatePocketById(
+  updateLibarById(
     @Param('id') id: string,
     @Body() updateDto: UpdatePocketDto,
     @Request() req: RequestWithUser,
   ) {
-    return this.pocketService.updatePocket(id, updateDto, req.user.id);
+    return this.libraryService.updateLibrary(id, updateDto, req.user.id);
   }
 
   @Post('/')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  createPocket(
+  createLibrary(
     @Request() req: RequestWithUser,
-    @Body() createPocketDto: CreatePocketDtoApiRequest,
+    @Body() createLibraryDto: CreatePocketDtoApiRequest,
   ) {
-    return this.pocketService.createPocket({
+    return this.libraryService.createLibrary({
       userId: req.user.id,
-      ...createPocketDto,
+      ...createLibraryDto,
     });
   }
 
   @Delete('/:id')
-  deletePocketById(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.pocketService.deletePocket(id, req.user.id);
+  deleteLibraryById(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.libraryService.deleteLibrary(id, req.user.id);
   }
 }

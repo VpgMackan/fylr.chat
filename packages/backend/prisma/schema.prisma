@@ -12,35 +12,35 @@ datasource db {
 }
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  password String
-  name     String
-  pockets  Pocket[]
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  libraries     Library[]
+  conversations Conversation[]
 
   @@map("Users")
 }
 
-model Pocket {
-  id            String         @id @default(uuid())
-  userId        String         @map("user_id")
-  icon          String
-  description   String         @db.Text
-  createdAt     DateTime       @default(now()) @map("created_at")
-  tags          String[]       @db.Text
-  title         String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sources       Source[]
-  conversations Conversation[]
-  Summary       Summary[]
-  Podcast       Podcast[]
+model Library {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  icon        String
+  description String    @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  tags        String[]  @db.Text
+  title       String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources     Source[]
+  Summary     Summary[]
+  Podcast     Podcast[]
 
-  @@map("Pockets")
+  @@map("Libraries")
 }
 
 model Source {
   id            String         @id @default(uuid())
-  pocketId      String         @map("pocket_id")
+  libraryId     String         @map("library_id")
   name          String
   type          String
   url           String
@@ -48,7 +48,7 @@ model Source {
   uploadTime    DateTime       @default(now()) @map("upload_time")
   jobKey        String         @map("job_key")
   status        String         @db.Text
-  pocket        Pocket         @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  library       Library        @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   vectors       Vector[]
   conversations Conversation[] @relation("ConversationSources")
 
@@ -68,12 +68,12 @@ model Vector {
 
 model Summary {
   id        String           @id @default(uuid())
-  pocketId  String           @map("pocket_id")
+  libraryId String           @map("library_id")
   title     String
   createdAt DateTime         @default(now()) @map("created_at")
   length    Int
   generated String?          @db.Text
-  pocket    Pocket           @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  library   Library          @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   episodes  SummaryEpisode[]
 
   @@map("Summary")
@@ -93,12 +93,12 @@ model SummaryEpisode {
 
 model Podcast {
   id        String           @id @default(uuid())
-  pocketId  String           @map("pocket_id")
+  libraryId String           @map("library_id")
   title     String
   createdAt DateTime         @default(now()) @map("created_at")
   length    Int
   generated String?          @db.Text
-  pocket    Pocket           @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  library   Library          @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   episodes  PodcastEpisode[]
 
   @@map("Podcast")
@@ -119,11 +119,11 @@ model PodcastEpisode {
 
 model Conversation {
   id        String    @id @default(uuid())
-  pocketId  String    @map("pocket_id")
+  userId    String    @map("user_id")
   metadata  Json
   createdAt DateTime  @default(now()) @map("created_at")
   title     String
-  pocket    Pocket    @relation(fields: [pocketId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
   sources   Source[]  @relation("ConversationSources")
 
