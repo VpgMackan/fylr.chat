@@ -75,6 +75,9 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
           content: action.payload.content,
           createdAt: new Date().toISOString(),
           metadata: {},
+          reasoning: null,
+          toolCalls: null,
+          toolCallId: null,
         };
         return { ...state, messages: [...state.messages, newStreamingMsg] };
       }
