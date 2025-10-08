@@ -23,16 +23,16 @@ import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface
 export class SummaryController {
   constructor(private summaryService: SummaryService) {}
 
-  @Get('pocket/:pocketId')
-  getSummariesByPocketId(
-    @Param('pocketId') pocketId: string,
+  @Get('library/:libraryId')
+  getSummariesByLibraryId(
+    @Param('libraryId') libraryId: string,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
     @Request() req: RequestWithUser,
   ) {
-    return this.summaryService.getSummariesByPocketId(
-      pocketId,
+    return this.summaryService.getSummariesByLibraryId(
+      libraryId,
       req.user.id,
       take,
       offset,
@@ -40,15 +40,15 @@ export class SummaryController {
     );
   }
 
-  @Post('pocket/:pocketId')
+  @Post('library/:libraryId')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createSummary(
-    @Param('pocketId') pocketId: string,
+    @Param('library') libraryId: string,
     @Body() createSummaryDto: CreateSummaryDto,
     @Request() req: RequestWithUser,
   ) {
     return this.summaryService.createSummary(
-      pocketId,
+      libraryId,
       req.user.id,
       createSummaryDto,
     );

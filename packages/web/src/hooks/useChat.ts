@@ -285,6 +285,24 @@ export function useChat(chatId: string | null) {
     socketRef.current?.connect();
   }, [socketRef]);
 
+  const initiateAndSendMessage = useCallback(
+    async (content: string) => {
+      if (chatId) {
+        sendMessage(content);
+        return null;
+      }
+
+      try {
+        const newConversation: any = await initiateAndSendMessage(content);
+        return newConversation;
+      } catch (error) {
+        console.error('Failed to initiate conversation', error);
+        return null;
+      }
+    },
+    [chatId, sendMessage],
+  );
+
   return {
     messages: state.messages,
     sources: state.sources,
@@ -292,6 +310,7 @@ export function useChat(chatId: string | null) {
     connectionStatus: state.connectionStatus,
     status: state.status,
     sendMessage,
+    initiateAndSendMessage,
     deleteMessage,
     updateMessage,
     updateSources,

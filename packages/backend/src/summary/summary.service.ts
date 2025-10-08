@@ -10,8 +10,8 @@ export class SummaryService {
     private readonly rabbitMQService: RabbitMQService,
   ) {}
 
-  async getSummariesByPocketId(
-    pocketId: string,
+  async getSummariesByLibraryId(
+    libraryId: string,
     userId: string,
     take: number,
     offset: number,
@@ -19,8 +19,8 @@ export class SummaryService {
   ) {
     const summaries = await this.prisma.summary.findMany({
       where: {
-        pocketId,
-        pocket: { userId },
+        libraryId,
+        library: { userId },
         ...(searchTerm && {
           title: { contains: searchTerm, mode: 'insensitive' },
         }),
@@ -37,7 +37,7 @@ export class SummaryService {
     const summary = await this.prisma.summary.findFirst({
       where: {
         id,
-        pocket: { userId },
+        library: { userId },
       },
       include: { episodes: true },
     });
@@ -50,17 +50,17 @@ export class SummaryService {
   }
 
   async createSummary(
-    pocketId: string,
+    libraryId: string,
     userId: string,
     createSummaryDto: CreateSummaryDto,
   ) {
-    const pocket = await this.prisma.pocket.findUnique({
-      where: { id: pocketId },
+    const library = await this.prisma.library.findUnique({
+      where: { id: libraryId },
     });
 
-    if (!pocket || pocket.userId !== userId) {
+    if (!library || library.userId !== userId) {
       throw new NotFoundException(
-        `Pocket with ID "${pocketId}" not found or access denied.`,
+        `Library with ID "${libraryId}" not found or access denied.`,
       );
     }
 
@@ -69,7 +69,7 @@ export class SummaryService {
     const newSummary = await this.prisma.summary.create({
       data: {
         title,
-        pocketId,
+        libraryId,
         length: 0,
         generated: 'PENDING',
         episodes: {

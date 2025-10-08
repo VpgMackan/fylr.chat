@@ -43,34 +43,24 @@ export class ChatController {
     return this.conversationService.getConversationsByUserId(req.user.id);
   }
 
-  @Get(':pocketId/conversations')
-  getConversations(
-    @Param('pocketId') pocketId: string,
-    @Request() req: RequestWithUser,
-    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
-  ) {
-    return this.conversationService.getConversations(
-      pocketId,
-      req.user.id,
-      take,
-      offset,
-      searchTerm,
-    );
-  }
-
-  @Post(':pocketId/conversation')
+  @Post('conversation')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createConversation(
     @Body() body: CreateConversationDto,
     @Request() req: RequestWithUser,
-    @Param('pocketId') pocketId: string,
   ) {
-    return this.conversationService.createConversation(
-      body,
-      pocketId,
+    return this.conversationService.createConversation(body, req.user.id);
+  }
+
+  @Post('conversation/initiate')
+  initiateConversation(
+    @Body() body: { content: string; sourceIds?: string[] },
+    @Request() req: RequestWithUser,
+  ) {
+    return this.conversationService.initiateConversation(
+      body.content,
       req.user.id,
+      body.sourceIds,
     );
   }
 

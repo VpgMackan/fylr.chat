@@ -93,8 +93,8 @@ export class SourceService {
   }
 
   async getSourcesByConversationId(conversationId: string, userId: string) {
-    const conversation = await this.prisma.conversation.findFirst({
-      where: { id: conversationId, library: { userId } },
+    /*const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, Library: { userId } },
       select: { libraryId: true },
     });
     if (!conversation) {
@@ -114,7 +114,8 @@ export class SourceService {
     return sources.map(({ conversations, ...source }) => ({
       ...source,
       isActive: conversations.length > 0,
-    }));
+    }));*/
+    return [];
   }
 
   async findByVector(vector: number[], sourceIds: string[]) {

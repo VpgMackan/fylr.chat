@@ -60,15 +60,15 @@ export class SourceController {
       throw new BadRequestException('No file provided.');
     }
 
-    return this.sourceService.createSource(file, body.pocketId, req.user.id);
+    return this.sourceService.createSource(file, body.libraryId, req.user.id);
   }
 
-  @Get('pocket/:pocketId')
-  async getSourcesByPocketId(
-    @Param('pocketId') pocketId: string,
+  @Get('library/:libraryId')
+  async getSourcesByLibraryId(
+    @Param('libraryId') libraryId: string,
     @Request() req: RequestWithUser,
   ) {
-    return this.sourceService.getSourcesByPocketId(pocketId, req.user.id);
+    return this.sourceService.getSourcesByLibraryId(libraryId, req.user.id);
   }
 
   @Get('access/:sourceId')
