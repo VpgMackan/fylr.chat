@@ -1,6 +1,6 @@
 import { IsUUID, IsString, IsArray, IsOptional } from 'class-validator';
 
-export class UpdatePocketDto {
+export class UpdateLibraryDto {
   @IsOptional()
   @IsString()
   icon?: string;
@@ -19,7 +19,7 @@ export class UpdatePocketDto {
   title?: string;
 }
 
-export class CreatePocketDtoApiRequest {
+export class CreateLibraryDtoApiRequest {
   @IsString()
   icon!: string;
 
@@ -34,7 +34,7 @@ export class CreatePocketDtoApiRequest {
   title!: string;
 }
 
-export class CreatePocketDto {
+export class CreateLibraryDto {
   @IsUUID()
   userId!: string;
 

@@ -5,7 +5,7 @@ export interface UserApiResponse {
 }
 export interface SourceApiResponse {
   id: string;
-  pocketId: string;
+  libraryId: string;
   name: string;
   type: string;
   url: string;
@@ -16,13 +16,13 @@ export interface SourceApiResponse {
 
 export interface ConversationApiResponse {
   id: string;
-  pocketId: string;
+  userId: string;
   metadata: object;
   createdAt: string;
   title: string;
 }
 
-export interface PocketApiResponse {
+export interface LibraryApiResponse {
   id: string;
   userId: string;
   icon: string;
@@ -31,10 +31,6 @@ export interface PocketApiResponse {
   tags: string[];
   title: string;
   sources: SourceApiResponse[];
-}
-
-export interface PocketWithRecentActivityApiResponse extends PocketApiResponse {
-  recentActivity: ConversationApiResponse[];
 }
 
 export interface MessageApiResponse {
