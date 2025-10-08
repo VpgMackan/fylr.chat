@@ -43,17 +43,29 @@ class GroqProvider(BaseProvider):
             raise ValueError("A model must be specified for the GroqProvider.")
 
         try:
+            # Filter messages to remove tool_calls from non-assistant messages
+            filtered_messages = []
+            for msg in messages:
+                filtered_msg = msg.copy()
+                if msg.get("role") != "assistant":
+                    filtered_msg.pop("tool_calls", None)
+                filtered_messages.append(filtered_msg)
+
             # Prepare the request parameters
             params = {
                 "model": request.model,
-                "messages": messages,
+                "messages": filtered_messages,
                 "stream": False,
                 **request.options,
             }
 
             # Add tool-related parameters if provided
             if request.tools:
-                params["tools"] = [tool.model_dump() for tool in request.tools]
+                params["tools"] = []
+                for tool in request.tools:
+                    tool_dict = tool.model_dump()
+                    tool_dict["name"] = tool.function.name  # Add name at top level for compatibility
+                    params["tools"].append(tool_dict)
             if request.tool_choice:
                 params["tool_choice"] = request.tool_choice
 
@@ -78,17 +90,29 @@ class GroqProvider(BaseProvider):
             raise ValueError("A model must be specified for the GroqProvider.")
 
         try:
+            # Filter messages to remove tool_calls from non-assistant messages
+            filtered_messages = []
+            for msg in messages:
+                filtered_msg = msg.copy()
+                if msg.get("role") != "assistant":
+                    filtered_msg.pop("tool_calls", None)
+                filtered_messages.append(filtered_msg)
+
             # Prepare the request parameters
             params = {
                 "model": request.model,
-                "messages": messages,
+                "messages": filtered_messages,
                 "stream": True,
                 **request.options,
             }
 
             # Add tool-related parameters if provided
             if request.tools:
-                params["tools"] = [tool.model_dump() for tool in request.tools]
+                params["tools"] = []
+                for tool in request.tools:
+                    tool_dict = tool.model_dump()
+                    tool_dict["name"] = tool.function.name  # Add name at top level for compatibility
+                    params["tools"].append(tool_dict)
             if request.tool_choice:
                 params["tool_choice"] = request.tool_choice
 

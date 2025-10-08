@@ -59,6 +59,9 @@ class EnvironmentVariables {
 
   @IsString()
   RABBITMQ_URL: string;
+
+  @IsString()
+  TAVILY_API_KEY: string;
 }
 
 export function validate(config: Record<string, unknown>) {

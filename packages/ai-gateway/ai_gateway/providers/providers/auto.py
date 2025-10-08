@@ -27,7 +27,7 @@ class AutoProvider(BaseProvider):
         """
 
         MODEL_MAP = {
-            "default": ("openai", "alibaba/tongyi-deepresearch-30b-a3b:free"),
+            "default": ("groq", "openai/gpt-oss-120b"),
         }
 
         if request.prompt_type:

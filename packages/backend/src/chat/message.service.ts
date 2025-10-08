@@ -11,8 +11,9 @@ import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
+import { ToolService } from './tools/tool.service';
 
-import { tools } from './tool';
+import { tools as specialTools } from './tool';
 
 @Injectable()
 export class MessageService {
@@ -21,45 +22,8 @@ export class MessageService {
     private readonly llmService: LLMService,
     private readonly vectorService: AiVectorService,
     private sourceService: SourceService,
+    private readonly toolService: ToolService,
   ) {}
-
-  private async executeTool(
-    name: string,
-    args: any,
-    pocketId: string,
-    conversationId: string,
-    userId?: string,
-  ): Promise<any> {
-    console.log(`Executing tool: ${name} with args:`, args);
-    switch (name) {
-      case 'search_documents':
-        const embedding = await this.vectorService.search(args.query);
-        const sourceIds =
-          args.source_ids ||
-          (
-            await this.sourceService.getSourcesByPocketId(
-              pocketId,
-              userId || '',
-            )
-          ).map((s) => s.id);
-        return this.sourceService.findByVector(embedding, sourceIds);
-
-      case 'list_sources_in_pocket':
-        const conversation = await this.prisma.conversation.findUnique({
-          where: { id: conversationId },
-          include: { pocket: true },
-        });
-        if (!conversation)
-          throw new NotFoundException('No conversation found.');
-        return this.sourceService.getSourcesByPocketId(
-          pocketId,
-          conversation.pocket.userId,
-        );
-
-      default:
-        throw new Error(`Tool "${name}" not found.`);
-    }
-  }
 
   async getMessages(conversationId: string) {
     try {
@@ -232,10 +196,10 @@ export class MessageService {
     while (currentIteration < MAX_ITERATIONS) {
       currentIteration++;
 
-      const llmResponse = await this.llmService.generateWithTools(
-        llmMessages,
-        tools,
-      );
+      const llmResponse = await this.llmService.generateWithTools(llmMessages, [
+        ...this.toolService.getAllToolDefinitions(),
+        ...specialTools,
+      ]);
 
       const responseMessage = llmResponse.choices[0].message;
 
@@ -275,12 +239,14 @@ export class MessageService {
       const toolResults = await Promise.all(
         responseMessage.tool_calls.map(async (toolCall) => {
           try {
-            const result = await this.executeTool(
+            const result = await this.toolService.executeTool(
               toolCall.function.name,
               JSON.parse(toolCall.function.arguments),
-              conversation.pocketId,
-              conversationId,
-              conversation.pocket.userId,
+              {
+                pocketId: conversation.pocketId,
+                conversationId,
+                userId: conversation.pocket.userId,
+              },
             );
             return {
               tool_call_id: toolCall.id,
