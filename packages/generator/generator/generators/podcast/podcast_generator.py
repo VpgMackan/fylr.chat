@@ -201,9 +201,9 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             {"stage": "fetching_vectors", "message": "Gathering content..."},
             "podcast",
         )
-        sources = self._fetch_sources_with_vectors(db, podcast.pocket_id)
+        sources = self._fetch_sources_with_vectors(db, podcast.library_id)
         if not sources:
-            raise ValueError("No sources with content found in this pocket.")
+            raise ValueError("No sources with content found in this library.")
 
         self._publish_status(
             channel,

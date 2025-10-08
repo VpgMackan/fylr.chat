@@ -25,7 +25,7 @@ class Source(Base):
     __tablename__ = "Sources"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
+    library_id = Column(String, ForeignKey("Libraries.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
     url = Column(String, nullable=False)
@@ -35,7 +35,7 @@ class Source(Base):
     status = Column(Text, nullable=False)
 
     vectors = relationship("DocumentVector", back_populates="source")
-    pocket = relationship("Pocket", back_populates="sources")
+    library = relationship("Library", back_populates="sources")
 
 
 class SummaryEpisode(Base):
@@ -55,13 +55,13 @@ class Summary(Base):
     __tablename__ = "Summary"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
+    library_id = Column(String, ForeignKey("Libraries.id"), nullable=False)
     title = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     length = Column(BigInteger, nullable=False)
     generated = Column(Text, nullable=True)
 
-    pocket = relationship("Pocket", back_populates="summaries")
+    library = relationship("Library", back_populates="summaries")
     episodes = relationship("SummaryEpisode", back_populates="summary")
 
 
@@ -83,18 +83,18 @@ class Podcast(Base):
     __tablename__ = "Podcast"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    pocket_id = Column(String, ForeignKey("Pockets.id"), nullable=False)
+    library_id = Column(String, ForeignKey("Libaries.id"), nullable=False)
     title = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     length = Column(BigInteger, nullable=False)
     generated = Column(Text, nullable=True)
 
-    pocket = relationship("Pocket", back_populates="podcast")
+    library = relationship("Library", back_populates="podcast")
     episodes = relationship("PodcastEpisode", back_populates="podcast")
 
 
-class Pocket(Base):
-    __tablename__ = "Pockets"
+class Library(Base):
+    __tablename__ = "Libraries"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, nullable=False)
@@ -104,6 +104,6 @@ class Pocket(Base):
     tags = Column(ARRAY(String))
     title = Column(String, nullable=False)
 
-    sources = relationship("Source", back_populates="pocket")
-    summaries = relationship("Summary", back_populates="pocket")
-    podcast = relationship("Podcast", back_populates="pocket")
+    sources = relationship("Source", back_populates="library")
+    summaries = relationship("Summary", back_populates="library")
+    podcast = relationship("Podcast", back_populates="library")

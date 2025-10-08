@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
-  CreatePocketDto,
-  PocketApiResponse,
-  UpdatePocketDto,
+  CreateLibraryDto,
+  LibraryApiResponse,
+  UpdateLibraryDto,
 } from '@fylr/types';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class LibraryService {
     take = 10,
     offset = 0,
     searchTerm = '',
-  ): Promise<PocketApiResponse[]> {
+  ): Promise<LibraryApiResponse[]> {
     const libraries = await this.prisma.library.findMany({
       where: {
         userId: id,
@@ -65,11 +65,15 @@ export class LibraryService {
     return { library };
   }
 
-  async createLibrary(data: CreatePocketDto) {
+  async createLibrary(data: CreateLibraryDto) {
     return await this.prisma.library.create({ data });
   }
 
-  async updateLibrary(id: string, updateData: UpdatePocketDto, userId: string) {
+  async updateLibrary(
+    id: string,
+    updateData: UpdateLibraryDto,
+    userId: string,
+  ) {
     return await this.prisma.library.update({
       where: { id, userId },
       data: updateData,

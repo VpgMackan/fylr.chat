@@ -16,9 +16,9 @@ export class ListSourcesTool extends BaseTool {
     return {
       type: 'function',
       function: {
-        name: 'list_sources_in_pocket',
+        name: 'list_associated_sources',
         description:
-          'Lists all available source documents in the current pocket.',
+          'Lists all source documents associated with the current conversation.',
         parameters: { type: 'object', properties: {} },
       },
     };
@@ -27,12 +27,9 @@ export class ListSourcesTool extends BaseTool {
   async execute(args: any, context: ToolExecutionContext): Promise<any> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: context.conversationId },
-      include: { pocket: true },
+      include: { sources: true },
     });
-    if (!conversation) throw new NotFoundException('No conversation found.');
-    return this.sourceService.getSourcesByPocketId(
-      context.pocketId,
-      conversation.pocket.userId,
-    );
+    if (!conversation) throw new NotFoundException('Conversation not found.');
+    return conversation.sources;
   }
 }

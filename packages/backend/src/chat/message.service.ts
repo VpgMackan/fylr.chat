@@ -147,7 +147,7 @@ export class MessageService {
             relatedSources: relevantChunks.map((c) => ({
               id: c.id,
               sourceId: c.source.id,
-              pocketId: c.source.pocketId,
+              libraryId: c.source.libraryId,
               name: c.source.name,
               chunkIndex: c.chunkIndex,
             })),
@@ -175,7 +175,6 @@ export class MessageService {
 
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { pocket: true },
     });
     if (!conversation) {
       throw new NotFoundException(
@@ -243,9 +242,8 @@ export class MessageService {
               toolCall.function.name,
               JSON.parse(toolCall.function.arguments),
               {
-                pocketId: conversation.pocketId,
                 conversationId,
-                userId: conversation.pocket.userId,
+                userId: conversation.userId,
               },
             );
             return {

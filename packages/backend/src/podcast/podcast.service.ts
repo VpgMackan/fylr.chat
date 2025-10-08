@@ -14,8 +14,8 @@ export class PodcastService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getPodcastsByPocketId(
-    pocketId: string,
+  async getPodcastsByLibraryId(
+    libraryId: string,
     userId: string,
     take: number,
     offset: number,
@@ -23,8 +23,8 @@ export class PodcastService {
   ) {
     const podcasts = await this.prisma.podcast.findMany({
       where: {
-        pocketId,
-        pocket: { userId },
+        libraryId,
+        library: { userId },
         ...(searchTerm && {
           title: { contains: searchTerm, mode: 'insensitive' },
         }),
@@ -41,7 +41,7 @@ export class PodcastService {
     const podcast = await this.prisma.podcast.findFirst({
       where: {
         id,
-        pocket: { userId },
+        library: { userId },
       },
       include: { episodes: true },
     });
@@ -54,17 +54,17 @@ export class PodcastService {
   }
 
   async createPodcast(
-    pocketId: string,
+    libraryId: string,
     userId: string,
     createPodcastDto: CreatePodcastDto,
   ) {
-    const pocket = await this.prisma.pocket.findUnique({
-      where: { id: pocketId },
+    const library = await this.prisma.library.findUnique({
+      where: { id: libraryId },
     });
 
-    if (!pocket || pocket.userId !== userId) {
+    if (!library || library.userId !== userId) {
       throw new NotFoundException(
-        `Pocket with ID "${pocketId}" not found or access denied.`,
+        `Library with ID "${libraryId}" not found or access denied.`,
       );
     }
 
@@ -73,7 +73,7 @@ export class PodcastService {
     const newPodcast = await this.prisma.podcast.create({
       data: {
         title,
-        pocketId,
+        libraryId,
         length: 0,
         generated: 'PENDING',
         episodes: {
@@ -99,7 +99,7 @@ export class PodcastService {
     const podcast = await this.prisma.podcast.findFirst({
       where: {
         id: podcastId,
-        pocket: { userId },
+        library: { userId },
       },
       include: {
         episodes: true,

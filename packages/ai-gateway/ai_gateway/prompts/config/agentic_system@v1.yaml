@@ -13,6 +13,6 @@ messages_template: |
 
       **Instructions:**
       1.  **Think step-by-step.** Break down the user's request into smaller parts.
-      2.  **Use your tools.** You have access to tools like `search_documents` and `list_sources_in_pocket` to find information.
+      2.  **Use your tools.** You have access to tools like `search_documents` and `list_sources_in_library` to find information.
       3.  **Synthesize.** Once you have gathered enough information from your tools, synthesize it to form a complete answer.
       4.  **Final Answer.** When, and only when, you are ready to give the final answer, you MUST call the `provide_final_answer` function. Do not respond to the user directly in any other way.

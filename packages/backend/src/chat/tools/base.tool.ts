@@ -12,7 +12,6 @@ export interface ToolDefinition {
 }
 
 export interface ToolExecutionContext {
-  pocketId: string;
   conversationId: string;
   userId?: string;
 }

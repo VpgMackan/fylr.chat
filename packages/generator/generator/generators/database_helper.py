@@ -14,20 +14,20 @@ log = structlog.getLogger(__name__)
 
 class DatabaseHelper(ABC):
     def _fetch_all_documents(
-        self, db: Session, pocket_id: uuid.UUID
+        self, db: Session, library_id: uuid.UUID
     ) -> List[Dict[str, Any]]:
         """
-        Fetches and consolidates content from all sources within a pocket.
+        Fetches and consolidates content from all sources within a library.
         """
         log.info(
-            f"Fetching sources for pocket_id: {pocket_id}",
+            f"Fetching sources for library_id: {library_id}",
             method="_fetch_all_documents",
         )
 
         sources = (
             db.query(Source)
             .options(joinedload(Source.vectors))
-            .filter(Source.pocket_id == pocket_id)
+            .filter(Source.library_id == library_id)
             .all()
         )
 
@@ -44,28 +44,28 @@ class DatabaseHelper(ABC):
             )
 
         log.info(
-            f"Found {len(documents)} documents with content for pocket {pocket_id}",
+            f"Found {len(documents)} documents with content for library {library_id}",
             method="_fetch_all_documents",
         )
         return documents
 
     def _fetch_related_documents(
-        self, db: Session, query_text: str, pocket_id: uuid.UUID, limit: int = 10
+        self, db: Session, query_text: str, library_id: uuid.UUID, limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Performs vector search to find documents related to the query text within a specific pocket.
+        Performs vector search to find documents related to the query text within a specific library.
 
         Args:
             db: Database session
             query_text: The search query text
-            pocket_id: The pocket ID to limit search to
+            library_id: The library ID to limit search to
             limit: Maximum number of results to return
 
         Returns:
             List of dictionaries containing document content and metadata
         """
         log.info(
-            f"Performing vector search for query: '{query_text}' in pocket {pocket_id}",
+            f"Performing vector search for query: '{query_text}' in library {library_id}",
             method="_fetch_related_documents",
         )
 
@@ -86,7 +86,7 @@ class DatabaseHelper(ABC):
                     ),
                 )
                 .join(Source, DocumentVector.file_id == Source.id)
-                .filter(Source.pocket_id == str(pocket_id))
+                .filter(Source.library_id == str(library_id))
                 .order_by(DocumentVector.embedding.cosine_distance(query_embedding))
                 .limit(limit)
             )
@@ -122,32 +122,32 @@ class DatabaseHelper(ABC):
             return []
 
     def _fetch_sources_with_vectors(
-        self, db: Session, pocket_id: uuid.UUID
+        self, db: Session, library_id: uuid.UUID
     ) -> List[Source]:
         """
-        Fetches all sources with their vectors for a given pocket.
+        Fetches all sources with their vectors for a given library.
 
         Args:
             db: Database session
-            pocket_id: The pocket ID to fetch sources for
+            library_id: The library ID to fetch sources for
 
         Returns:
             List of Source objects with loaded vectors
         """
         log.info(
-            f"Fetching sources with vectors for pocket_id: {pocket_id}",
+            f"Fetching sources with vectors for library_id: {library_id}",
             method="_fetch_sources_with_vectors",
         )
 
         sources = (
             db.query(Source)
             .options(joinedload(Source.vectors))
-            .filter(Source.pocket_id == pocket_id)
+            .filter(Source.library_id == library_id)
             .all()
         )
 
         log.info(
-            f"Found {len(sources)} sources for pocket {pocket_id}",
+            f"Found {len(sources)} sources for library {library_id}",
             method="_fetch_sources_with_vectors",
         )
         return sources

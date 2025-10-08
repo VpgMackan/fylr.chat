@@ -26,16 +26,16 @@ import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface
 export class PodcastController {
   constructor(private podcastService: PodcastService) {}
 
-  @Get('pocket/:pocketId')
-  getPodcastsByPocketId(
-    @Param('pocketId') pocketId: string,
+  @Get('library/:libraryId')
+  getPodcastsByLibraryId(
+    @Param('libraryId') libraryId: string,
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
     @Request() req: RequestWithUser,
   ) {
-    return this.podcastService.getPodcastsByPocketId(
-      pocketId,
+    return this.podcastService.getPodcastsByLibraryId(
+      libraryId,
       req.user.id,
       take,
       offset,
@@ -43,15 +43,15 @@ export class PodcastController {
     );
   }
 
-  @Post('pocket/:pocketId')
+  @Post('library/:libraryId')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createPodcast(
-    @Param('pocketId') pocketId: string,
+    @Param('libraryId') libraryId: string,
     @Body() createPodcastDto: CreatePodcastDto,
     @Request() req: RequestWithUser,
   ) {
     return this.podcastService.createPodcast(
-      pocketId,
+      libraryId,
       req.user.id,
       createPodcastDto,
     );

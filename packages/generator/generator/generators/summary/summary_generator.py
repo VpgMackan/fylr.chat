@@ -73,7 +73,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
                 all_related_docs = []
                 for query in search_queries[:3]:
                     related_docs = self._fetch_related_documents(
-                        db, query, summary.pocket_id, limit=5
+                        db, query, summary.library_id, limit=5
                     )
                     all_related_docs.extend(related_docs)
 

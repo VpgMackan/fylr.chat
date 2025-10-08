@@ -19,7 +19,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 import { LibraryService } from './library.service';
-import { UpdatePocketDto, CreatePocketDtoApiRequest } from '@fylr/types';
+import { UpdateLibraryDto, CreateLibraryDtoApiRequest } from '@fylr/types';
 
 @UseGuards(AuthGuard)
 @Controller('library')
@@ -56,7 +56,7 @@ export class LibraryController {
   )
   updateLibarById(
     @Param('id') id: string,
-    @Body() updateDto: UpdatePocketDto,
+    @Body() updateDto: UpdateLibraryDto,
     @Request() req: RequestWithUser,
   ) {
     return this.libraryService.updateLibrary(id, updateDto, req.user.id);
@@ -66,7 +66,7 @@ export class LibraryController {
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createLibrary(
     @Request() req: RequestWithUser,
-    @Body() createLibraryDto: CreatePocketDtoApiRequest,
+    @Body() createLibraryDto: CreateLibraryDtoApiRequest,
   ) {
     return this.libraryService.createLibrary({
       userId: req.user.id,
