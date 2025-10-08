@@ -1,6 +1,9 @@
 import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getConversationWsToken } from '@/services/api/chat.api';
+import {
+  getConversationWsToken,
+  initiateConversation as apiInitiateConversation,
+} from '@/services/api/chat.api';
 import {
   MessageApiResponse,
   WsServerEventPayload,
@@ -293,7 +296,7 @@ export function useChat(chatId: string | null) {
       }
 
       try {
-        const newConversation: any = await initiateAndSendMessage(content);
+        const newConversation: any = await apiInitiateConversation(content);
         return newConversation;
       } catch (error) {
         console.error('Failed to initiate conversation', error);

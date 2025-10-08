@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 interface RelatedSource {
   id: string;
   sourceId: string;
-  pocketId: string;
+  libraryId: string;
   name: string;
   chunkIndex: number;
 }
@@ -75,7 +75,7 @@ export default function ChatBubble({
   const handleVisitingSource = useCallback(
     (chunk: RelatedSource) =>
       router.push(
-        `/pocket/${chunk.pocketId}/source/${chunk.sourceId}#${chunk.chunkIndex}`,
+        `/library/${chunk.libraryId}/source/${chunk.sourceId}#${chunk.chunkIndex}`,
       ),
     [router],
   );
