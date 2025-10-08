@@ -32,10 +32,12 @@ export default function HomeView() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center">
-      <RecentLibraryGrid />
-      <div className="mt-3 w-full flex justify-center">
-        <ChatInput onSend={handleSend} className="w-full max-w-[25rem]" />
+    <div className="flex flex-col justify-center items-center h-full w-full px-4">
+      <div className="flex-grow flex items-center justify-center">
+        <RecentLibraryGrid />
+      </div>
+      <div className="w-full flex justify-center pb-8">
+        <ChatInput onSend={handleSend} className="w-full max-w-[40rem]" />
       </div>
     </div>
   );

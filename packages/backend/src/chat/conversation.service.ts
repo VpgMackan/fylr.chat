@@ -14,13 +14,22 @@ import {
 } from '@fylr/types';
 
 import { AuthService } from 'src/auth/auth.service';
+import { MessageService } from './message.service';
+import { Server } from 'socket.io';
 
 @Injectable()
 export class ConversationService {
+  private server: Server;
+
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
+    private messageService: MessageService,
   ) {}
+
+  setServer(server: Server) {
+    this.server = server;
+  }
 
   async generateWebSocketToken(
     user: UserPayload,
@@ -114,6 +123,19 @@ export class ConversationService {
         messages: true,
       },
     });
+
+    if (this.server && newConversation.messages.length > 0) {
+      const userMessage = newConversation.messages[0];
+      this.messageService
+        .generateAndStreamAiResponseWithTools(userMessage, this.server)
+        .catch((error) => {
+          console.error(
+            `Failed to generate AI response for conversation ${newConversation.id}:`,
+            error,
+          );
+        });
+    }
+
     return newConversation;
   }
 

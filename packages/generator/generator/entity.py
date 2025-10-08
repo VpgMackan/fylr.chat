@@ -83,7 +83,7 @@ class Podcast(Base):
     __tablename__ = "Podcast"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    library_id = Column(String, ForeignKey("Libaries.id"), nullable=False)
+    library_id = Column(String, ForeignKey("Libraries.id"), nullable=False)
     title = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     length = Column(BigInteger, nullable=False)

@@ -5,7 +5,7 @@ export const getSourcesByLibraryId = async (
   libaryId: string,
 ): Promise<SourceApiResponse[]> => {
   const { data } = await axios.get<SourceApiResponse[]>(
-    `source/libary/${libaryId}`,
+    `source/library/${libaryId}`,
   );
   return data;
 };

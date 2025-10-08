@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { diskStorage } from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+import * as path from 'path';
 
 import { RabbitMQService } from '../utils/rabbitmq.service';
 
@@ -18,7 +21,16 @@ import { EventsModule } from 'src/events/events.module';
     S3Module.registerAsync(),
     MulterModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
-        dest: configService.get<string>('TEMP_FILE_DIR'),
+        storage: diskStorage({
+          destination: configService.get<string>('TEMP_FILE_DIR'),
+          filename: (_req, file, cb) => {
+            const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+            cb(null, uniqueName);
+          },
+        }),
+        limits: {
+          fileSize: 100 * 1024 * 1024, // 100MB
+        },
       }),
       inject: [ConfigService],
     }),

@@ -49,4 +49,4 @@ class Library(Base):
     tags = Column(ARRAY(String))
     title = Column(String, nullable=False)
 
-    sources = relationship("Source", back_populates="libary")
+    sources = relationship("Source", back_populates="library")

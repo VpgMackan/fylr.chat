@@ -57,7 +57,21 @@ export class SourceController {
     @Request() req: RequestWithUser,
   ) {
     if (!file) {
-      throw new BadRequestException('No file provided.');
+      throw new BadRequestException(
+        'No file provided. Ensure you are sending multipart/form-data with a field named "file".',
+      );
+    }
+
+    if (!file.size || file.size === 0) {
+      throw new BadRequestException(
+        `File is empty or size could not be determined. File details: ${JSON.stringify(
+          {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
+        )}`,
+      );
     }
 
     return this.sourceService.createSource(file, body.libraryId, req.user.id);

@@ -43,6 +43,9 @@ export class ChatGateway
   ) {}
 
   afterInit(server: Server) {
+    // Provide server reference to ConversationService so it can trigger AI responses
+    this.conversationService.setServer(server);
+
     server.use((socket: SocketWithChatUser, next) => {
       try {
         const token = socket.handshake.auth?.token;

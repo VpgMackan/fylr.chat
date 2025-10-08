@@ -14,7 +14,7 @@ export default function LibraryMentionPopup({
   if (libraries.length === 0) return null;
 
   return (
-    <div className="absolute bottom-full mb-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-10">
+    <div className="absolute top-full mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-10">
       <ul className="max-h-60 overflow-y-auto">
         {libraries.map((lib, index) => (
           <li

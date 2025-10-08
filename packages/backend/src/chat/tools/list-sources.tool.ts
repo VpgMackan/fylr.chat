@@ -30,6 +30,13 @@ export class ListSourcesTool extends BaseTool {
       include: { sources: true },
     });
     if (!conversation) throw new NotFoundException('Conversation not found.');
+
+    if (!conversation.sources || conversation.sources.length === 0) {
+      return {
+        message: 'There are no sources associated with this conversation.',
+      };
+    }
+
     return conversation.sources;
   }
 }

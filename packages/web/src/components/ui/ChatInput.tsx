@@ -33,14 +33,31 @@ export default function ChatInput({ onSend, className = '' }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    listLibraries().then(setAllLibraries).catch(console.error);
+    console.log('[ChatInput] Fetching libraries...');
+    listLibraries()
+      .then((libs) => {
+        console.log('[ChatInput] Libraries fetched:', libs);
+        setAllLibraries(libs);
+      })
+      .catch((err) => {
+        console.error('[ChatInput] Error fetching libraries:', err);
+      });
   }, []);
 
   useEffect(() => {
+    console.log(
+      '[ChatInput] isMentioning:',
+      isMentioning,
+      'mentionQuery:',
+      mentionQuery,
+      'allLibraries count:',
+      allLibraries.length,
+    );
     if (isMentioning) {
       const filtered = allLibraries.filter((lib) =>
         lib.title.toLowerCase().includes(mentionQuery.toLowerCase()),
       );
+      console.log('[ChatInput] Filtered libraries:', filtered);
       setFilteredLibraries(filtered);
       setMentionIndex(0);
     }
@@ -58,12 +75,17 @@ export default function ChatInput({ onSend, className = '' }: ChatInputProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    console.log('[ChatInput] Input changed:', value);
 
     const atIndex = value.lastIndexOf('@');
+    console.log('[ChatInput] @ index:', atIndex);
     if (atIndex !== -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
+      const query = value.substring(atIndex + 1);
+      console.log('[ChatInput] Setting mentioning to true, query:', query);
       setIsMentioning(true);
-      setMentionQuery(value.substring(atIndex + 1));
+      setMentionQuery(query);
     } else {
+      console.log('[ChatInput] Setting mentioning to false');
       setIsMentioning(false);
     }
     setInputValue(value);
@@ -130,17 +152,22 @@ export default function ChatInput({ onSend, className = '' }: ChatInputProps) {
     setSelectedLibraries([]);
   };
 
+  console.log(
+    '[ChatInput] Render - isMentioning:',
+    isMentioning,
+    'filteredLibraries:',
+    filteredLibraries.length,
+  );
+
   return (
     <div className={`w-full relative ${className}`}>
-      {isMentioning && (
-        <LibraryMentionPopup
-          libraries={filteredLibraries}
-          onSelect={handleSelectLibrary}
-          selectedIndex={mentionIndex}
-        />
-      )}
+      {/* Debug info */}
+      <div className="text-xs text-gray-600 mb-1">
+        Debug: Libraries loaded: {allLibraries.length} | Mentioning:{' '}
+        {isMentioning ? 'YES' : 'NO'} | Filtered: {filteredLibraries.length}
+      </div>
       <div className="flex flex-col bg-blue-200 rounded-2xl border border-blue-300 shadow-md p-2">
-        <div className="flex items-center flex-wrap p-1">
+        <div className="flex items-center flex-wrap p-1 relative">
           {selectedLibraries.map((lib) => (
             <LibraryPill
               key={lib.id}
@@ -157,6 +184,13 @@ export default function ChatInput({ onSend, className = '' }: ChatInputProps) {
             placeholder="Ask anything, or type @ to select a library..."
             rows={1}
           />
+          {isMentioning && (
+            <LibraryMentionPopup
+              libraries={filteredLibraries}
+              onSelect={handleSelectLibrary}
+              selectedIndex={mentionIndex}
+            />
+          )}
         </div>
         <div className="flex items-center justify-between pt-1">
           <div className="flex gap-2">
