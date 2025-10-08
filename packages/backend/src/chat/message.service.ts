@@ -286,9 +286,15 @@ export class MessageService {
     overrideQuery?: string,
   ) {
     const synthesisPrompt = `
-        Based on the entire conversation history, including all thoughts and tool results, provide a final, comprehensive answer to the initial user query.
-        The user's final query was: "${messages.find((m) => m.role === 'user').content}".
-        Synthesize the information you've gathered. Cite sources if applicable using markdown format.
+        You have now completed your research using your tools. Your task is to synthesize all the information you've gathered from the conversation history (including your own thoughts and tool results) into a single, final answer for the user.
+
+        **Tone and Style:**
+        - Be friendly, clear, and conversational.
+        - Start with a direct answer or summary, then elaborate with details.
+        - Explain things simply. Avoid just copying and pasting from your tool results. Weave the facts into a helpful explanation.
+        - When you use information from a source, cite it clearly using Markdown format like [1], [2], etc., if applicable.
+
+        Please provide a comprehensive and helpful response to the user's original query.
         ${overrideQuery || ''}
       `;
 
@@ -318,7 +324,7 @@ export class MessageService {
       conversationId,
       data: finalAssistantMessage,
     });
-  }
+  }1
 
   async regenerateAndStreamAiResponse(
     assistantMessageId: string,

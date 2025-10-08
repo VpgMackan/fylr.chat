@@ -1,4 +1,4 @@
-import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import {
   getConversationWsToken,
@@ -58,18 +58,24 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_MESSAGE':
+      if (state.messages.some((m) => m.id === action.payload.id)) {
+        return state;
+      }
       return { ...state, messages: [...state.messages, action.payload] };
-    case 'APPEND_CHUNK':
-      const lastMsg = state.messages[state.messages.length - 1];
-      if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
+    case 'APPEND_CHUNK': {
+      const streamingMsgIndex = state.messages.findIndex(
+        (m) => m.id === STREAMING_ASSISTANT_ID,
+      );
+      if (streamingMsgIndex > -1) {
+        const newMessages = [...state.messages];
         const updatedMsg = {
-          ...lastMsg,
-          content: lastMsg.content + action.payload.content,
+          ...newMessages[streamingMsgIndex],
+          content:
+            (newMessages[streamingMsgIndex].content || '') +
+            action.payload.content,
         };
-        return {
-          ...state,
-          messages: [...state.messages.slice(0, -1), updatedMsg],
-        };
+        newMessages[streamingMsgIndex] = updatedMsg;
+        return { ...state, messages: newMessages };
       } else {
         const newStreamingMsg: MessageApiResponse = {
           id: STREAMING_ASSISTANT_ID,
@@ -84,15 +90,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         };
         return { ...state, messages: [...state.messages, newStreamingMsg] };
       }
-    case 'FINALIZE_ASSISTANT_MESSAGE':
+    }
+    case 'FINALIZE_ASSISTANT_MESSAGE': {
+      const finalMsg = action.payload;
+      const newMessages = state.messages.map((m) =>
+        m.id === STREAMING_ASSISTANT_ID ? finalMsg : m,
+      );
+      if (!newMessages.some((m) => m.id === finalMsg.id)) {
+        newMessages.push(finalMsg);
+      }
       return {
         ...state,
         status: null,
-        messages: [
-          ...state.messages.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
-          action.payload,
-        ],
+        messages: newMessages,
       };
+    }
     case 'DELETE_MESSAGE':
       return {
         ...state,
