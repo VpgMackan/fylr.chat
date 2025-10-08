@@ -41,6 +41,11 @@ export class LibraryController {
     );
   }
 
+    @Get('list')
+  listUserLibraries(@Request() req: RequestWithUser) {
+    return this.libraryService.listUserLibraries(req.user.id);
+  }
+
   @Get('/:id')
   getLibarById(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.libraryService.findOneById(id, req.user.id);

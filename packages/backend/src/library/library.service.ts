@@ -52,6 +52,19 @@ export class LibraryService {
     });
   }
 
+  async listUserLibraries(userId: string) {
+    return this.prisma.library.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        title: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async findOneById(id: string, userId: string) {
     const library = await this.prisma.library.findFirst({
       where: { id, userId },

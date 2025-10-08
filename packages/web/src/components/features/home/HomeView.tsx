@@ -14,11 +14,14 @@ export default function HomeView() {
   const { initiateAndSendMessage } = useChat(null);
   const [isSending, setIsSending] = useState(false);
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (payload: {
+    content: string;
+    sourceIds?: string[];
+  }) => {
     if (isSending) return;
     setIsSending(true);
 
-    const newConversation = await initiateAndSendMessage(content);
+    const newConversation = await initiateAndSendMessage(payload);
 
     if (newConversation) {
       toast.success('New conversation started!');

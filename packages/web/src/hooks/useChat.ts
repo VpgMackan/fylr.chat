@@ -289,14 +289,17 @@ export function useChat(chatId: string | null) {
   }, [socketRef]);
 
   const initiateAndSendMessage = useCallback(
-    async (content: string) => {
+    async (payload: { content: string; sourceIds?: string[] }) => {
       if (chatId) {
-        sendMessage(content);
+        sendMessage(payload.content);
         return null;
       }
 
       try {
-        const newConversation: any = await apiInitiateConversation(content);
+        const newConversation: any = await apiInitiateConversation(
+          payload.content,
+          payload.sourceIds,
+        );
         return newConversation;
       } catch (error) {
         console.error('Failed to initiate conversation', error);
