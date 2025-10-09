@@ -27,7 +27,7 @@ export default function ConversationIdPageView() {
   }, [messages]);
 
   return (
-    <div className="w-full max-w-4xl col-span-5 p-4 flex flex-col h-full">
+    <div className="w-full col-span-5 p-4 flex flex-col h-full">
       {connectionStatus === 'connected' ? (
         <>
           <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4 pr-2">
