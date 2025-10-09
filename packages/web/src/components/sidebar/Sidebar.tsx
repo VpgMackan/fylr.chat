@@ -19,6 +19,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ selectedId }: SidebarProps) {
+  const [firstLoad, setFirstLoad] = useState(true);
   const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
@@ -59,20 +60,24 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         setItems(data);
       })
       .catch(console.error)
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+      });
 
-    localStorage.setItem('sidebarContentType', contentType);
+    if (!firstLoad) {
+      localStorage.setItem('sidebarContentType', contentType);
+    } else {
+      setFirstLoad(false);
+    }
   }, [contentType]);
 
   const handleSelect = (id: string) => {
     switch (contentType) {
       case 'Summaries':
-        // You'll need to create these pages
         router.push(`/summary/${id}`);
         break;
       case 'Podcasts':
-        // You'll need to create these pages
-        // router.push(`/podcasts/${id}`);
+        router.push(`/podcast/${id}`);
         break;
       case 'Conversations':
       default:
