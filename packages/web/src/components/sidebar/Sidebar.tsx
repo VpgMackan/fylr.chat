@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import Dropdown from '@/components/ui/Dropdown';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
-import CreateLibraryModal from '../modals/CreateLibraryModal';
+import CreateContentModal from '../modals/CreateContentModal';
 import { getConversations } from '@/services/api/chat.api';
 import { getSummaries } from '@/services/api/summary.api';
 import { getPodcasts } from '@/services/api/podcast.api';
@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ selectedId }: SidebarProps) {
-  const [createLibraryModalOpen, setCreateLibraryModalOpen] = useState(false);
+  const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,13 +83,13 @@ export default function Sidebar({ selectedId }: SidebarProps) {
 
   return (
     <>
-      <CreateLibraryModal
-        isOpen={createLibraryModalOpen}
-        onClose={() => setCreateLibraryModalOpen(false)}
+      <CreateContentModal
+        isOpen={createContentModalOpen}
+        onClose={() => setCreateContentModalOpen(false)}
       />
       <div className="bg-blue-100 p-2 flex flex-col h-full w-64">
         <SidebarActions
-          onCreateContent={() => setCreateLibraryModalOpen(true)}
+          onCreateContent={() => setCreateContentModalOpen(true)}
         />
         <hr className="my-2 text-gray-600" />
         <div className="mb-3">
