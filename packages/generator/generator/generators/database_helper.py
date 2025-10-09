@@ -13,59 +13,23 @@ log = structlog.getLogger(__name__)
 
 
 class DatabaseHelper(ABC):
-    def _fetch_all_documents(
-        self, db: Session, library_id: uuid.UUID
-    ) -> List[Dict[str, Any]]:
-        """
-        Fetches and consolidates content from all sources within a library.
-        """
-        log.info(
-            f"Fetching sources for library_id: {library_id}",
-            method="_fetch_all_documents",
-        )
-
-        sources = (
-            db.query(Source)
-            .options(joinedload(Source.vectors))
-            .filter(Source.library_id == library_id)
-            .all()
-        )
-
-        documents = []
-        for source in sources:
-            if not source.vectors:
-                continue
-
-            sorted_chunks = sorted(source.vectors, key=lambda v: v.chunk_index)
-            full_content = " ".join([chunk.content for chunk in sorted_chunks])
-
-            documents.append(
-                {"id": source.id, "name": source.name, "content": full_content}
-            )
-
-        log.info(
-            f"Found {len(documents)} documents with content for library {library_id}",
-            method="_fetch_all_documents",
-        )
-        return documents
-
     def _fetch_related_documents(
-        self, db: Session, query_text: str, library_id: uuid.UUID, limit: int = 10
+        self, db: Session, query_text: str, source_ids: List[str], limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Performs vector search to find documents related to the query text within a specific library.
+        Performs vector search to find documents related to the query text within a specific set of sources.
 
         Args:
             db: Database session
             query_text: The search query text
-            library_id: The library ID to limit search to
+            source_ids: List of source IDs to filter the search
             limit: Maximum number of results to return
 
         Returns:
             List of dictionaries containing document content and metadata
         """
         log.info(
-            f"Performing vector search for query: '{query_text}' in library {library_id}",
+            f"Performing vector search for query: '{query_text}' in selected sources",
             method="_fetch_related_documents",
         )
 
@@ -86,14 +50,13 @@ class DatabaseHelper(ABC):
                     ),
                 )
                 .join(Source, DocumentVector.file_id == Source.id)
-                .filter(Source.library_id == str(library_id))
+                .filter(Source.id.in_(source_ids))
                 .order_by(DocumentVector.embedding.cosine_distance(query_embedding))
                 .limit(limit)
             )
 
             result = db.execute(query).fetchall()
 
-            # Convert results to a more usable format
             related_docs = []
             for row in result:
                 related_docs.append(
@@ -122,32 +85,32 @@ class DatabaseHelper(ABC):
             return []
 
     def _fetch_sources_with_vectors(
-        self, db: Session, library_id: uuid.UUID
+        self, db: Session, source_ids: List[str]
     ) -> List[Source]:
         """
-        Fetches all sources with their vectors for a given library.
+        Fetches all sources with their vectors for a given list of source IDs.
 
         Args:
             db: Database session
-            library_id: The library ID to fetch sources for
+            source_ids: List of source IDs to filter the sources
 
         Returns:
             List of Source objects with loaded vectors
         """
         log.info(
-            f"Fetching sources with vectors for library_id: {library_id}",
+            f"Fetching sources with vectors for selected sources",
             method="_fetch_sources_with_vectors",
         )
 
         sources = (
             db.query(Source)
             .options(joinedload(Source.vectors))
-            .filter(Source.library_id == library_id)
+            .filter(Source.id.in_(source_ids))
             .all()
         )
 
         log.info(
-            f"Found {len(sources)} sources for library {library_id}",
+            f"Found {len(sources)} sources for selected source IDs",
             method="_fetch_sources_with_vectors",
         )
         return sources

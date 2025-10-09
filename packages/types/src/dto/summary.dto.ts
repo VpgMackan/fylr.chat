@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsString,
+  IsUUID,
   IsNotEmpty,
   IsOptional,
   IsArray,
@@ -26,4 +27,14 @@ export class CreateSummaryDto {
   @ValidateNested({ each: true })
   @Type(() => CreateSummaryEpisodeDto)
   episodes!: CreateSummaryEpisodeDto[];
+
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  libraryIds?: string[];
+
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  sourceIds?: string[];
 }

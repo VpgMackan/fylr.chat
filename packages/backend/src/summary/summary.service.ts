@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSummaryDto } from '@fylr/types';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
@@ -10,8 +15,7 @@ export class SummaryService {
     private readonly rabbitMQService: RabbitMQService,
   ) {}
 
-  async getSummariesByLibraryId(
-    libraryId: string,
+  async getSummariesByUserId(
     userId: string,
     take: number,
     offset: number,
@@ -19,8 +23,7 @@ export class SummaryService {
   ) {
     const summaries = await this.prisma.summary.findMany({
       where: {
-        libraryId,
-        library: { userId },
+        userId,
         ...(searchTerm && {
           title: { contains: searchTerm, mode: 'insensitive' },
         }),
@@ -37,7 +40,7 @@ export class SummaryService {
     const summary = await this.prisma.summary.findFirst({
       where: {
         id,
-        library: { userId },
+        userId,
       },
       include: { episodes: true },
     });
@@ -49,27 +52,50 @@ export class SummaryService {
     return summary;
   }
 
-  async createSummary(
-    libraryId: string,
-    userId: string,
-    createSummaryDto: CreateSummaryDto,
-  ) {
-    const library = await this.prisma.library.findUnique({
-      where: { id: libraryId },
-    });
+  async createSummary(userId: string, createSummaryDto: CreateSummaryDto) {
+    const {
+      title,
+      episodes,
+      libraryIds = [],
+      sourceIds = [],
+    } = createSummaryDto;
 
-    if (!library || library.userId !== userId) {
-      throw new NotFoundException(
-        `Library with ID "${libraryId}" not found or access denied.`,
+    if (libraryIds.length === 0 && sourceIds.length === 0) {
+      throw new BadRequestException(
+        'Either libraryIds or sourceIds must be provided.',
       );
     }
 
-    const { title, episodes } = createSummaryDto;
+    const allSourceIds = new Set<string>(sourceIds);
+
+    if (libraryIds.length > 0) {
+      const libraries = await this.prisma.library.findMany({
+        where: { id: { in: libraryIds }, userId },
+        include: { sources: { select: { id: true } } },
+      });
+
+      if (libraries.length !== libraryIds.length) {
+        throw new ForbiddenException('You do not own all specified libraries.');
+      }
+
+      libraries.forEach((lib) =>
+        lib.sources.forEach((src) => allSourceIds.add(src.id)),
+      );
+    }
+
+    if (sourceIds.length > 0) {
+      const sources = await this.prisma.source.findMany({
+        where: { id: { in: sourceIds }, library: { userId } },
+      });
+      if (sources.length !== sourceIds.length) {
+        throw new ForbiddenException('You do not own all specified sources.');
+      }
+    }
 
     const newSummary = await this.prisma.summary.create({
       data: {
         title,
-        libraryId,
+        userId,
         length: 0,
         generated: 'PENDING',
         episodes: {
@@ -78,6 +104,9 @@ export class SummaryService {
             focus: episode.focus,
             content: 'Generating...',
           })),
+        },
+        sources: {
+          connect: Array.from(allSourceIds).map((id) => ({ id })),
         },
       },
     });

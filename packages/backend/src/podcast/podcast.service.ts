@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePodcastDto } from '@fylr/types';
@@ -14,8 +19,7 @@ export class PodcastService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getPodcastsByLibraryId(
-    libraryId: string,
+  async getPodcastsByUserId(
     userId: string,
     take: number,
     offset: number,
@@ -23,8 +27,7 @@ export class PodcastService {
   ) {
     const podcasts = await this.prisma.podcast.findMany({
       where: {
-        libraryId,
-        library: { userId },
+        userId,
         ...(searchTerm && {
           title: { contains: searchTerm, mode: 'insensitive' },
         }),
@@ -41,7 +44,7 @@ export class PodcastService {
     const podcast = await this.prisma.podcast.findFirst({
       where: {
         id,
-        library: { userId },
+        userId,
       },
       include: { episodes: true },
     });
@@ -53,27 +56,45 @@ export class PodcastService {
     return podcast;
   }
 
-  async createPodcast(
-    libraryId: string,
-    userId: string,
-    createPodcastDto: CreatePodcastDto,
-  ) {
-    const library = await this.prisma.library.findUnique({
-      where: { id: libraryId },
-    });
+  async createPodcast(userId: string, createPodcastDto: CreatePodcastDto) {
+    const { title, libraryIds = [], sourceIds = [] } = createPodcastDto;
 
-    if (!library || library.userId !== userId) {
-      throw new NotFoundException(
-        `Library with ID "${libraryId}" not found or access denied.`,
+    if (libraryIds.length === 0 && sourceIds.length === 0) {
+      throw new BadRequestException(
+        'Either libraryIds or sourceIds must be provided.',
       );
     }
 
-    const { title } = createPodcastDto;
+    const allSourceIds = new Set<string>(sourceIds);
+
+    if (libraryIds.length > 0) {
+      const libraries = await this.prisma.library.findMany({
+        where: { id: { in: libraryIds }, userId },
+        include: { sources: { select: { id: true } } },
+      });
+
+      if (libraries.length !== libraryIds.length) {
+        throw new ForbiddenException('You do not own all specified libraries.');
+      }
+
+      libraries.forEach((lib) =>
+        lib.sources.forEach((src) => allSourceIds.add(src.id)),
+      );
+    }
+
+    if (sourceIds.length > 0) {
+      const sources = await this.prisma.source.findMany({
+        where: { id: { in: sourceIds }, library: { userId } },
+      });
+      if (sources.length !== sourceIds.length) {
+        throw new ForbiddenException('You do not own all specified sources.');
+      }
+    }
 
     const newPodcast = await this.prisma.podcast.create({
       data: {
         title,
-        libraryId,
+        userId,
         length: 0,
         generated: 'PENDING',
         episodes: {
@@ -82,6 +103,9 @@ export class PodcastService {
             focus: '',
             content: 'Generating...',
           },
+        },
+        sources: {
+          connect: Array.from(allSourceIds).map((id) => ({ id })),
         },
       },
     });
@@ -99,7 +123,7 @@ export class PodcastService {
     const podcast = await this.prisma.podcast.findFirst({
       where: {
         id: podcastId,
-        library: { userId },
+        userId,
       },
       include: {
         episodes: true,
