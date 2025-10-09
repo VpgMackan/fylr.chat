@@ -1,10 +1,4 @@
-import {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-} from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { listLibraries, SimpleLibrary } from '@/services/api/library.api';
 import { getSourcesByLibraryId } from '@/services/api/source.api';
@@ -152,20 +146,8 @@ export default function ChatInput({ onSend, className = '' }: ChatInputProps) {
     setSelectedLibraries([]);
   };
 
-  console.log(
-    '[ChatInput] Render - isMentioning:',
-    isMentioning,
-    'filteredLibraries:',
-    filteredLibraries.length,
-  );
-
   return (
     <div className={`w-full relative ${className}`}>
-      {/* Debug info */}
-      <div className="text-xs text-gray-600 mb-1">
-        Debug: Libraries loaded: {allLibraries.length} | Mentioning:{' '}
-        {isMentioning ? 'YES' : 'NO'} | Filtered: {filteredLibraries.length}
-      </div>
       <div className="flex flex-col bg-blue-200 rounded-2xl border border-blue-300 shadow-md p-2">
         <div className="flex items-center flex-wrap p-1 relative">
           {selectedLibraries.map((lib) => (

@@ -86,6 +86,10 @@ export default function Sidebar({ selectedId }: SidebarProps) {
     }
   };
 
+  const onCreateChat = () => {
+    router.push('/');
+  };
+
   return (
     <>
       <CreateContentModal
@@ -94,6 +98,7 @@ export default function Sidebar({ selectedId }: SidebarProps) {
       />
       <div className="bg-blue-100 p-2 flex flex-col h-full w-64">
         <SidebarActions
+          onCreateChat={onCreateChat}
           onCreateContent={() => setCreateContentModalOpen(true)}
         />
         <hr className="my-2 text-gray-600" />

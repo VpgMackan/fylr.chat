@@ -1,16 +1,23 @@
 import Button from '../ui/Button';
 
 interface SidebarActionsProps {
+  onCreateChat?: () => void;
   onCreateContent?: () => void;
   onSelectLibrary?: () => void;
 }
 
 export default function SidebarActions({
+  onCreateChat,
   onCreateContent,
   onSelectLibrary,
 }: SidebarActionsProps) {
   return (
     <div className="flex flex-col gap-2">
+      <Button
+        name="New Chat"
+        icon="heroicons-solid:plus-sm"
+        onClick={onCreateChat}
+      />
       {/* QUICK CREATE BUTTON (OPENS MODAL FOR Library CREATION AND CONTENT CREATION) */}
       <Button
         name="Create content"
