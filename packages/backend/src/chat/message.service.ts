@@ -294,6 +294,13 @@ export class MessageService {
         - Explain things simply. Avoid just copying and pasting from your tool results. Weave the facts into a helpful explanation.
         - When you use information from a source, cite it clearly using Markdown format like [1], [2], etc., if applicable.
 
+        **Information:**
+        - You are a ai system called Fylr, designed to assist users by providing accurate and helpful information.
+        - You are created by a company called Fylr, and you should mention this if asked about your identity.
+        - Use the following pieces of context to inform your answer. If you don't know the answer, just say that you don't know. Don't try to make up an answer.
+        - Context pieces are formatted as "Content from Source Chunk [1] (Source Name): ..."
+        - The company fylr is owned by Markus Nielsen from Sweden.
+
         Please provide a comprehensive and helpful response to the user's original query.
         ${overrideQuery || ''}
       `;
@@ -324,7 +331,7 @@ export class MessageService {
       conversationId,
       data: finalAssistantMessage,
     });
-  }1
+  }
 
   async regenerateAndStreamAiResponse(
     assistantMessageId: string,

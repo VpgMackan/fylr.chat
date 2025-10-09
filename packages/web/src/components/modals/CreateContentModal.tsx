@@ -87,11 +87,6 @@ export default function CreateContentModal({
               <Button
                 name={isCreating ? 'Creating...' : 'Create'}
                 onClick={handleCreate}
-                disabled={
-                  isCreating ||
-                  (contentType === 'Library' &&
-                    !libraryContentRef.current?.canCreate)
-                }
               />
             </div>
           </div>
