@@ -12,7 +12,7 @@ interface ConversationListProps {
 }
 
 export default function ConversationList({
-  conversations = [{ id: '1', name: 'Hello' }],
+  conversations = [],
   selectedId,
   onSelect,
 }: ConversationListProps) {
