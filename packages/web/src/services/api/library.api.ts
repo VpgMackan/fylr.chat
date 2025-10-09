@@ -14,14 +14,14 @@ export const listLibraries = async (): Promise<SimpleLibrary[]> => {
 export const getLibraries = async (params: {
   take: number;
   offset: number;
-  searchTerm: string;
+  searchTerm?: string;
 }): Promise<LibraryApiResponse[]> => {
   const { data } = await axios.get<LibraryApiResponse[]>('library', { params });
   return data;
 };
 
 export const getLibraryById = async (id: string) => {
-  const { data } = await axios.get(`libary/${id}`);
+  const { data } = await axios.get(`library/${id}`);
   return data;
 };
 

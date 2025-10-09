@@ -10,32 +10,17 @@ import Button from '@/components/ui/Button';
 import { useEpisodeManager } from '@/hooks/useEpisodeManager';
 import { getPodcastById } from '@/services/api/podcast.api';
 import { PodcastApiResponse, PodcastEpisodeApiResponse } from '@fylr/types';
+import { useParams } from 'next/navigation';
 
-interface PodcastIdViewRefactoredProps {
-  params: Promise<{ id: string; podcastid: string }>;
-}
+export default function PodcastIdViewRefactored() {
+  const params = useParams();
+  const podcastId = params.podcastid as string;
 
-export default function PodcastIdViewRefactored({
-  params,
-}: PodcastIdViewRefactoredProps) {
-  const [pocketId, setPocketId] = useState<string | null>(null);
-  const [podcastId, setPodcastId] = useState<string | null>(null);
-  const t = useTranslations('pages.podcast');
-  const commonT = useTranslations('common');
-
-  // Audio player state
   const [playing, setPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [volume, setVolume] = useState<number>(1);
   const audioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    params.then((res) => {
-      setPocketId(res.id);
-      setPodcastId(res.podcastid);
-    });
-  }, [params]);
 
   const {
     data: podcastData,
@@ -199,8 +184,8 @@ export default function PodcastIdViewRefactored({
 
   const headerActions = (
     <>
-      <Button name={t('share') || 'Share'} variant="secondary" />
-      <Button name={t('download') || 'Download'} variant="secondary" />
+      <Button name={'Share'} variant="secondary" />
+      <Button name={'Download'} variant="secondary" />
       <Button name="" icon="ph:gear-fill" variant="ghost" />
     </>
   );
@@ -214,14 +199,14 @@ export default function PodcastIdViewRefactored({
       error={error}
       generationStatus={generationStatus}
       onEpisodeSelect={handleEpisodeSelectWithAudioReset}
-      sidebarTitle={t('podcastEpisodes') || 'Podcast Episodes'}
+      sidebarTitle={'Podcast Episodes'}
       episodeIcon="ph:microphone-fill"
       renderEpisodeCard={renderEpisodeCard}
       headerActions={headerActions}
       translations={{
-        editButton: t('editButton') || 'Edit',
-        loadingMessage: commonT('loading') || 'Loading podcast...',
-        errorPrefix: commonT('error') || 'Error',
+        editButton: 'Edit',
+        loadingMessage: 'Loading podcast...',
+        errorPrefix: 'Error',
       }}
     >
       {selectedEpisode && (

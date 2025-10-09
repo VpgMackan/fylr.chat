@@ -17,7 +17,6 @@ export default function Dropdown({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
@@ -68,7 +67,9 @@ export default function Dropdown({
                     ? 'heroicons-solid:chat-alt-2'
                     : option === 'Summaries'
                       ? 'heroicons-solid:book-open'
-                      : 'heroicons-solid:microphone'
+                      : option === 'Libraries'
+                        ? 'heroicons-solid:library'
+                        : 'heroicons-solid:microphone'
                 }
                 width="18"
                 height="18"

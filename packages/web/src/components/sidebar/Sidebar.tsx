@@ -11,8 +11,14 @@ import CreateContentModal from '../modals/CreateContentModal';
 import { getConversations } from '@/services/api/chat.api';
 import { getSummaries } from '@/services/api/summary.api';
 import { getPodcasts } from '@/services/api/podcast.api';
+import { getLibraries } from '@/services/api/library.api';
 
-type ContentType = 'Conversations' | 'Summaries' | 'Podcasts' | '';
+type ContentType =
+  | 'Conversations'
+  | 'Summaries'
+  | 'Podcasts'
+  | 'Libraries'
+  | '';
 
 interface SidebarProps {
   selectedId?: string;
@@ -30,7 +36,9 @@ export default function Sidebar({ selectedId }: SidebarProps) {
     const savedType = localStorage.getItem('sidebarContentType') as ContentType;
     if (
       savedType &&
-      ['Conversations', 'Summaries', 'Podcasts'].includes(savedType)
+      ['Conversations', 'Summaries', 'Podcasts', 'Libraries'].includes(
+        savedType,
+      )
     ) {
       setContentType(savedType);
     } else {
@@ -48,6 +56,9 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         break;
       case 'Podcasts':
         fetchPromise = getPodcasts({ take: 50, offset: 0 });
+        break;
+      case 'Libraries':
+        fetchPromise = getLibraries({ take: 50, offset: 0 });
         break;
       case 'Conversations':
       default:
@@ -79,6 +90,9 @@ export default function Sidebar({ selectedId }: SidebarProps) {
       case 'Podcasts':
         router.push(`/podcast/${id}`);
         break;
+      case 'Libraries':
+        router.push(`/library/${id}`);
+        break;
       case 'Conversations':
       default:
         router.push(`/c/${id}`);
@@ -104,7 +118,7 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         <hr className="my-2 text-gray-600" />
         <div className="mb-3">
           <Dropdown
-            options={['Conversations', 'Summaries', 'Podcasts']}
+            options={['Conversations', 'Summaries', 'Podcasts', 'Libraries']}
             selectedOption={contentType}
             onSelect={(option) => setContentType(option as ContentType)}
           />

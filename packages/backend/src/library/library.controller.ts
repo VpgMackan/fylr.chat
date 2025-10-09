@@ -41,13 +41,13 @@ export class LibraryController {
     );
   }
 
-    @Get('list')
+  @Get('list')
   listUserLibraries(@Request() req: RequestWithUser) {
     return this.libraryService.listUserLibraries(req.user.id);
   }
 
   @Get('/:id')
-  getLibarById(@Param('id') id: string, @Request() req: RequestWithUser) {
+  getLibraryById(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.libraryService.findOneById(id, req.user.id);
   }
 
@@ -59,7 +59,7 @@ export class LibraryController {
       skipMissingProperties: true,
     }),
   )
-  updateLibarById(
+  updateLibrarById(
     @Param('id') id: string,
     @Body() updateDto: UpdateLibraryDto,
     @Request() req: RequestWithUser,
