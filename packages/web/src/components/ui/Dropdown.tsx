@@ -5,12 +5,16 @@ import { Icon } from '@iconify/react';
 
 interface DropdownProps {
   options: string[];
-  defaultOption?: string;
+  selectedOption: string;
+  onSelect: (option: string) => void;
 }
 
-export default function Dropdown({ options, defaultOption }: DropdownProps) {
+export default function Dropdown({
+  options,
+  selectedOption,
+  onSelect,
+}: DropdownProps) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(defaultOption || options[0]);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -32,7 +36,7 @@ export default function Dropdown({ options, defaultOption }: DropdownProps) {
       >
         <span className="flex items-center gap-2">
           <Icon icon="heroicons-solid:menu-alt-2" width="20" height="20" />
-          {selected}
+          {selectedOption}
         </span>
         <Icon
           icon={
@@ -49,22 +53,22 @@ export default function Dropdown({ options, defaultOption }: DropdownProps) {
             <button
               key={idx}
               onClick={() => {
-                setSelected(option);
+                onSelect(option);
                 setOpen(false);
               }}
               className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-blue-50 transition ${
-                selected === option
+                selectedOption === option
                   ? 'text-blue-500 font-semibold'
                   : 'text-gray-700'
               }`}
             >
               <Icon
                 icon={
-                  option === 'Content'
-                    ? 'heroicons-solid:document-text'
+                  option === 'Conversations'
+                    ? 'heroicons-solid:chat-alt-2'
                     : option === 'Summaries'
                       ? 'heroicons-solid:book-open'
-                      : 'heroicons-solid:music-note'
+                      : 'heroicons-solid:microphone'
                 }
                 width="18"
                 height="18"

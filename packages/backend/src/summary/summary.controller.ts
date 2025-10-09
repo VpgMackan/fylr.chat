@@ -24,7 +24,7 @@ export class SummaryController {
   constructor(private summaryService: SummaryService) {}
 
   @Get('/')
-  getSummariesByLibraryId(
+  getSummariesByUserId(
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,

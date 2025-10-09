@@ -68,6 +68,7 @@ export interface SummaryApiResponse {
   title: string;
   createdAt: string;
   generated: string | null;
+  episodes: SummaryEpisodeApiResponse[];
 }
 
 export interface PodcastEpisodeApiResponse {

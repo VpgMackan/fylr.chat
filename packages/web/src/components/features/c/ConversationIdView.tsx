@@ -50,7 +50,11 @@ export default function ConversationIdPageView() {
             </div>
           )}
 
-          <ChatInput onSend={sendMessage} />
+          <ChatInput
+            onSend={(data) => {
+              sendMessage(data.content);
+            }}
+          />
         </>
       ) : (
         <div className="flex items-center justify-center h-full">
