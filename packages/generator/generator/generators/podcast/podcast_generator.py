@@ -201,7 +201,10 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             {"stage": "fetching_vectors", "message": "Gathering content..."},
             "podcast",
         )
-        sources = self._fetch_sources_with_vectors(db, podcast.library_id)
+        source_ids = [source.id for source in podcast.sources]
+        if not source_ids:
+            raise ValueError(f"No sources associated with summary {podcast.id}")
+        sources = self._fetch_sources_with_vectors(db, source_ids)
         if not sources:
             raise ValueError("No sources with content found in this library.")
 
