@@ -13,6 +13,7 @@ export default function ConversationIdPageView() {
 
   const {
     messages,
+    sources,
     sendMessage,
     regenerateMessage,
     deleteMessage,
@@ -54,6 +55,8 @@ export default function ConversationIdPageView() {
             onSend={(data) => {
               sendMessage(data.content);
             }}
+            showSourceMenu={true}
+            conversationSources={sources}
           />
         </>
       ) : (

@@ -93,29 +93,38 @@ export class SourceService {
   }
 
   async getSourcesByConversationId(conversationId: string, userId: string) {
-    /*const conversation = await this.prisma.conversation.findFirst({
-      where: { id: conversationId, Library: { userId } },
-      select: { libraryId: true },
-    });
-    if (!conversation) {
-      throw new NotFoundException('Conversation not found or not accessible');
-    }
-    const libraryId = conversation.libraryId;
-    const sources = await this.prisma.source.findMany({
-      where: { libraryId },
+    // Verify user has access to this conversation
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
       include: {
-        conversations: {
-          where: { id: conversationId },
+        sources: {
           select: { id: true },
         },
       },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or not accessible');
+    }
+
+    // Get the IDs of sources currently associated with this conversation
+    const conversationSourceIds = new Set(
+      conversation.sources.map((s) => s.id),
+    );
+
+    // Get all sources from user's libraries
+    const allSources = await this.prisma.source.findMany({
+      where: {
+        library: { userId },
+      },
       orderBy: { uploadTime: 'desc' },
     });
-    return sources.map(({ conversations, ...source }) => ({
+
+    // Map sources with isActive flag
+    return allSources.map((source) => ({
       ...source,
-      isActive: conversations.length > 0,
-    }));*/
-    return [];
+      isActive: conversationSourceIds.has(source.id),
+    }));
   }
 
   async findByVector(vector: number[], sourceIds: string[]) {
