@@ -230,12 +230,13 @@ export function useChat(chatId: string | null) {
   }, [chatId]);
 
   const sendMessage = useCallback(
-    (content: string) => {
-      if (socketRef.current && chatId && content.trim()) {
+    (payload: { content: string; sourceIds?: string[] | undefined }) => {
+      if (socketRef.current && chatId && payload.content.trim()) {
         socketRef.current.emit('conversationAction', {
           action: 'sendMessage',
           conversationId: chatId,
-          content,
+          content: payload.content,
+          sourceIds: payload.sourceIds,
         });
       }
     },
@@ -248,7 +249,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'deleteMessage',
           conversationId: chatId,
-          messageId,
+          payload: { messageId },
         });
       }
     },
@@ -261,8 +262,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'updateMessage',
           conversationId: chatId,
-          messageId,
-          content,
+          payload: { messageId, content },
         });
       }
     },
@@ -275,7 +275,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'updateSources',
           conversationId: chatId,
-          sourcesId,
+          payload: { sourcesId },
         });
       }
     },
@@ -288,7 +288,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'regenerateMessage',
           conversationId: chatId,
-          messageId,
+          payload: { messageId },
         });
       }
     },
@@ -303,7 +303,7 @@ export function useChat(chatId: string | null) {
   const initiateAndSendMessage = useCallback(
     async (payload: { content: string; sourceIds?: string[] }) => {
       if (chatId) {
-        sendMessage(payload.content);
+        sendMessage(payload);
         return null;
       }
 

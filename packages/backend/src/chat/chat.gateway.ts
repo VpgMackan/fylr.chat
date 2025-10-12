@@ -117,12 +117,30 @@ export class ChatGateway
       }
 
       case 'sendMessage': {
-        const { content } = payload as { content: string };
+        const { content, sourceIds } = payload as {
+          content: string;
+          sourceIds?: string[] | undefined;
+        };
+
+        if (sourceIds && sourceIds.length > 0) {
+          try {
+            await this.conversationService.updateSources(
+              conversationId,
+              sourceIds,
+              client.user.id,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to add sources to conversation ${conversationId}: ${error.message}`,
+            );
+          }
+        }
+
         if (!content) {
           throw new WsException('content is required for sendMessage action');
         }
         const userMessage = await this.messageService.createMessage(
-          { role: 'user', content, metadata: {} },
+          { role: 'user', content: content, metadata: {} },
           conversationId,
         );
         this.server.to(conversationId).emit('conversationAction', {

@@ -12,6 +12,7 @@ export interface SourceApiResponse {
   size: string;
   uploadTime: string;
   status: string;
+  jobKey?: string;
 }
 
 export interface ConversationApiResponse {

@@ -52,9 +52,7 @@ export default function ConversationIdPageView() {
           )}
 
           <ChatInput
-            onSend={(data) => {
-              sendMessage(data.content);
-            }}
+            onSend={sendMessage}
             showSourceMenu={true}
             conversationSources={sources}
           />

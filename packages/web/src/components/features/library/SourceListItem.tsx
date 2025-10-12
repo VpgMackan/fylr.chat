@@ -56,7 +56,7 @@ export default function SourceListItem({
 }: {
   source: SourceApiResponse;
 }) {
-  const { name, size, uploadTime, id, libraryId } = source;
+  const { name, size, uploadTime, id, libraryId, jobKey } = source;
 
   const [currentStatus, setCurrentStatus] = useState(source.status);
   const [statusMessage, setStatusMessage] = useState(source.status);
@@ -65,7 +65,7 @@ export default function SourceListItem({
 
   // Note: jobKey is not in the SourceApiResponse interface
   // If you need real-time updates, you'll need to add jobKey to the interface
-  const routingKey = null; // jobKey ? `job.${jobKey}.status` : null;
+  const routingKey = jobKey ? `job.${jobKey}.status` : null;
 
   useSubscription(routingKey, (data: { payload: StatusPayload }) => {
     const { stage, message, error } = data.payload;

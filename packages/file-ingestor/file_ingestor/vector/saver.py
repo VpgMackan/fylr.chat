@@ -73,6 +73,10 @@ def fetch_embeddings_from_ai_gateway(
         "options": options,
     }
 
+    # Add model if specified (otherwise AI Gateway will use default)
+    if model:
+        request_payload["model"] = model
+
     info_callback(
         f"Requesting embeddings for {len(chunks)} chunks from AI Gateway...", job_key
     )
@@ -82,11 +86,25 @@ def fetch_embeddings_from_ai_gateway(
         raise ValueError("AI_GATEWAY_URL environment variable is required")
 
     try:
+        log.info(
+            f"Sending request to AI Gateway: {ai_gateway_url}/v1/embeddings",
+            method="fetch_embeddings_from_ai_gateway",
+            payload_keys=list(request_payload.keys()),
+            num_chunks=len(chunks),
+        )
+
         response = requests.post(
             f"{ai_gateway_url}/v1/embeddings",
             json=request_payload,
-            timeout=30,
+            timeout=60,  # Increased timeout for large batches
+            headers={"Content-Type": "application/json"},
         )
+
+        log.info(
+            f"AI Gateway response status: {response.status_code}",
+            method="fetch_embeddings_from_ai_gateway",
+        )
+
         response.raise_for_status()
 
         response_data = response.json()
@@ -107,6 +125,25 @@ def fetch_embeddings_from_ai_gateway(
         info_callback(f"Successfully received {len(embeddings)} embeddings.", job_key)
         return embeddings
 
+    except requests.exceptions.Timeout as e:
+        error_msg = f"AI Gateway request timed out after 60s: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        log.error(error_msg, method="fetch_embeddings_from_ai_gateway")
+        raise
+    except requests.exceptions.ConnectionError as e:
+        error_msg = f"Failed to connect to AI Gateway at {ai_gateway_url}: {str(e)}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        log.error(error_msg, method="fetch_embeddings_from_ai_gateway")
+        raise
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"AI Gateway returned error {response.status_code}: {response.text}"
+        info_callback(error_msg, job_key, {"error": True, "message": error_msg})
+        log.error(
+            error_msg,
+            method="fetch_embeddings_from_ai_gateway",
+            response_body=response.text,
+        )
+        raise
     except requests.exceptions.RequestException as e:
         error_msg = f"AI Gateway request failed: {str(e)}"
         info_callback(error_msg, job_key, {"error": True, "message": error_msg})
