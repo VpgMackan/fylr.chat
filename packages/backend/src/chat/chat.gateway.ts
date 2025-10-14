@@ -124,11 +124,30 @@ export class ChatGateway
 
         if (sourceIds && sourceIds.length > 0) {
           try {
+            const existingSourceIds =
+              await this.conversationService.getConversationSourceIds(
+                conversationId,
+                client.user.id,
+              );
+
+            const allSourceIds = [
+              ...new Set([...existingSourceIds, ...sourceIds]),
+            ];
+
             await this.conversationService.updateSources(
               conversationId,
-              sourceIds,
+              allSourceIds,
               client.user.id,
             );
+
+            const updatedSources =
+              await this.sourceService.getSourcesByConversationId(
+                conversationId,
+                client.user.id,
+              );
+            this.server
+              .to(conversationId)
+              .emit('sourcesUpdated', updatedSources);
           } catch (error) {
             this.logger.error(
               `Failed to add sources to conversation ${conversationId}: ${error.message}`,

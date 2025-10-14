@@ -149,6 +149,20 @@ export class ConversationService {
     return conversation;
   }
 
+  async getConversationSourceIds(
+    conversationId: string,
+    userId: string,
+  ): Promise<string[]> {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+      select: { sources: { select: { id: true } } },
+    });
+    if (!conversation) {
+      throw new NotFoundException(`Conversation not found or access denied.`);
+    }
+    return conversation.sources.map((s) => s.id);
+  }
+
   async updateConversation(
     body: UpdateConversationDto,
     id: string,

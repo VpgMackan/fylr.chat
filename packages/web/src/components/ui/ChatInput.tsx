@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { listLibraries, SimpleLibrary } from '@/services/api/library.api';
 import { getSourcesByLibraryId } from '@/services/api/source.api';
-import LibraryPill from './LibraryPill';
 import LibraryMentionPopup from './LibraryMentionPopup';
 
 interface ChatInputProps {
@@ -16,6 +15,10 @@ interface ChatInputProps {
   }>;
 }
 
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export default function ChatInput({
   onSend,
   className = '',
@@ -23,9 +26,6 @@ export default function ChatInput({
   conversationSources = [],
 }: ChatInputProps) {
   const [inputValue, setInputValue] = useState('');
-  const [selectedLibraries, setSelectedLibraries] = useState<SimpleLibrary[]>(
-    [],
-  );
 
   const [mentionQuery, setMentionQuery] = useState('');
   const [isMentioning, setIsMentioning] = useState(false);
@@ -45,10 +45,8 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    console.log('[ChatInput] Fetching libraries...');
     listLibraries()
       .then((libs) => {
-        console.log('[ChatInput] Libraries fetched:', libs);
         setAllLibraries(libs);
       })
       .catch((err) => {
@@ -91,19 +89,10 @@ export default function ChatInput({
   };
 
   useEffect(() => {
-    console.log(
-      '[ChatInput] isMentioning:',
-      isMentioning,
-      'mentionQuery:',
-      mentionQuery,
-      'allLibraries count:',
-      allLibraries.length,
-    );
     if (isMentioning) {
       const filtered = allLibraries.filter((lib) =>
         lib.title.toLowerCase().includes(mentionQuery.toLowerCase()),
       );
-      console.log('[ChatInput] Filtered libraries:', filtered);
       setFilteredLibraries(filtered);
       setMentionIndex(0);
     }
@@ -121,33 +110,37 @@ export default function ChatInput({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    console.log('[ChatInput] Input changed:', value);
 
     const atIndex = value.lastIndexOf('@');
-    console.log('[ChatInput] @ index:', atIndex);
     if (atIndex !== -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
       const query = value.substring(atIndex + 1);
-      console.log('[ChatInput] Setting mentioning to true, query:', query);
       setIsMentioning(true);
       setMentionQuery(query);
     } else {
-      console.log('[ChatInput] Setting mentioning to false');
       setIsMentioning(false);
     }
     setInputValue(value);
   };
 
   const handleSelectLibrary = (library: SimpleLibrary) => {
-    setSelectedLibraries((prev) => [...prev, library]);
     const atIndex = inputValue.lastIndexOf('@');
-    setInputValue(inputValue.substring(0, atIndex));
+    const queryStartIndex = atIndex + 1;
+    const before = inputValue.substring(0, queryStartIndex);
+    const after = inputValue.substring(queryStartIndex + mentionQuery.length);
+
+    const newValue = `${before}${library.title} ${after.trimStart()}`;
+    setInputValue(newValue);
+
     setIsMentioning(false);
     setMentionQuery('');
-    textareaRef.current?.focus();
-  };
 
-  const handleRemoveLibrary = (libraryId: string) => {
-    setSelectedLibraries((prev) => prev.filter((lib) => lib.id !== libraryId));
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const cursorPosition = (before + library.title).length + 1;
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -179,23 +172,30 @@ export default function ChatInput({
 
   const handleSend = async () => {
     const content = inputValue.trim();
-    if (!content && selectedLibraries.length === 0) return;
+    if (!content) return;
 
-    let allSourceIds: string[] = [];
-    if (selectedLibraries.length > 0) {
-      const sourcePromises = selectedLibraries.map((lib) =>
+    const mentionedLibraries = allLibraries.filter((lib) => {
+      const escapedTitle = escapeRegExp(lib.title);
+      const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
+      return regex.test(content);
+    });
+
+    let sourceIds: string[] = [];
+    if (mentionedLibraries.length > 0) {
+      const sourcePromises = mentionedLibraries.map((lib) =>
         getSourcesByLibraryId(lib.id),
       );
       const sourcesByLibrary = await Promise.all(sourcePromises);
-      allSourceIds = sourcesByLibrary.flat().map((source) => source.id);
+      sourceIds = [
+        ...new Set(sourcesByLibrary.flat().map((source) => source.id)),
+      ];
     }
 
     onSend({
       content,
-      sourceIds: allSourceIds.length > 0 ? allSourceIds : undefined,
+      sourceIds: sourceIds.length > 0 ? sourceIds : undefined,
     });
     setInputValue('');
-    setSelectedLibraries([]);
   };
 
   const getConversationSourceIds = (): Set<string> => {
@@ -209,19 +209,27 @@ export default function ChatInput({
 
   const getSelectedSourceIds = (): Set<string> => {
     const sourceIds = new Set<string>();
-    selectedLibraries.forEach((lib) => {
+    const mentionedLibraries = allLibraries.filter((lib) => {
+      const escapedTitle = escapeRegExp(lib.title);
+      const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
+      return regex.test(inputValue);
+    });
+
+    mentionedLibraries.forEach((lib) => {
       const libData = librariesWithSources.find((l) => l.library.id === lib.id);
       if (libData) {
         libData.sources.forEach((source) => sourceIds.add(source.id));
       }
     });
-    console.log('[ChatInput] Selected source IDs:', Array.from(sourceIds));
-    console.log('[ChatInput] Selected libraries:', selectedLibraries);
     return sourceIds;
   };
 
   const isLibrarySelected = (libraryId: string): boolean => {
-    return selectedLibraries.some((lib) => lib.id === libraryId);
+    const library = allLibraries.find((lib) => lib.id === libraryId);
+    if (!library) return false;
+    const escapedTitle = escapeRegExp(library.title);
+    const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
+    return regex.test(inputValue);
   };
 
   return (
@@ -389,13 +397,6 @@ export default function ChatInput({
         className={`flex flex-col bg-blue-200 ${showSourceMenu ? ' rounded-r-2xl rounded-bl-2xl' : 'rounded-2xl'} border border-blue-300 shadow-md p-2`}
       >
         <div className="flex items-center flex-wrap p-1 relative">
-          {selectedLibraries.map((lib) => (
-            <LibraryPill
-              key={lib.id}
-              name={lib.title}
-              onRemove={() => handleRemoveLibrary(lib.id)}
-            />
-          ))}
           <textarea
             ref={textareaRef}
             value={inputValue}
