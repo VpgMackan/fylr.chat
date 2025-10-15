@@ -1,7 +1,7 @@
 'use client';
 
 import RecentLibraryGrid from '@/components/library/RecentLibraryGrid';
-import ChatInput from '@/components/ui/ChatInput';
+import ChatInput from '@/components/ui/ChatInput2';
 
 import toast from 'react-hot-toast';
 
