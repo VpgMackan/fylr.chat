@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React from 'react';
 import { Icon } from '@iconify/react';
-import { listLibraries, SimpleLibrary } from '@/services/api/library.api';
-import { getSourcesByLibraryId } from '@/services/api/source.api';
-import LibraryMentionPopup from './LibraryMentionPopup';
+import { MentionsInput, Mention } from 'react-mentions';
+import type { SuggestionDataItem } from 'react-mentions';
+import SourceMenu from './SourceMenu';
+import { useChatInput } from '@/hooks/useChatInput';
 
 interface ChatInputProps {
   onSend: (payload: { content: string; sourceIds?: string[] }) => void;
@@ -15,9 +16,60 @@ interface ChatInputProps {
   }>;
 }
 
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+const mentionsInputStyle = {
+  control: {
+    backgroundColor: 'transparent',
+    fontSize: '0.95rem',
+    fontWeight: 'normal' as const,
+    wordBreak: 'break-word' as const,
+  },
+  '&multiLine': {
+    control: {
+      minHeight: '2.5rem',
+    },
+    highlighter: {
+      padding: '0.5rem',
+      border: 'none',
+    },
+    input: {
+      padding: '0.5rem',
+      border: 'none',
+      outline: 'none',
+      color: '#1f2937',
+      lineHeight: '1.5',
+      spellCheck: 'false',
+    },
+  },
+  suggestions: {
+    borderRadius: '9999px',
+    list: {
+      backgroundColor: 'white',
+      border: '1px solid #e5e7eb',
+      borderRadius: '0.75rem',
+      boxShadow:
+        '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      fontSize: '0.9rem',
+      maxHeight: '200px',
+      overflowY: 'auto' as const,
+      padding: '0.5rem',
+    },
+    item: {
+      padding: '0.625rem 0.875rem',
+      borderRadius: '0.5rem',
+      cursor: 'pointer',
+      transition: 'all 0.15s ease',
+      '&focused': {
+        backgroundColor: '#dbeafe',
+        color: '#1e40af',
+      },
+    },
+  },
+};
+
+const mentionStyle = {
+  backgroundColor: '#3b82f6',
+  borderRadius: '6px',
+};
 
 export default function ChatInput({
   onSend,
@@ -25,415 +77,99 @@ export default function ChatInput({
   showSourceMenu = false,
   conversationSources = [],
 }: ChatInputProps) {
-  const [inputValue, setInputValue] = useState('');
-
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [isMentioning, setIsMentioning] = useState(false);
-  const [allLibraries, setAllLibraries] = useState<SimpleLibrary[]>([]);
-  const [filteredLibraries, setFilteredLibraries] = useState<SimpleLibrary[]>(
-    [],
-  );
-  const [mentionIndex, setMentionIndex] = useState(0);
-  const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
-  const [librariesWithSources, setLibrariesWithSources] = useState<
-    Array<{ library: SimpleLibrary; sources: any[] }>
-  >([]);
-  const [expandedLibraries, setExpandedLibraries] = useState<Set<string>>(
-    new Set(),
-  );
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    listLibraries()
-      .then((libs) => {
-        setAllLibraries(libs);
-      })
-      .catch((err) => {
-        console.error('[ChatInput] Error fetching libraries:', err);
-      });
-  }, []);
-
-  const loadLibrariesWithSources = async () => {
-    try {
-      const libs = await listLibraries();
-      const libsWithSources = await Promise.all(
-        libs.map(async (lib) => {
-          const sources = await getSourcesByLibraryId(lib.id);
-          return { library: lib, sources };
-        }),
-      );
-      setLibrariesWithSources(libsWithSources);
-    } catch (err) {
-      console.error('[ChatInput] Error loading libraries with sources:', err);
-    }
-  };
-
-  const toggleSourceMenu = () => {
-    if (!isSourceMenuOpen) {
-      loadLibrariesWithSources();
-    }
-    setIsSourceMenuOpen(!isSourceMenuOpen);
-  };
-
-  const toggleLibrary = (libraryId: string) => {
-    setExpandedLibraries((prev) => {
-      const next = new Set(prev);
-      if (next.has(libraryId)) {
-        next.delete(libraryId);
-      } else {
-        next.add(libraryId);
-      }
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    if (isMentioning) {
-      const filtered = allLibraries.filter((lib) =>
-        lib.title.toLowerCase().includes(mentionQuery.toLowerCase()),
-      );
-      setFilteredLibraries(filtered);
-      setMentionIndex(0);
-    }
-  }, [mentionQuery, isMentioning, allLibraries]);
-
-  const adjustHeight = () => {
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.style.height = 'auto';
-      ta.style.height = `${ta.scrollHeight}px`;
-    }
-  };
-
-  useLayoutEffect(adjustHeight, [inputValue]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-
-    const atIndex = value.lastIndexOf('@');
-    if (atIndex !== -1 && (atIndex === 0 || /\s/.test(value[atIndex - 1]))) {
-      const query = value.substring(atIndex + 1);
-      setIsMentioning(true);
-      setMentionQuery(query);
-    } else {
-      setIsMentioning(false);
-    }
-    setInputValue(value);
-  };
-
-  const handleSelectLibrary = (library: SimpleLibrary) => {
-    const atIndex = inputValue.lastIndexOf('@');
-    const queryStartIndex = atIndex + 1;
-    const before = inputValue.substring(0, queryStartIndex);
-    const after = inputValue.substring(queryStartIndex + mentionQuery.length);
-
-    const newValue = `${before}${library.title} ${after.trimStart()}`;
-    setInputValue(newValue);
-
-    setIsMentioning(false);
-    setMentionQuery('');
-
-    setTimeout(() => {
-      if (textareaRef.current) {
-        const cursorPosition = (before + library.title).length + 1;
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    }, 0);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (isMentioning) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setMentionIndex((prev) => (prev + 1) % filteredLibraries.length);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setMentionIndex(
-          (prev) =>
-            (prev - 1 + filteredLibraries.length) % filteredLibraries.length,
-        );
-      } else if (
-        (e.key === 'Enter' || e.key === 'Tab') &&
-        filteredLibraries.length > 0
-      ) {
-        e.preventDefault();
-        handleSelectLibrary(filteredLibraries[mentionIndex]);
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setIsMentioning(false);
-      }
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleSend = async () => {
-    const content = inputValue.trim();
-    if (!content) return;
-
-    const mentionedLibraries = allLibraries.filter((lib) => {
-      const escapedTitle = escapeRegExp(lib.title);
-      const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
-      return regex.test(content);
-    });
-
-    let sourceIds: string[] = [];
-    if (mentionedLibraries.length > 0) {
-      const sourcePromises = mentionedLibraries.map((lib) =>
-        getSourcesByLibraryId(lib.id),
-      );
-      const sourcesByLibrary = await Promise.all(sourcePromises);
-      sourceIds = [
-        ...new Set(sourcesByLibrary.flat().map((source) => source.id)),
-      ];
-    }
-
-    onSend({
-      content,
-      sourceIds: sourceIds.length > 0 ? sourceIds : undefined,
-    });
-    setInputValue('');
-  };
+  const {
+    value,
+    textareaRef,
+    isSourceMenuOpen,
+    librariesWithSources,
+    expandedLibraries,
+    handleSend,
+    handleChange,
+    toggleSourceMenu,
+    toggleLibrary,
+    getSelectedSourceIds,
+    isLibrarySelected,
+    libraryData,
+    plainText,
+  } = useChatInput(onSend);
 
   const getConversationSourceIds = (): Set<string> => {
     const sourceIds = new Set<string>();
     conversationSources
       .filter((source) => source.isActive)
       .forEach((source) => sourceIds.add(source.id));
-    console.log('[ChatInput] Conversation source IDs:', Array.from(sourceIds));
     return sourceIds;
   };
 
-  const getSelectedSourceIds = (): Set<string> => {
-    const sourceIds = new Set<string>();
-    const mentionedLibraries = allLibraries.filter((lib) => {
-      const escapedTitle = escapeRegExp(lib.title);
-      const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
-      return regex.test(inputValue);
-    });
-
-    mentionedLibraries.forEach((lib) => {
-      const libData = librariesWithSources.find((l) => l.library.id === lib.id);
-      if (libData) {
-        libData.sources.forEach((source) => sourceIds.add(source.id));
-      }
-    });
-    return sourceIds;
-  };
-
-  const isLibrarySelected = (libraryId: string): boolean => {
-    const library = allLibraries.find((lib) => lib.id === libraryId);
-    if (!library) return false;
-    const escapedTitle = escapeRegExp(library.title);
-    const regex = new RegExp(`@${escapedTitle}(?=\\s|$)`);
-    return regex.test(inputValue);
-  };
+  const buttonStyle =
+    'p-2 bg-white/80 text-gray-600 rounded-full hover:bg-blue-200 hover:text-blue-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95';
 
   return (
     <div className={`w-full relative ${className}`}>
       {showSourceMenu && (
-        <>
-          <button
-            onClick={toggleSourceMenu}
-            className="absolute bottom-full left-0 mb-2 bg-blue-200 rounded-t-2xl border border-blue-300 shadow-md p-3 min-w-[200px] flex items-center hover:bg-blue-300 transition-colors cursor-pointer"
-          >
-            <div className="text-sm text-gray-700 font-medium">
-              Selected Sources
-            </div>
-            <Icon
-              icon={isSourceMenuOpen ? 'mdi:chevron-down' : 'mdi:chevron-up'}
-              width="20"
-              height="20"
-              className="ml-auto text-gray-700"
-            />
-          </button>
-
-          {isSourceMenuOpen && (
-            <div className="absolute bottom-full left-0 mb-[60px] bg-blue-100 rounded-t-2xl border border-blue-300 shadow-lg p-3 min-w-[350px] max-w-[500px] max-h-[400px] overflow-y-auto">
-              <div className="text-xs font-semibold text-gray-800 mb-2">
-                Libraries & Sources
-              </div>
-
-              {librariesWithSources.length === 0 ? (
-                <div className="text-xs text-gray-600 italic">
-                  Loading libraries...
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {(() => {
-                    const conversationSourceIds = getConversationSourceIds();
-                    const selectedSourceIds = getSelectedSourceIds();
-                    return librariesWithSources.map(({ library, sources }) => {
-                      const isSelected = isLibrarySelected(library.id);
-
-                      return (
-                        <div
-                          key={library.id}
-                          className={`bg-white rounded-md border ${isSelected ? 'border-blue-400 bg-blue-50' : 'border-blue-200'} overflow-hidden`}
-                        >
-                          <button
-                            onClick={() => toggleLibrary(library.id)}
-                            className="w-full flex items-center justify-between p-2 hover:bg-blue-50 transition-colors"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <Icon
-                                icon="mdi:library"
-                                width="14"
-                                height="14"
-                                className={
-                                  isSelected ? 'text-blue-600' : 'text-gray-500'
-                                }
-                              />
-                              <span
-                                className={`text-xs font-medium ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}
-                              >
-                                {library.title}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                ({sources.length})
-                              </span>
-                              {isSelected && (
-                                <Icon
-                                  icon="mdi:check-circle"
-                                  width="14"
-                                  height="14"
-                                  className="text-green-600"
-                                />
-                              )}
-                            </div>
-                            <Icon
-                              icon={
-                                expandedLibraries.has(library.id)
-                                  ? 'mdi:chevron-up'
-                                  : 'mdi:chevron-down'
-                              }
-                              width="16"
-                              height="16"
-                              className="text-gray-500"
-                            />
-                          </button>
-
-                          {expandedLibraries.has(library.id) && (
-                            <div className="border-t border-blue-200 bg-blue-50/50 p-1.5">
-                              {sources.length === 0 ? (
-                                <div className="text-xs text-gray-500 italic px-2 py-1">
-                                  No sources
-                                </div>
-                              ) : (
-                                <div className="space-y-0.5">
-                                  {sources.map((source) => {
-                                    const isSourceInConversation =
-                                      conversationSourceIds.has(source.id);
-                                    const isSourceSelected =
-                                      selectedSourceIds.has(source.id);
-
-                                    return (
-                                      <div
-                                        key={source.id}
-                                        className={`flex items-center gap-1.5 p-1.5 rounded ${
-                                          isSourceInConversation
-                                            ? 'bg-green-100 border border-green-300'
-                                            : isSourceSelected
-                                              ? 'bg-blue-100 border border-blue-300'
-                                              : 'bg-white border border-blue-100 hover:border-blue-300'
-                                        } transition-colors`}
-                                      >
-                                        <Icon
-                                          icon="mdi:file-document"
-                                          width="12"
-                                          height="12"
-                                          className={
-                                            isSourceInConversation
-                                              ? 'text-green-600'
-                                              : isSourceSelected
-                                                ? 'text-blue-600'
-                                                : 'text-gray-400'
-                                          }
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                          <div
-                                            className={`text-xs truncate ${
-                                              isSourceInConversation
-                                                ? 'font-medium text-green-800'
-                                                : isSourceSelected
-                                                  ? 'font-medium text-blue-800'
-                                                  : 'text-gray-700'
-                                            }`}
-                                          >
-                                            {source.title ||
-                                              source.name ||
-                                              'Untitled'}
-                                          </div>
-                                        </div>
-                                        {isSourceInConversation && (
-                                          <Icon
-                                            icon="mdi:check-circle"
-                                            width="12"
-                                            height="12"
-                                            className="text-green-600 flex-shrink-0"
-                                          />
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-        </>
+        <SourceMenu
+          toggleSourceMenu={toggleSourceMenu}
+          isSourceMenuOpen={isSourceMenuOpen}
+          librariesWithSources={librariesWithSources}
+          getConversationSourceIds={getConversationSourceIds}
+          getSelectedSourceIds={getSelectedSourceIds}
+          isLibrarySelected={isLibrarySelected}
+          toggleLibrary={toggleLibrary}
+          expandedLibraries={expandedLibraries}
+        />
       )}
       <div
-        className={`flex flex-col bg-blue-200 ${showSourceMenu ? ' rounded-r-2xl rounded-bl-2xl' : 'rounded-2xl'} border border-blue-300 shadow-md p-2`}
+        className={`flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 ${
+          showSourceMenu ? 'rounded-r-2xl rounded-bl-2xl' : 'rounded-2xl'
+        } border border-blue-200 shadow-lg hover:shadow-xl transition-shadow duration-200 p-3`}
       >
-        <div className="flex items-center flex-wrap p-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none resize-none p-1 overflow-y-auto min-h-[28px] max-h-40"
+        <div className="flex items-center flex-wrap px-2 py-1 relative min-h-[2.5rem]">
+          <MentionsInput
+            inputRef={textareaRef}
+            singleLine={false}
+            className="flex-1 mentions-input"
+            style={mentionsInputStyle}
             placeholder="Ask anything, or type @ to select a library..."
-            rows={1}
-          />
-          {isMentioning && (
-            <LibraryMentionPopup
-              libraries={filteredLibraries}
-              onSelect={handleSelectLibrary}
-              selectedIndex={mentionIndex}
+            value={value}
+            onChange={handleChange}
+            forceSuggestionsAboveCursor
+          >
+            <Mention
+              trigger="@"
+              data={libraryData}
+              markup="@@@____id__^^^____display__@@@^^^"
+              displayTransform={(_, display) => ` @${display} `}
+              style={mentionStyle}
+              appendSpaceOnAdd
+              renderSuggestion={(suggestion: SuggestionDataItem) => (
+                <span className="font-medium">{suggestion.display}</span>
+              )}
             />
-          )}
+          </MentionsInput>
         </div>
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex gap-2">
-            <button className="p-2 bg-blue-300 rounded-full hover:bg-blue-500">
-              <Icon icon="mdi:plus" width="20" height="20" />
+
+        <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
+          <div className="flex gap-1.5">
+            <button className={buttonStyle} aria-label="Add attachment">
+              <Icon icon="mdi:plus" width="18" height="18" />
             </button>
-            <button className="p-2 bg-blue-300 rounded-full hover:bg-blue-500">
-              <Icon icon="mdi:web" width="20" height="20" />
+            <button className={buttonStyle} aria-label="Add web source">
+              <Icon icon="mdi:web" width="18" height="18" />
             </button>
-            <button className="p-2 bg-blue-300 rounded-full hover:bg-blue-500">
-              <Icon icon="mdi:dots-horizontal" width="20" height="20" />
+            <button className={buttonStyle} aria-label="More options">
+              <Icon icon="mdi:dots-horizontal" width="18" height="18" />
             </button>
           </div>
 
-          <div className="flex gap-4">
-            <button className="p-2 bg-blue-300 rounded-full hover:bg-blue-500">
+          <div className="flex gap-2">
+            <button className={buttonStyle} aria-label="Voice input">
               <Icon icon="mdi:microphone" width="20" height="20" />
             </button>
             <button
-              className="p-2 bg-blue-500 rounded-full hover:bg-blue-700"
+              className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSend}
+              disabled={!plainText.trim()}
+              aria-label="Send message"
             >
               <Icon icon="mdi:arrow-up" width="20" height="20" />
             </button>
