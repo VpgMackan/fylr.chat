@@ -54,13 +54,15 @@ export class ChatController {
 
   @Post('conversation/initiate')
   initiateConversation(
-    @Body() body: { content: string; sourceIds?: string[] },
+    @Body()
+    body: { content: string; sourceIds?: string[]; libraryIds?: string[] },
     @Request() req: RequestWithUser,
   ) {
     return this.conversationService.initiateConversation(
       body.content,
       req.user.id,
       body.sourceIds,
+      body.libraryIds,
     );
   }
 

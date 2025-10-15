@@ -24,10 +24,11 @@ export const createConversation = async (
 export const initiateConversation = async (
   content: string,
   sourceIds?: string[],
+  libraryIds?: string[],
 ): Promise<ConversationApiResponse> => {
   const { data } = await axios.post<ConversationApiResponse>(
     'chat/conversation/initiate',
-    { content, sourceIds },
+    { content, sourceIds, libraryIds },
   );
   return data;
 };

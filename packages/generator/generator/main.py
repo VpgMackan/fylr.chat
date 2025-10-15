@@ -5,6 +5,7 @@ from functools import partial
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
+from .config import settings
 from .database import get_db_session
 from .generator_service import GeneratorService
 from .generators.base_generator import BaseGenerator
@@ -39,7 +40,14 @@ def on_message_callback(
             exc_info=True,
             method="on_message_callback",
         )
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        # Only nack if channel is still open
+        if channel.is_open:
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        else:
+            log.warning(
+                f"Channel closed during error handling. Message may be redelivered.",
+                method="on_message_callback",
+            )
 
 
 def main():
@@ -53,10 +61,28 @@ def main():
         generator_service = GeneratorService()
         configs = generator_service.get_generator_configs()
 
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host="localhost")
+        # Configure connection parameters with heartbeat for long-running tasks
+        credentials = pika.PlainCredentials(
+            settings.rabbitmq_user, settings.rabbitmq_password
         )
+        connection_params = pika.ConnectionParameters(
+            host=settings.rabbitmq_host,
+            port=settings.rabbitmq_port,
+            credentials=credentials,
+            heartbeat=settings.rabbitmq_heartbeat,
+            blocked_connection_timeout=settings.rabbitmq_blocked_connection_timeout,
+        )
+
+        connection = pika.BlockingConnection(connection_params)
         channel = connection.channel()
+
+        # Enable publisher confirms for reliability
+        channel.confirm_delivery()
+
+        # Set QoS to prefetch only 1 message at a time
+        # This is important for long-running tasks to prevent timeout issues
+        channel.basic_qos(prefetch_count=1)
+
         dlx_name = "fylr-dlx"
         channel.exchange_declare(
             exchange=dlx_name, exchange_type="direct", durable=True

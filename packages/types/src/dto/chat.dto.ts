@@ -74,6 +74,11 @@ export class CreateConversationDto {
   @IsUUID('all', { each: true })
   @IsOptional()
   sourceIds?: string[];
+
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  libraryIds?: string[];
 }
 
 export class CreateMessageDto {

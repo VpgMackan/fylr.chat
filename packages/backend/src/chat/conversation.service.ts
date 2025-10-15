@@ -80,16 +80,53 @@ export class ConversationService {
         }
       }
 
+      // Collect all source IDs from both sourceIds and libraryIds
+      let allSourceIds: string[] = [];
+
+      // Add direct source IDs if provided
+      if (body.sourceIds && body.sourceIds.length > 0) {
+        allSourceIds = [...body.sourceIds];
+      }
+
+      // Fetch sources from libraries if library IDs are provided
+      if (body.libraryIds && body.libraryIds.length > 0) {
+        const librarySources = await this.prisma.source.findMany({
+          where: {
+            libraryId: { in: body.libraryIds },
+            library: { userId },
+          },
+          select: { id: true },
+        });
+        allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
+      }
+
+      // Validate all sources exist and belong to the user
+      if (allSourceIds.length > 0) {
+        const sources = await this.prisma.source.findMany({
+          where: {
+            id: { in: allSourceIds },
+            library: { userId },
+          },
+        });
+
+        if (sources.length !== allSourceIds.length) {
+          throw new BadRequestException(
+            'Some sources not found or not accessible',
+          );
+        }
+      }
+
       return await this.prisma.conversation.create({
         data: {
           userId,
           title: body.title,
           metadata: body.metadata,
-          sources: body.sourceIds
-            ? {
-                connect: body.sourceIds.map((id) => ({ id })),
-              }
-            : undefined,
+          sources:
+            allSourceIds.length > 0
+              ? {
+                  connect: allSourceIds.map((id) => ({ id })),
+                }
+              : undefined,
         },
       });
     } catch (error) {
@@ -103,15 +140,53 @@ export class ConversationService {
     content: string,
     userId: string,
     sourceIds?: string[],
+    libraryIds?: string[],
   ) {
+    // Collect all source IDs from both sourceIds and libraryIds
+    let allSourceIds: string[] = [];
+
+    // Add direct source IDs if provided
+    if (sourceIds && sourceIds.length > 0) {
+      allSourceIds = [...sourceIds];
+    }
+
+    // Fetch sources from libraries if library IDs are provided
+    if (libraryIds && libraryIds.length > 0) {
+      const librarySources = await this.prisma.source.findMany({
+        where: {
+          libraryId: { in: libraryIds },
+          library: { userId },
+        },
+        select: { id: true },
+      });
+      allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
+    }
+
+    // Validate all sources exist and belong to the user
+    if (allSourceIds.length > 0) {
+      const sources = await this.prisma.source.findMany({
+        where: {
+          id: { in: allSourceIds },
+          library: { userId },
+        },
+      });
+
+      if (sources.length !== allSourceIds.length) {
+        throw new BadRequestException(
+          'Some sources not found or not accessible',
+        );
+      }
+    }
+
     const newConversation = await this.prisma.conversation.create({
       data: {
         userId,
         title: content.split(' ').slice(0, 5).join(' ') + '...',
         metadata: {},
-        sources: sourceIds
-          ? { connect: sourceIds.map((id) => ({ id })) }
-          : undefined,
+        sources:
+          allSourceIds.length > 0
+            ? { connect: allSourceIds.map((id) => ({ id })) }
+            : undefined,
         messages: {
           create: {
             role: 'user',

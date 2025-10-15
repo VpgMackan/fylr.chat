@@ -117,12 +117,17 @@ export class ChatGateway
       }
 
       case 'sendMessage': {
-        const { content, sourceIds } = payload as {
+        const { content, sourceIds, libraryIds } = payload as {
           content: string;
-          sourceIds?: string[] | undefined;
+          sourceIds?: string[];
+          libraryIds?: string[];
         };
 
-        if (sourceIds && sourceIds.length > 0) {
+        // Handle both sourceIds and libraryIds
+        if (
+          (sourceIds && sourceIds.length > 0) ||
+          (libraryIds && libraryIds.length > 0)
+        ) {
           try {
             const existingSourceIds =
               await this.conversationService.getConversationSourceIds(
@@ -130,8 +135,30 @@ export class ChatGateway
                 client.user.id,
               );
 
+            // Collect new source IDs
+            let newSourceIds: string[] = [];
+
+            // Add direct source IDs
+            if (sourceIds && sourceIds.length > 0) {
+              newSourceIds = [...sourceIds];
+            }
+
+            // Fetch and add sources from libraries
+            if (libraryIds && libraryIds.length > 0) {
+              const librarySources =
+                await this.sourceService.getSourcesByLibraryIds(
+                  libraryIds,
+                  client.user.id,
+                );
+              newSourceIds = [
+                ...newSourceIds,
+                ...librarySources.map((s) => s.id),
+              ];
+            }
+
+            // Combine with existing sources and remove duplicates
             const allSourceIds = [
-              ...new Set([...existingSourceIds, ...sourceIds]),
+              ...new Set([...existingSourceIds, ...newSourceIds]),
             ];
 
             await this.conversationService.updateSources(

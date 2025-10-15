@@ -1,98 +1,146 @@
 'use client';
 
-import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@iconify/react';
 import axios from '@/utils/axios';
+import { useLibrarySelection } from '@/hooks/useLibrarySelection';
+import LibrarySourceSelector from '@/components/shared/LibrarySourceSelector';
 
-export interface CreateSummaryContentRef {
+export interface CreatePodcastContentRef {
   handleCreate: () => Promise<void>;
   isCreating: boolean;
   canCreate: boolean;
 }
 
-const CreateSummaryContent = forwardRef<CreateSummaryContentRef>(
-  (props, ref) => {
-    const [summaryName, setSummaryName] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
+interface CreatePodcastContentProps {
+  onCanCreateChange: (canCreate: boolean) => void;
+}
 
-    const handleCreate = async () => {
-      setIsCreating(true);
-      setError(null);
+const CreatePodcastContent = forwardRef<
+  CreatePodcastContentRef,
+  CreatePodcastContentProps
+>(({ onCanCreateChange }, ref) => {
+  const [podcastName, setPodcastName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-      try {
-        //router.push(`/summary/${summary.id}`);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'An error occurred while creating the suimmary',
-        );
-        throw err;
-      } finally {
-        setIsCreating(false);
+  const {
+    libraries,
+    expandedLibraries,
+    librarySources,
+    loadingSources,
+    selectedLibraries,
+    selectedSources,
+    toggleLibraryExpansion,
+    toggleLibrarySelection,
+    toggleSourceSelection,
+    isLibraryFullySelected,
+    isLibraryPartiallySelected,
+    clearAllSelections,
+    getSourcesNotInSelectedLibraries,
+  } = useLibrarySelection();
+
+  const canCreate =
+    podcastName.trim().length > 0 &&
+    (selectedLibraries.size > 0 || selectedSources.size > 0);
+
+  useEffect(() => {
+    onCanCreateChange(canCreate);
+  }, [canCreate, onCanCreateChange]);
+
+  const handleCreate = async () => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      if (selectedLibraries.size === 0 && selectedSources.size === 0) {
+        throw new Error('Please select at least one library or source');
       }
-    };
 
-    useImperativeHandle(ref, () => ({
-      handleCreate,
-      isCreating,
-      canCreate: summaryName.trim().length > 0,
-    }));
+      const payload = {
+        title: podcastName,
+        libraryIds: Array.from(selectedLibraries),
+        sourceIds: getSourcesNotInSelectedLibraries(),
+      };
 
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold mb-2">Create New Summary</h2>
-          <p className="text-gray-600">
-            Create a new summary to quickly understand different topics
-          </p>
-        </div>
+      const response = await axios.post('/podcast', payload);
+      router.push(`/podcast/${response.data.id}`);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An error occurred while creating the podcast',
+      );
+      throw err;
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
+  useImperativeHandle(ref, () => ({
+    handleCreate,
+    isCreating,
+    canCreate,
+  }));
 
-        <div className="space-y-4">
-          <div>
-            <label
-              htmlFor="summary-name"
-              className="block text-sm font-medium mb-2"
-            >
-              Summary Name
-            </label>
-            <input
-              id="summary-name"
-              type="text"
-              value={summaryName}
-              onChange={(e) => setSummaryName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-3"
-              placeholder="Enter summary name"
-              required
-              disabled={isCreating}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="source-button"
-              className="block text-sm font-medium mb-2"
-            >
-              Sources
-            </label>
-          </div>
-
-          {/* Display selected files */}
-        </div>
+  return (
+    <div className="flex flex-col h-full">
+      <div className="mb-4">
+        <h2 className="text-2xl font-semibold mb-1">Create New Podcast</h2>
+        <p className="text-sm text-gray-600">
+          Create a new podcast to quickly understand different topics
+        </p>
       </div>
-    );
-  },
-);
 
-CreateSummaryContent.displayName = 'CreateSummaryContent';
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-export default CreateSummaryContent;
+      <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+        {/* Podcast Name */}
+        <div>
+          <label
+            htmlFor="podcast-name"
+            className="block text-sm font-medium text-gray-700 mb-1.5"
+          >
+            Podcast Name
+          </label>
+          <input
+            id="podcast-name"
+            type="text"
+            value={podcastName}
+            onChange={(e) => setPodcastName(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            placeholder="Enter podcast name"
+            required
+            disabled={isCreating}
+          />
+        </div>
+
+        {/* Libraries and Sources Selection */}
+        <LibrarySourceSelector
+          libraries={libraries}
+          expandedLibraries={expandedLibraries}
+          librarySources={librarySources}
+          loadingSources={loadingSources}
+          selectedLibraries={selectedLibraries}
+          selectedSources={selectedSources}
+          isCreating={isCreating}
+          onToggleLibraryExpansion={toggleLibraryExpansion}
+          onToggleLibrarySelection={toggleLibrarySelection}
+          onToggleSourceSelection={toggleSourceSelection}
+          isLibraryFullySelected={isLibraryFullySelected}
+          isLibraryPartiallySelected={isLibraryPartiallySelected}
+          onClearAll={clearAllSelections}
+        />
+      </div>
+    </div>
+  );
+});
+
+CreatePodcastContent.displayName = 'CreatePodcastContent';
+
+export default CreatePodcastContent;

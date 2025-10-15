@@ -15,7 +15,11 @@ interface Mention {
 }
 
 export function useChatInput(
-  onSend: (payload: { content: string; sourceIds?: string[] }) => void,
+  onSend: (payload: {
+    content: string;
+    sourceIds?: string[];
+    libraryIds?: string[];
+  }) => void,
 ) {
   const [value, setValue] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -52,8 +56,9 @@ export function useChatInput(
   const handleSend = () => {
     if (!plainText.trim()) return;
 
-    const sourceIds = mentions.map((m) => m.id);
-    onSend({ content: plainText, sourceIds });
+    // Mentions are library IDs (from @ mentions)
+    const libraryIds = mentions.map((m) => m.id);
+    onSend({ content: plainText, libraryIds });
     setValue('');
     setPlainText('');
     setMentions([]);

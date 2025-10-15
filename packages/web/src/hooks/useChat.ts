@@ -230,13 +230,18 @@ export function useChat(chatId: string | null) {
   }, [chatId]);
 
   const sendMessage = useCallback(
-    (payload: { content: string; sourceIds?: string[] | undefined }) => {
+    (payload: {
+      content: string;
+      sourceIds?: string[];
+      libraryIds?: string[];
+    }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
         socketRef.current.emit('conversationAction', {
           action: 'sendMessage',
           conversationId: chatId,
           content: payload.content,
           sourceIds: payload.sourceIds,
+          libraryIds: payload.libraryIds,
         });
       }
     },
@@ -301,7 +306,11 @@ export function useChat(chatId: string | null) {
   }, [socketRef]);
 
   const initiateAndSendMessage = useCallback(
-    async (payload: { content: string; sourceIds?: string[] }) => {
+    async (payload: {
+      content: string;
+      sourceIds?: string[];
+      libraryIds?: string[];
+    }) => {
       if (chatId) {
         sendMessage(payload);
         return null;
@@ -311,6 +320,7 @@ export function useChat(chatId: string | null) {
         const newConversation: any = await apiInitiateConversation(
           payload.content,
           payload.sourceIds,
+          payload.libraryIds,
         );
         return newConversation;
       } catch (error) {

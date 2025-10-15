@@ -7,16 +7,15 @@ import CreateLibraryContent, {
 import CreateSummaryContent, {
   CreateSummaryContentRef,
 } from './CreateSummaryContent';
+import CreatePodcastContent, {
+  CreatePodcastContentRef,
+} from './CreatePodcastContent';
 
 type ContentType = 'Library' | 'Summary' | 'Podcast';
 
 interface CreateContentModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-function CreatePodcastContent() {
-  return <p>Podcast Content</p>;
 }
 
 const CONTENT_TYPES: ContentType[] = ['Library', 'Summary', 'Podcast'];
@@ -27,17 +26,34 @@ export default function CreateContentModal({
 }: CreateContentModalProps) {
   const [contentType, setContentType] = useState<ContentType>('Library');
   const [isCreating, setIsCreating] = useState(false);
+  const [canContentBeCreated, setCanContentBeCreated] = useState(false);
   const libraryContentRef = useRef<CreateLibraryContentRef>(null);
   const summaryContentRef = useRef<CreateSummaryContentRef>(null);
+  const podcastContentRef = useRef<CreatePodcastContentRef>(null);
 
   const renderContent = () => {
     switch (contentType) {
       case 'Library':
-        return <CreateLibraryContent ref={libraryContentRef} />;
+        return (
+          <CreateLibraryContent
+            ref={libraryContentRef}
+            onCanCreateChange={setCanContentBeCreated}
+          />
+        );
       case 'Summary':
-        return <CreateSummaryContent ref={summaryContentRef} />;
+        return (
+          <CreateSummaryContent
+            ref={summaryContentRef}
+            onCanCreateChange={setCanContentBeCreated}
+          />
+        );
       case 'Podcast':
-        return <CreatePodcastContent />;
+        return (
+          <CreatePodcastContent
+            ref={podcastContentRef}
+            onCanCreateChange={setCanContentBeCreated}
+          />
+        );
     }
   };
 
@@ -50,6 +66,9 @@ export default function CreateContentModal({
       } else if (contentType === 'Summary' && summaryContentRef.current) {
         await summaryContentRef.current.handleCreate();
         onClose();
+      } else if (contentType === 'Podcast' && podcastContentRef.current) {
+        await podcastContentRef.current.handleCreate();
+        onClose();
       }
     } catch (error) {
       console.error(`Failed to create ${contentType.toLowerCase()}:`, error);
@@ -59,12 +78,7 @@ export default function CreateContentModal({
   };
 
   const canCreate = () => {
-    if (contentType === 'Library' && libraryContentRef.current) {
-      return libraryContentRef.current.canCreate;
-    } else if (contentType === 'Summary' && summaryContentRef.current) {
-      return summaryContentRef.current.canCreate;
-    }
-    return false;
+    return canContentBeCreated;
   };
 
   if (!isOpen) return null;

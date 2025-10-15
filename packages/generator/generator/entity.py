@@ -28,8 +28,8 @@ summary_sources_table = Table(
 podcast_sources_table = Table(
     "_PodcastSources",
     Base.metadata,
-    Column("A", String, ForeignKey("Sources.id"), primary_key=True),
-    Column("B", String, ForeignKey("Podcast.id"), primary_key=True),
+    Column("A", String, ForeignKey("Podcast.id"), primary_key=True),
+    Column("B", String, ForeignKey("Sources.id"), primary_key=True),
 )
 
 

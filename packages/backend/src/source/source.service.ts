@@ -92,6 +92,16 @@ export class SourceService {
     });
   }
 
+  async getSourcesByLibraryIds(libraryIds: string[], userId: string) {
+    return await this.prisma.source.findMany({
+      where: {
+        libraryId: { in: libraryIds },
+        library: { userId },
+      },
+      orderBy: { uploadTime: 'desc' },
+    });
+  }
+
   async getSourcesByConversationId(conversationId: string, userId: string) {
     // Verify user has access to this conversation
     const conversation = await this.prisma.conversation.findFirst({

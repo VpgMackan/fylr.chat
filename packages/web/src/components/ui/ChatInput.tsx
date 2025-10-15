@@ -6,7 +6,11 @@ import SourceMenu from './SourceMenu';
 import { useChatInput } from '@/hooks/useChatInput';
 
 interface ChatInputProps {
-  onSend: (payload: { content: string; sourceIds?: string[] }) => void;
+  onSend: (payload: {
+    content: string;
+    sourceIds?: string[];
+    libraryIds?: string[];
+  }) => void;
   className?: string;
   showSourceMenu?: boolean;
   conversationSources?: Array<{
