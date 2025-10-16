@@ -4,22 +4,29 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Icon } from '@iconify/react';
 import { toast } from 'react-hot-toast';
+import { useParams, useRouter } from 'next/navigation';
 
 import EpisodeLayout from '@/components/layout/EpisodeLayout';
 import Button from '@/components/ui/Button';
+import ItemSettingsModal from '@/components/modals/ItemSettingsModal';
 import { useEpisodeManager } from '@/hooks/useEpisodeManager';
-import { getPodcastById } from '@/services/api/podcast.api';
+import {
+  getPodcastById,
+  updatePodcast,
+  deletePodcast,
+} from '@/services/api/podcast.api';
 import { PodcastApiResponse, PodcastEpisodeApiResponse } from '@fylr/types';
-import { useParams } from 'next/navigation';
 
 export default function PodcastIdViewRefactored() {
   const params = useParams();
   const podcastId = params.podcastid as string;
+  const router = useRouter();
 
   const [playing, setPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [volume, setVolume] = useState<number>(1);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const {
@@ -30,6 +37,7 @@ export default function PodcastIdViewRefactored() {
     error,
     generationStatus,
     handleEpisodeSelect,
+    refetch,
   } = useEpisodeManager<PodcastEpisodeApiResponse>({
     resourceId: podcastId,
     resourceType: 'podcast',
@@ -191,6 +199,28 @@ export default function PodcastIdViewRefactored() {
     }
   };
 
+  const handleRename = async (newName: string) => {
+    try {
+      await updatePodcast(podcastId, { title: newName });
+      toast.success('Podcast renamed successfully!');
+      refetch?.(); // Re-fetch data to update the title
+    } catch (error) {
+      console.error('Failed to rename podcast', error);
+      throw error; // Re-throw to let modal handle the error state
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deletePodcast(podcastId);
+      toast.success('Podcast deleted successfully!');
+      router.push('/'); // Navigate away after deletion
+    } catch (error) {
+      console.error('Failed to delete podcast', error);
+      throw error; // Re-throw to let modal handle the error state
+    }
+  };
+
   // Custom episode card with microphone icon
   const renderEpisodeCard = (
     episode: PodcastEpisodeApiResponse,
@@ -229,143 +259,166 @@ export default function PodcastIdViewRefactored() {
         onClick={handleDownload}
         disabled={!selectedEpisode?.audioKey}
       />
-      <Button name="" icon="ph:gear-fill" variant="ghost" />
+      <Button
+        name=""
+        icon="ph:gear-fill"
+        variant="ghost"
+        onClick={() => setIsSettingsOpen(true)}
+      />
     </>
   );
 
   return (
-    <EpisodeLayout
-      title={podcastData?.title || 'Podcast'}
-      episodes={podcastData?.episodes || []}
-      selectedEpisodeId={selectedEpisodeId}
-      isLoading={isLoading}
-      error={error}
-      generationStatus={generationStatus}
-      onEpisodeSelect={handleEpisodeSelectWithAudioReset}
-      sidebarTitle={'Podcast Episodes'}
-      episodeIcon="ph:microphone-fill"
-      renderEpisodeCard={renderEpisodeCard}
-      headerActions={headerActions}
-      translations={{
-        editButton: 'Edit',
-        loadingMessage: 'Loading podcast...',
-        errorPrefix: 'Error',
-      }}
-    >
-      {selectedEpisode && (
-        <div className="flex flex-col justify-between h-full">
-          {/* Episode Title */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {selectedEpisode.title}
-            </h1>
-          </div>
-
-          {/* Audio Player Controls - Centered */}
-          <div className="flex gap-4 justify-center items-center mb-8">
-            <div
-              className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
-              onClick={() => handleSkip(-15)}
-            >
-              <Icon
-                icon="fluent:skip-back-15-20-filled"
-                width="24"
-                height="24"
-              />
+    <>
+      <EpisodeLayout
+        title={podcastData?.title || 'Podcast'}
+        episodes={podcastData?.episodes || []}
+        selectedEpisodeId={selectedEpisodeId}
+        isLoading={isLoading}
+        error={error}
+        generationStatus={generationStatus}
+        onEpisodeSelect={handleEpisodeSelectWithAudioReset}
+        sidebarTitle={'Podcast Episodes'}
+        episodeIcon="ph:microphone-fill"
+        renderEpisodeCard={renderEpisodeCard}
+        headerActions={headerActions}
+        translations={{
+          editButton: 'Edit',
+          loadingMessage: 'Loading podcast...',
+          errorPrefix: 'Error',
+        }}
+      >
+        {selectedEpisode && (
+          <div className="flex flex-col justify-between h-full">
+            {/* Episode Title */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {selectedEpisode.title}
+              </h1>
             </div>
 
-            <div
-              className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
-              onClick={() => handleSkip(-10)}
-            >
-              <Icon icon="fluent:rewind-28-filled" width="32" height="32" />
-            </div>
-
-            <div
-              className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
-              onClick={handlePlayPause}
-            >
-              {playing ? (
-                <Icon icon="fluent:pause-28-filled" width="52" height="52" />
-              ) : (
-                <Icon icon="fluent:play-28-filled" width="52" height="52" />
-              )}
-            </div>
-
-            <div
-              className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
-              onClick={() => handleSkip(10)}
-            >
-              <Icon
-                icon="fluent:fast-forward-28-filled"
-                width="32"
-                height="32"
-              />
-            </div>
-
-            <div
-              className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
-              onClick={() => handleSkip(15)}
-            >
-              <Icon
-                icon="fluent:skip-forward-15-20-20-filled"
-                width="24"
-                height="24"
-              />
-            </div>
-          </div>
-
-          {/* Audio Progress Bar and Volume Controls */}
-          <div className="flex items-center gap-4 bg-blue-200 rounded-2xl p-4">
-            {/* Progress Bar Section */}
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-left">
-                  {formatTime(currentTime)}
-                </span>
-                <span className="text-sm text-right">
-                  {formatTime(duration)}
-                </span>
+            {/* Audio Player Controls - Centered */}
+            <div className="flex gap-4 justify-center items-center mb-8">
+              <div
+                className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
+                onClick={() => handleSkip(-15)}
+              >
+                <Icon
+                  icon="fluent:skip-back-15-20-filled"
+                  width="24"
+                  height="24"
+                />
               </div>
-              <input
-                type="range"
-                min="0"
-                max={duration || 0}
-                value={currentTime}
-                onChange={handleSeek}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
+
+              <div
+                className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
+                onClick={() => handleSkip(-10)}
+              >
+                <Icon icon="fluent:rewind-28-filled" width="32" height="32" />
+              </div>
+
+              <div
+                className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
+                onClick={handlePlayPause}
+              >
+                {playing ? (
+                  <Icon icon="fluent:pause-28-filled" width="52" height="52" />
+                ) : (
+                  <Icon icon="fluent:play-28-filled" width="52" height="52" />
+                )}
+              </div>
+
+              <div
+                className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
+                onClick={() => handleSkip(10)}
+              >
+                <Icon
+                  icon="fluent:fast-forward-28-filled"
+                  width="32"
+                  height="32"
+                />
+              </div>
+
+              <div
+                className="bg-blue-200 border-2 border-blue-300 rounded-full p-4 cursor-pointer hover:bg-blue-300 transition-colors"
+                onClick={() => handleSkip(15)}
+              >
+                <Icon
+                  icon="fluent:skip-forward-15-20-20-filled"
+                  width="24"
+                  height="24"
+                />
+              </div>
             </div>
 
-            {/* Volume Controls Section */}
-            <div className="flex items-center gap-2 min-w-fit">
-              <Icon icon="fluent:speaker-2-20-filled" width="20" height="20" />
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
+            {/* Audio Progress Bar and Volume Controls */}
+            <div className="flex items-center gap-4 bg-blue-200 rounded-2xl p-4">
+              {/* Progress Bar Section */}
+              <div className="flex-1 flex flex-col gap-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-left">
+                    {formatTime(currentTime)}
+                  </span>
+                  <span className="text-sm text-right">
+                    {formatTime(duration)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 0}
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Volume Controls Section */}
+              <div className="flex items-center gap-2 min-w-fit">
+                <Icon
+                  icon="fluent:speaker-2-20-filled"
+                  width="20"
+                  height="20"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
             </div>
+
+            {/* Hidden Audio Element */}
+            <audio
+              ref={audioRef}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => setPlaying(false)}
+              onError={(e) => {
+                console.error('Audio error:', e);
+                toast.error('Failed to load audio');
+                setPlaying(false);
+              }}
+            />
           </div>
+        )}
+      </EpisodeLayout>
 
-          {/* Hidden Audio Element */}
-          <audio
-            ref={audioRef}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onEnded={() => setPlaying(false)}
-            onError={(e) => {
-              console.error('Audio error:', e);
-              toast.error('Failed to load audio');
-              setPlaying(false);
-            }}
-          />
-        </div>
+      {/* Settings Modal */}
+      {podcastData && (
+        <ItemSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          currentItemName={podcastData.title}
+          itemType="podcast"
+          onRename={handleRename}
+          onDelete={handleDelete}
+        />
       )}
-    </EpisodeLayout>
+    </>
   );
 }
