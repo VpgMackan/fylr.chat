@@ -8,10 +8,23 @@ import Dropdown from '@/components/ui/Dropdown';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
 import CreateContentModal from '../modals/CreateContentModal';
-import { getConversations } from '@/services/api/chat.api';
-import { getSummaries } from '@/services/api/summary.api';
-import { getPodcasts } from '@/services/api/podcast.api';
+import {
+  getConversations,
+  updateConversation,
+  deleteConversation,
+} from '@/services/api/chat.api';
+import {
+  getSummaries,
+  updateSummary,
+  deleteSummary,
+} from '@/services/api/summary.api';
+import {
+  getPodcasts,
+  updatePodcast,
+  deletePodcast,
+} from '@/services/api/podcast.api';
 import { getLibraries } from '@/services/api/library.api';
+import toast from 'react-hot-toast';
 
 type ContentType =
   | 'Conversations'
@@ -104,6 +117,81 @@ export default function Sidebar({ selectedId }: SidebarProps) {
     router.push('/');
   };
 
+  const handleRename = async (id: string, newName: string) => {
+    try {
+      let successMessage = '';
+
+      switch (contentType) {
+        case 'Conversations':
+          await updateConversation(id, { title: newName });
+          successMessage = 'Conversation renamed successfully';
+          break;
+        case 'Summaries':
+          await updateSummary(id, { title: newName });
+          successMessage = 'Summary renamed successfully';
+          break;
+        case 'Podcasts':
+          await updatePodcast(id, { title: newName });
+          successMessage = 'Podcast renamed successfully';
+          break;
+        default:
+          return;
+      }
+
+      // Update the local state to reflect the change
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === id ? { ...item, title: newName } : item,
+        ),
+      );
+      toast.success(successMessage);
+    } catch (error) {
+      console.error(`Failed to rename ${contentType.toLowerCase()}:`, error);
+      toast.error(`Failed to rename ${contentType.toLowerCase()}`);
+      throw error;
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      let successMessage = '';
+      let redirectPath = '/';
+
+      switch (contentType) {
+        case 'Conversations':
+          await deleteConversation(id);
+          successMessage = 'Conversation deleted successfully';
+          redirectPath = '/';
+          break;
+        case 'Summaries':
+          await deleteSummary(id);
+          successMessage = 'Summary deleted successfully';
+          redirectPath = '/';
+          break;
+        case 'Podcasts':
+          await deletePodcast(id);
+          successMessage = 'Podcast deleted successfully';
+          redirectPath = '/';
+          break;
+        default:
+          return;
+      }
+
+      // Remove from local state
+      setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      toast.success(successMessage);
+
+      // If we deleted the currently selected item, navigate to home
+      if (selectedId === id) {
+        router.push(redirectPath);
+      }
+    } catch (error) {
+      console.error(`Failed to delete ${contentType.toLowerCase()}:`, error);
+      toast.error(`Failed to delete ${contentType.toLowerCase()}`);
+      throw error;
+    }
+  };
+
   return (
     <>
       <CreateContentModal
@@ -132,6 +220,20 @@ export default function Sidebar({ selectedId }: SidebarProps) {
             items={items.map((item) => ({ id: item.id, name: item.title }))}
             selectedId={selectedId}
             onSelect={handleSelect}
+            onRename={
+              contentType === 'Conversations' ||
+              contentType === 'Summaries' ||
+              contentType === 'Podcasts'
+                ? handleRename
+                : undefined
+            }
+            onDelete={
+              contentType === 'Conversations' ||
+              contentType === 'Summaries' ||
+              contentType === 'Podcasts'
+                ? handleDelete
+                : undefined
+            }
           />
         )}
 

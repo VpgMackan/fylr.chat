@@ -115,4 +115,42 @@ export class SummaryService {
 
     return newSummary;
   }
+
+  async updateSummary(id: string, userId: string, title?: string) {
+    const summary = await this.prisma.summary.findFirst({
+      where: { id, userId },
+    });
+
+    if (!summary) {
+      throw new NotFoundException(
+        `Summary not found or you do not have permission to access it.`,
+      );
+    }
+
+    const updateData: any = {};
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+
+    return this.prisma.summary.update({
+      where: { id },
+      data: updateData,
+    });
+  }
+
+  async deleteSummary(id: string, userId: string) {
+    const summary = await this.prisma.summary.findFirst({
+      where: { id, userId },
+    });
+
+    if (!summary) {
+      throw new NotFoundException(
+        `Summary not found or you do not have permission to access it.`,
+      );
+    }
+
+    return this.prisma.summary.delete({
+      where: { id },
+    });
+  }
 }

@@ -43,3 +43,15 @@ export const getConversationWsToken = async (
   }>(`chat/conversation/${id}/ws-token`);
   return data;
 };
+
+export const updateConversation = async (
+  id: string,
+  data: { title?: string; metadata?: object },
+): Promise<ConversationApiResponse> => {
+  const response = await axios.patch(`chat/conversation/${id}`, data);
+  return response.data;
+};
+
+export const deleteConversation = async (id: string): Promise<void> => {
+  await axios.delete(`chat/conversation/${id}`);
+};

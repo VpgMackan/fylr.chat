@@ -1,18 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import ConversationOptionsMenu from '../ui/ConversationOptionsMenu';
+
+interface ConversationProps {
+  id: string;
+  name: string;
+  selected: boolean;
+  onClick?: () => void;
+  onRename: (id: string, newName: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}
 
 export default function Conversation({
+  id,
   name,
   selected,
   onClick,
-}: {
-  name: string;
-  selected: boolean;
-
-  onClick?: () => void;
-}) {
+  onRename,
+  onDelete,
+}: ConversationProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -26,18 +33,18 @@ export default function Conversation({
     >
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-800 truncate pr-2">{name}</p>
-        <button
-          className={`flex-shrink-0 p-1 hover:bg-blue-300 rounded transition-all ${
+        <div
+          className={`flex-shrink-0 transition-all ${
             isHovered ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <Icon
-            icon="heroicons-solid:dots-horizontal"
-            width="16"
-            height="16"
-            className="text-gray-600"
+          <ConversationOptionsMenu
+            conversationId={id}
+            conversationName={name}
+            onRename={onRename}
+            onDelete={onDelete}
           />
-        </button>
+        </div>
       </div>
     </div>
   );

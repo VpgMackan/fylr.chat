@@ -13,12 +13,14 @@ import {
   Request,
   Response,
   StreamableFile,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { Response as ExpressResponse } from 'express';
 
 import { PodcastService } from './podcast.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { CreatePodcastDto } from '@fylr/types';
+import { CreatePodcastDto, UpdatePodcastDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 @UseGuards(AuthGuard)
@@ -77,5 +79,27 @@ export class PodcastController {
     });
 
     return new StreamableFile(audioStream);
+  }
+
+  @Patch('/:podcastId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  updatePodcast(
+    @Param('podcastId') podcastId: string,
+    @Body() updatePodcastDto: UpdatePodcastDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.updatePodcast(
+      podcastId,
+      req.user.id,
+      updatePodcastDto.title,
+    );
+  }
+
+  @Delete('/:podcastId')
+  deletePodcast(
+    @Param('podcastId') podcastId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.deletePodcast(podcastId, req.user.id);
   }
 }

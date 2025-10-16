@@ -19,3 +19,12 @@ export const createPodcast = async (dto: CreatePodcastDto) => {
   const { data } = await axios.post(`podcast`, dto);
   return data;
 };
+
+export const updatePodcast = async (id: string, data: { title?: string }) => {
+  const response = await axios.patch(`podcast/${id}`, data);
+  return response.data;
+};
+
+export const deletePodcast = async (id: string): Promise<void> => {
+  await axios.delete(`podcast/${id}`);
+};

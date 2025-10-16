@@ -21,3 +21,9 @@ export class CreatePodcastDto {
   @IsOptional()
   sourceIds?: string[];
 }
+
+export class UpdatePodcastDto {
+  @IsString()
+  @IsOptional()
+  title?: string;
+}

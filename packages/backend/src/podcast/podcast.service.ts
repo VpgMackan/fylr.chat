@@ -158,4 +158,42 @@ export class PodcastService {
 
     return this.s3Service.getObject(bucket, episode.audioKey);
   }
+
+  async updatePodcast(id: string, userId: string, title?: string) {
+    const podcast = await this.prisma.podcast.findFirst({
+      where: { id, userId },
+    });
+
+    if (!podcast) {
+      throw new NotFoundException(
+        `Podcast not found or you do not have permission to access it.`,
+      );
+    }
+
+    const updateData: any = {};
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+
+    return this.prisma.podcast.update({
+      where: { id },
+      data: updateData,
+    });
+  }
+
+  async deletePodcast(id: string, userId: string) {
+    const podcast = await this.prisma.podcast.findFirst({
+      where: { id, userId },
+    });
+
+    if (!podcast) {
+      throw new NotFoundException(
+        `Podcast not found or you do not have permission to access it.`,
+      );
+    }
+
+    return this.prisma.podcast.delete({
+      where: { id },
+    });
+  }
 }

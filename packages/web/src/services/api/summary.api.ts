@@ -23,3 +23,15 @@ export const createSummary = async (
   const { data } = await axios.post<SummaryApiResponse>(`summary`, dto);
   return data;
 };
+
+export const updateSummary = async (
+  id: string,
+  data: { title?: string },
+): Promise<SummaryApiResponse> => {
+  const response = await axios.patch(`summary/${id}`, data);
+  return response.data;
+};
+
+export const deleteSummary = async (id: string): Promise<void> => {
+  await axios.delete(`summary/${id}`);
+};

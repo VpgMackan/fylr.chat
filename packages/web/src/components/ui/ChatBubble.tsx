@@ -1,6 +1,6 @@
 import MarkdownComponent from '@/components/ui/MarkdownComponents';
 import { useTranslations } from 'next-intl';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 
@@ -47,7 +47,6 @@ export default function ChatBubble({
   metadata,
   onRegenerate,
   onDelete,
-  // onCopy,
   // onSourceClick,
   // createdAt,
 }: {
@@ -56,12 +55,12 @@ export default function ChatBubble({
   metadata?: { relatedSources?: RelatedSource[] };
   onRegenerate: () => void;
   onDelete: () => void;
-  // onCopy?: () => void;
   // onSourceClick?: (src: RelatedSource) => void;
   // createdAt?: string;
 }) {
   const t = useTranslations('features.chat');
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
 
   const maxWidthClass = user ? 'max-w-[30%]' : 'max-w-[70%]';
   const bubbleStyle = user
@@ -79,6 +78,16 @@ export default function ChatBubble({
       ),
     [router],
   );
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  }, [text]);
 
   return (
     <div
@@ -130,6 +139,19 @@ export default function ChatBubble({
                 />
               </button>
             )}
+
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full hover:bg-gray-300 transition-colors"
+              title={copied ? 'Copied!' : 'Copy message'}
+            >
+              <Icon
+                icon={copied ? 'mdi:check' : 'mdi:content-copy'}
+                width="20"
+                height="20"
+                aria-label={copied ? 'Copied!' : 'Copy message'}
+              />
+            </button>
 
             <button
               onClick={handleDelete}

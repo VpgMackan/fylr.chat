@@ -11,11 +11,13 @@ import {
   UsePipes,
   ValidationPipe,
   Request,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 
 import { SummaryService } from './summary.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { CreateSummaryDto } from '@fylr/types';
+import { CreateSummaryDto, UpdateSummaryDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 @UseGuards(AuthGuard)
@@ -53,5 +55,27 @@ export class SummaryController {
     @Request() req: RequestWithUser,
   ) {
     return this.summaryService.getSummaryById(summaryId, req.user.id);
+  }
+
+  @Patch('/:summaryId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  updateSummary(
+    @Param('summaryId') summaryId: string,
+    @Body() updateSummaryDto: UpdateSummaryDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.summaryService.updateSummary(
+      summaryId,
+      req.user.id,
+      updateSummaryDto.title,
+    );
+  }
+
+  @Delete('/:summaryId')
+  deleteSummary(
+    @Param('summaryId') summaryId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.summaryService.deleteSummary(summaryId, req.user.id);
   }
 }

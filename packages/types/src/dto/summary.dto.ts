@@ -38,3 +38,9 @@ export class CreateSummaryDto {
   @IsOptional()
   sourceIds?: string[];
 }
+
+export class UpdateSummaryDto {
+  @IsString()
+  @IsOptional()
+  title?: string;
+}
