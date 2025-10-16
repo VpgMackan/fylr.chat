@@ -36,6 +36,10 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
         try:
             generated_episodes = []
 
+            source_ids = [source.id for source in summary.sources]
+            if not source_ids:
+                raise ValueError(f"No sources associated with summary {summary.id}")
+
             for episode in summary.episodes:
                 log.info(
                     f"Processing episode: '{episode.title}'", method="_create_summary"
@@ -73,7 +77,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
                 all_related_docs = []
                 for query in search_queries[:3]:
                     related_docs = self._fetch_related_documents(
-                        db, query, summary.pocket_id, limit=5
+                        db, query, source_ids, limit=5
                     )
                     all_related_docs.extend(related_docs)
 

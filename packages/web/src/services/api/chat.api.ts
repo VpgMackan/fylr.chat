@@ -14,27 +14,23 @@ export const getConversations = async (params: {
   return data;
 };
 
-export const getConversationsByPocketId = async (
-  id: string,
-  params: {
-    take: number;
-    offset: number;
-    searchTerm: string;
-  },
-): Promise<ConversationApiResponse[]> => {
-  const { data } = await axios.get<ConversationApiResponse[]>(
-    `chat/${id}/conversations`,
-    { params },
-  );
-  return data;
-};
-
 export const createConversation = async (
-  pocketId: string,
   data: CreateConversationDto,
 ): Promise<ConversationApiResponse> => {
-  const response = await axios.post(`/chat/${pocketId}/conversation`, data);
+  const response = await axios.post(`chat/conversation`, data);
   return response.data;
+};
+
+export const initiateConversation = async (
+  content: string,
+  sourceIds?: string[],
+  libraryIds?: string[],
+): Promise<ConversationApiResponse> => {
+  const { data } = await axios.post<ConversationApiResponse>(
+    'chat/conversation/initiate',
+    { content, sourceIds, libraryIds },
+  );
+  return data;
 };
 
 export const getConversationWsToken = async (
@@ -44,6 +40,18 @@ export const getConversationWsToken = async (
 }> => {
   const { data } = await axios.post<{
     token: string;
-  }>(`/chat/conversation/${id}/ws-token`);
+  }>(`chat/conversation/${id}/ws-token`);
   return data;
+};
+
+export const updateConversation = async (
+  id: string,
+  data: { title?: string; metadata?: object },
+): Promise<ConversationApiResponse> => {
+  const response = await axios.patch(`chat/conversation/${id}`, data);
+  return response.data;
+};
+
+export const deleteConversation = async (id: string): Promise<void> => {
+  await axios.delete(`chat/conversation/${id}`);
 };

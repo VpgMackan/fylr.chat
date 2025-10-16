@@ -1,6 +1,9 @@
-import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getConversationWsToken } from '@/services/api/chat.api';
+import {
+  getConversationWsToken,
+  initiateConversation as apiInitiateConversation,
+} from '@/services/api/chat.api';
 import {
   MessageApiResponse,
   WsServerEventPayload,
@@ -55,18 +58,24 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_MESSAGE':
+      if (state.messages.some((m) => m.id === action.payload.id)) {
+        return state;
+      }
       return { ...state, messages: [...state.messages, action.payload] };
-    case 'APPEND_CHUNK':
-      const lastMsg = state.messages[state.messages.length - 1];
-      if (lastMsg?.id === STREAMING_ASSISTANT_ID) {
+    case 'APPEND_CHUNK': {
+      const streamingMsgIndex = state.messages.findIndex(
+        (m) => m.id === STREAMING_ASSISTANT_ID,
+      );
+      if (streamingMsgIndex > -1) {
+        const newMessages = [...state.messages];
         const updatedMsg = {
-          ...lastMsg,
-          content: lastMsg.content + action.payload.content,
+          ...newMessages[streamingMsgIndex],
+          content:
+            (newMessages[streamingMsgIndex].content || '') +
+            action.payload.content,
         };
-        return {
-          ...state,
-          messages: [...state.messages.slice(0, -1), updatedMsg],
-        };
+        newMessages[streamingMsgIndex] = updatedMsg;
+        return { ...state, messages: newMessages };
       } else {
         const newStreamingMsg: MessageApiResponse = {
           id: STREAMING_ASSISTANT_ID,
@@ -75,18 +84,27 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
           content: action.payload.content,
           createdAt: new Date().toISOString(),
           metadata: {},
+          reasoning: null,
+          toolCalls: null,
+          toolCallId: null,
         };
         return { ...state, messages: [...state.messages, newStreamingMsg] };
       }
-    case 'FINALIZE_ASSISTANT_MESSAGE':
+    }
+    case 'FINALIZE_ASSISTANT_MESSAGE': {
+      const finalMsg = action.payload;
+      const newMessages = state.messages.map((m) =>
+        m.id === STREAMING_ASSISTANT_ID ? finalMsg : m,
+      );
+      if (!newMessages.some((m) => m.id === finalMsg.id)) {
+        newMessages.push(finalMsg);
+      }
       return {
         ...state,
         status: null,
-        messages: [
-          ...state.messages.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
-          action.payload,
-        ],
+        messages: newMessages,
       };
+    }
     case 'DELETE_MESSAGE':
       return {
         ...state,
@@ -212,12 +230,18 @@ export function useChat(chatId: string | null) {
   }, [chatId]);
 
   const sendMessage = useCallback(
-    (content: string) => {
-      if (socketRef.current && chatId && content.trim()) {
+    (payload: {
+      content: string;
+      sourceIds?: string[];
+      libraryIds?: string[];
+    }) => {
+      if (socketRef.current && chatId && payload.content.trim()) {
         socketRef.current.emit('conversationAction', {
           action: 'sendMessage',
           conversationId: chatId,
-          content,
+          content: payload.content,
+          sourceIds: payload.sourceIds,
+          libraryIds: payload.libraryIds,
         });
       }
     },
@@ -230,7 +254,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'deleteMessage',
           conversationId: chatId,
-          messageId,
+          payload: { messageId },
         });
       }
     },
@@ -243,8 +267,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'updateMessage',
           conversationId: chatId,
-          messageId,
-          content,
+          payload: { messageId, content },
         });
       }
     },
@@ -257,7 +280,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'updateSources',
           conversationId: chatId,
-          sourcesId,
+          payload: { sourcesId },
         });
       }
     },
@@ -270,7 +293,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'regenerateMessage',
           conversationId: chatId,
-          messageId,
+          payload: { messageId },
         });
       }
     },
@@ -282,6 +305,32 @@ export function useChat(chatId: string | null) {
     socketRef.current?.connect();
   }, [socketRef]);
 
+  const initiateAndSendMessage = useCallback(
+    async (payload: {
+      content: string;
+      sourceIds?: string[];
+      libraryIds?: string[];
+    }) => {
+      if (chatId) {
+        sendMessage(payload);
+        return null;
+      }
+
+      try {
+        const newConversation: any = await apiInitiateConversation(
+          payload.content,
+          payload.sourceIds,
+          payload.libraryIds,
+        );
+        return newConversation;
+      } catch (error) {
+        console.error('Failed to initiate conversation', error);
+        return null;
+      }
+    },
+    [chatId, sendMessage],
+  );
+
   return {
     messages: state.messages,
     sources: state.sources,
@@ -289,6 +338,7 @@ export function useChat(chatId: string | null) {
     connectionStatus: state.connectionStatus,
     status: state.status,
     sendMessage,
+    initiateAndSendMessage,
     deleteMessage,
     updateMessage,
     updateSources,

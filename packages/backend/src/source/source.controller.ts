@@ -57,18 +57,32 @@ export class SourceController {
     @Request() req: RequestWithUser,
   ) {
     if (!file) {
-      throw new BadRequestException('No file provided.');
+      throw new BadRequestException(
+        'No file provided. Ensure you are sending multipart/form-data with a field named "file".',
+      );
     }
 
-    return this.sourceService.createSource(file, body.pocketId, req.user.id);
+    if (!file.size || file.size === 0) {
+      throw new BadRequestException(
+        `File is empty or size could not be determined. File details: ${JSON.stringify(
+          {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
+        )}`,
+      );
+    }
+
+    return this.sourceService.createSource(file, body.libraryId, req.user.id);
   }
 
-  @Get('pocket/:pocketId')
-  async getSourcesByPocketId(
-    @Param('pocketId') pocketId: string,
+  @Get('library/:libraryId')
+  async getSourcesByLibraryId(
+    @Param('libraryId') libraryId: string,
     @Request() req: RequestWithUser,
   ) {
-    return this.sourceService.getSourcesByPocketId(pocketId, req.user.id);
+    return this.sourceService.getSourcesByLibraryId(libraryId, req.user.id);
   }
 
   @Get('access/:sourceId')

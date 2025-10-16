@@ -86,6 +86,12 @@ export interface WsStatusUpdateEvent {
   data: { stage: string; message: string };
 }
 
+export interface WsAgentThoughtEvent {
+  action: 'agentThought';
+  conversationId: string;
+  data: MessageApiResponse;
+}
+
 export type WsServerEventPayload =
   | WsNewMessageEvent
   | WsMessageChunkEvent
@@ -93,4 +99,5 @@ export type WsServerEventPayload =
   | WsStreamErrorEvent
   | WsMessageDeletedEvent
   | WsMessageUpdatedEvent
-  | WsStatusUpdateEvent;
+  | WsStatusUpdateEvent
+  | WsAgentThoughtEvent;

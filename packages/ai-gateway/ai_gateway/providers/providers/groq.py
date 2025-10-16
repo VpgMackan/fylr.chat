@@ -43,9 +43,35 @@ class GroqProvider(BaseProvider):
             raise ValueError("A model must be specified for the GroqProvider.")
 
         try:
-            response = self.client.chat.completions.create(
-                model=request.model, messages=messages, stream=False, **request.options
-            )
+            # Filter messages to remove tool_calls from non-assistant messages
+            filtered_messages = []
+            for msg in messages:
+                filtered_msg = msg.copy()
+                if msg.get("role") != "assistant":
+                    filtered_msg.pop("tool_calls", None)
+                filtered_messages.append(filtered_msg)
+
+            # Prepare the request parameters
+            params = {
+                "model": request.model,
+                "messages": filtered_messages,
+                "stream": False,
+                **request.options,
+            }
+
+            # Add tool-related parameters if provided
+            if request.tools:
+                params["tools"] = []
+                for tool in request.tools:
+                    tool_dict = tool.model_dump()
+                    tool_dict["name"] = (
+                        tool.function.name
+                    )  # Add name at top level for compatibility
+                    params["tools"].append(tool_dict)
+            if request.tool_choice:
+                params["tool_choice"] = request.tool_choice
+
+            response = self.client.chat.completions.create(**params)
             return response.model_dump()
 
         except Exception as e:
@@ -54,9 +80,10 @@ class GroqProvider(BaseProvider):
 
     async def generate_text_stream(
         self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generates a streaming chat completion using Groq.
+        Yields dict with 'content' and optionally 'tool_calls'.
         """
         if not self.async_client:
             raise ValueError("Groq API key is not configured")
@@ -65,13 +92,68 @@ class GroqProvider(BaseProvider):
             raise ValueError("A model must be specified for the GroqProvider.")
 
         try:
-            stream = await self.async_client.chat.completions.create(
-                model=request.model, messages=messages, stream=True, **request.options
-            )
+            # Filter messages to remove tool_calls from non-assistant messages
+            filtered_messages = []
+            for msg in messages:
+                filtered_msg = msg.copy()
+                if msg.get("role") != "assistant":
+                    filtered_msg.pop("tool_calls", None)
+                filtered_messages.append(filtered_msg)
+
+            # Prepare the request parameters
+            params = {
+                "model": request.model,
+                "messages": filtered_messages,
+                "stream": True,
+                **request.options,
+            }
+
+            # Add tool-related parameters if provided
+            if request.tools:
+                params["tools"] = []
+                for tool in request.tools:
+                    tool_dict = tool.model_dump()
+                    tool_dict["name"] = (
+                        tool.function.name
+                    )  # Add name at top level for compatibility
+                    params["tools"].append(tool_dict)
+            if request.tool_choice:
+                params["tool_choice"] = request.tool_choice
+
+            stream = await self.async_client.chat.completions.create(**params)
             async for chunk in stream:
-                content = chunk.choices[0].delta.content
-                if content:
-                    yield content
+                delta = chunk.choices[0].delta
+
+                # Build response chunk
+                chunk_data = {}
+
+                if delta.content:
+                    # Sanitize content to remove invalid surrogates
+                    content = delta.content
+                    try:
+                        content = content.encode("utf-8", errors="replace").decode(
+                            "utf-8"
+                        )
+                    except (UnicodeEncodeError, UnicodeDecodeError):
+                        content = content.encode("utf-8", errors="ignore").decode(
+                            "utf-8"
+                        )
+                    chunk_data["content"] = content
+
+                if delta.tool_calls:
+                    chunk_data["tool_calls"] = [
+                        tc.model_dump() for tc in delta.tool_calls
+                    ]
+
+                if delta.role:
+                    chunk_data["role"] = delta.role
+
+                if chunk.choices[0].finish_reason:
+                    chunk_data["finish_reason"] = chunk.choices[0].finish_reason
+
+                # Only yield if there's actual data
+                if chunk_data:
+                    yield chunk_data
 
         except Exception as e:
             log.error("groq_stream_generation_error", error=str(e))

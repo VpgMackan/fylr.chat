@@ -1,0 +1,18 @@
+# synthesis@v1.yaml
+id: synthesis
+version: v1
+description: >
+  Synthesis prompt template. Takes conversation history including thoughts and tool results
+  to provide a final, comprehensive answer to the user's query.
+form: messages
+messages_template: |
+  {% for message in messages %}
+  - role: {{ message.role | tojson }}
+    content: {{ message.content | tojson }}
+    {% if message.get('tool_calls') %}
+    tool_calls: {{ message.get('tool_calls') | tojson }}
+    {% endif %}
+    {% if message.get('tool_call_id') %}
+    tool_call_id: {{ message.get('tool_call_id') | tojson }}
+    {% endif %}
+  {% endfor %}

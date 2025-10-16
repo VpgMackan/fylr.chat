@@ -5,7 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { PocketModule } from './pocket/pocket.module';
+import { LibraryModule } from './library/library.module';
 import { SourceModule } from './source/source.module';
 import { EventsModule } from './events/events.module';
 import { validate } from './config/config';
@@ -22,7 +22,7 @@ import { PodcastModule } from './podcast/podcast.module';
     PrismaModule,
     UsersModule,
     AuthModule,
-    PocketModule,
+    LibraryModule,
     SourceModule,
     EventsModule,
     ChatModule,

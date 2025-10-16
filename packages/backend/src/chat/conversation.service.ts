@@ -14,13 +14,22 @@ import {
 } from '@fylr/types';
 
 import { AuthService } from 'src/auth/auth.service';
+import { MessageService } from './message.service';
+import { Server } from 'socket.io';
 
 @Injectable()
 export class ConversationService {
+  private server: Server;
+
   constructor(
     private prisma: PrismaService,
     private authService: AuthService,
+    private messageService: MessageService,
   ) {}
+
+  setServer(server: Server) {
+    this.server = server;
+  }
 
   async generateWebSocketToken(
     user: UserPayload,
@@ -29,12 +38,7 @@ export class ConversationService {
     const conversation = await this.prisma.conversation.findUnique({
       where: {
         id: conversationId,
-        pocket: {
-          userId: user.id,
-        },
-      },
-      include: {
-        pocket: true,
+        userId: user.id,
       },
     });
 
@@ -49,45 +53,13 @@ export class ConversationService {
     return { token };
   }
 
-  async getConversations(
-    pocketId: string,
-    userId: string,
-    take = 10,
-    offset = 0,
-    searchTerm = '',
-  ) {
-    const pocket = await this.prisma.pocket.findFirst({
-      where: {
-        id: pocketId,
-        userId,
-      },
-    });
-    if (!pocket) {
-      throw new NotFoundException(`Pocket not found or access denied.`);
-    }
-    return this.prisma.conversation.findMany({
-      where: {
-        pocketId,
-        ...(searchTerm && {
-          title: { contains: searchTerm, mode: 'insensitive' },
-        }),
-      },
-      take,
-      skip: offset,
-    });
-  }
-
   async getConversationsByUserId(userId: string) {
     try {
       return await this.prisma.conversation.findMany({
         where: {
-          pocket: {
-            userId: userId,
-          },
+          userId,
         },
-        include: {
-          pocket: true,
-        },
+        orderBy: { createdAt: 'desc' },
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -96,18 +68,7 @@ export class ConversationService {
     }
   }
 
-  async createConversation(
-    body: CreateConversationDto,
-    pocketId: string,
-    userId: string,
-  ) {
-    const pocket = await this.prisma.pocket.findFirst({
-      where: { id: pocketId, userId },
-    });
-    if (!pocket) {
-      throw new NotFoundException(`Pocket not found or access denied.`);
-    }
-
+  async createConversation(body: CreateConversationDto, userId: string) {
     try {
       if (typeof body.metadata === 'string') {
         try {
@@ -119,16 +80,53 @@ export class ConversationService {
         }
       }
 
+      // Collect all source IDs from both sourceIds and libraryIds
+      let allSourceIds: string[] = [];
+
+      // Add direct source IDs if provided
+      if (body.sourceIds && body.sourceIds.length > 0) {
+        allSourceIds = [...body.sourceIds];
+      }
+
+      // Fetch sources from libraries if library IDs are provided
+      if (body.libraryIds && body.libraryIds.length > 0) {
+        const librarySources = await this.prisma.source.findMany({
+          where: {
+            libraryId: { in: body.libraryIds },
+            library: { userId },
+          },
+          select: { id: true },
+        });
+        allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
+      }
+
+      // Validate all sources exist and belong to the user
+      if (allSourceIds.length > 0) {
+        const sources = await this.prisma.source.findMany({
+          where: {
+            id: { in: allSourceIds },
+            library: { userId },
+          },
+        });
+
+        if (sources.length !== allSourceIds.length) {
+          throw new BadRequestException(
+            'Some sources not found or not accessible',
+          );
+        }
+      }
+
       return await this.prisma.conversation.create({
         data: {
-          pocketId,
+          userId,
           title: body.title,
           metadata: body.metadata,
-          sources: body.sourceIds
-            ? {
-                connect: body.sourceIds.map((id) => ({ id })),
-              }
-            : undefined,
+          sources:
+            allSourceIds.length > 0
+              ? {
+                  connect: allSourceIds.map((id) => ({ id })),
+                }
+              : undefined,
         },
       });
     } catch (error) {
@@ -138,14 +136,106 @@ export class ConversationService {
     }
   }
 
+  async initiateConversation(
+    content: string,
+    userId: string,
+    sourceIds?: string[],
+    libraryIds?: string[],
+  ) {
+    // Collect all source IDs from both sourceIds and libraryIds
+    let allSourceIds: string[] = [];
+
+    // Add direct source IDs if provided
+    if (sourceIds && sourceIds.length > 0) {
+      allSourceIds = [...sourceIds];
+    }
+
+    // Fetch sources from libraries if library IDs are provided
+    if (libraryIds && libraryIds.length > 0) {
+      const librarySources = await this.prisma.source.findMany({
+        where: {
+          libraryId: { in: libraryIds },
+          library: { userId },
+        },
+        select: { id: true },
+      });
+      allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
+    }
+
+    // Validate all sources exist and belong to the user
+    if (allSourceIds.length > 0) {
+      const sources = await this.prisma.source.findMany({
+        where: {
+          id: { in: allSourceIds },
+          library: { userId },
+        },
+      });
+
+      if (sources.length !== allSourceIds.length) {
+        throw new BadRequestException(
+          'Some sources not found or not accessible',
+        );
+      }
+    }
+
+    const newConversation = await this.prisma.conversation.create({
+      data: {
+        userId,
+        title: content.split(' ').slice(0, 5).join(' ') + '...',
+        metadata: {},
+        sources:
+          allSourceIds.length > 0
+            ? { connect: allSourceIds.map((id) => ({ id })) }
+            : undefined,
+        messages: {
+          create: {
+            role: 'user',
+            content: content,
+          },
+        },
+      },
+      include: {
+        messages: true,
+      },
+    });
+
+    if (this.server && newConversation.messages.length > 0) {
+      const userMessage = newConversation.messages[0];
+      this.messageService
+        .generateAndStreamAiResponseWithTools(userMessage, this.server)
+        .catch((error) => {
+          console.error(
+            `Failed to generate AI response for conversation ${newConversation.id}:`,
+            error,
+          );
+        });
+    }
+
+    return newConversation;
+  }
+
   async getConversation(conversationId: string, userId: string) {
     const conversation = await this.prisma.conversation.findFirst({
-      where: { id: conversationId, pocket: { userId } },
+      where: { id: conversationId, userId },
     });
     if (!conversation) {
       throw new NotFoundException(`Conversation not found or access denied.`);
     }
     return conversation;
+  }
+
+  async getConversationSourceIds(
+    conversationId: string,
+    userId: string,
+  ): Promise<string[]> {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+      select: { sources: { select: { id: true } } },
+    });
+    if (!conversation) {
+      throw new NotFoundException(`Conversation not found or access denied.`);
+    }
+    return conversation.sources.map((s) => s.id);
   }
 
   async updateConversation(
@@ -174,7 +264,7 @@ export class ConversationService {
     const sources = await this.prisma.source.findMany({
       where: {
         id: { in: sourcesId },
-        pocket: { userId },
+        library: { userId },
       },
     });
 

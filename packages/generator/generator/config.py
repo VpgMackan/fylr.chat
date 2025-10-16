@@ -20,5 +20,13 @@ class Settings(BaseSettings):
     s3_region: str = "garage"
     s3_bucket_podcast_audio: str = "fylr.chat-podcasts"
 
+    # RabbitMQ settings
+    rabbitmq_host: str = "localhost"
+    rabbitmq_port: int = 5672
+    rabbitmq_user: str = "guest"
+    rabbitmq_password: str = "guest"
+    rabbitmq_heartbeat: int = 600  # 10 minutes for long-running tasks
+    rabbitmq_blocked_connection_timeout: int = 300  # 5 minutes
+
 
 settings = Settings()

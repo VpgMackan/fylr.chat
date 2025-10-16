@@ -74,18 +74,36 @@ export class CreateConversationDto {
   @IsUUID('all', { each: true })
   @IsOptional()
   sourceIds?: string[];
+
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  libraryIds?: string[];
 }
 
 export class CreateMessageDto {
   @IsString()
   @IsNotEmpty()
-  role!: string;
+  role!: 'user' | 'assistant' | 'tool';
 
   @IsString()
-  @IsNotEmpty()
-  content!: string;
+  @IsOptional()
+  content?: string;
+
+  @IsString()
+  @IsOptional()
+  reasoning?: string;
 
   @IsObject()
+  @IsOptional()
+  toolCalls?: any;
+
+  @IsString()
+  @IsOptional()
+  toolCallId?: string;
+
+  @IsObject()
+  @IsOptional()
   @Transform(({ value }) => {
     if (typeof value === 'string') {
       try {
@@ -96,5 +114,5 @@ export class CreateMessageDto {
     }
     return value;
   })
-  metadata!: object;
+  metadata?: object;
 }

@@ -43,6 +43,9 @@ export class ChatGateway
   ) {}
 
   afterInit(server: Server) {
+    // Provide server reference to ConversationService so it can trigger AI responses
+    this.conversationService.setServer(server);
+
     server.use((socket: SocketWithChatUser, next) => {
       try {
         const token = socket.handshake.auth?.token;
@@ -93,7 +96,13 @@ export class ChatGateway
       case 'join': {
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
-        const messages = await this.messageService.getMessages(conversationId);
+        const allMessages =
+          await this.messageService.getMessages(conversationId);
+        // Filter to only show user messages and assistant messages with content
+        const messages = allMessages.filter(
+          (msg) =>
+            msg.role === 'user' || (msg.role === 'assistant' && msg.content),
+        );
         const sources = await this.sourceService.getSourcesByConversationId(
           conversationId,
           client.user.id,
@@ -108,12 +117,76 @@ export class ChatGateway
       }
 
       case 'sendMessage': {
-        const { content } = payload as { content: string };
+        const { content, sourceIds, libraryIds } = payload as {
+          content: string;
+          sourceIds?: string[];
+          libraryIds?: string[];
+        };
+
+        // Handle both sourceIds and libraryIds
+        if (
+          (sourceIds && sourceIds.length > 0) ||
+          (libraryIds && libraryIds.length > 0)
+        ) {
+          try {
+            const existingSourceIds =
+              await this.conversationService.getConversationSourceIds(
+                conversationId,
+                client.user.id,
+              );
+
+            // Collect new source IDs
+            let newSourceIds: string[] = [];
+
+            // Add direct source IDs
+            if (sourceIds && sourceIds.length > 0) {
+              newSourceIds = [...sourceIds];
+            }
+
+            // Fetch and add sources from libraries
+            if (libraryIds && libraryIds.length > 0) {
+              const librarySources =
+                await this.sourceService.getSourcesByLibraryIds(
+                  libraryIds,
+                  client.user.id,
+                );
+              newSourceIds = [
+                ...newSourceIds,
+                ...librarySources.map((s) => s.id),
+              ];
+            }
+
+            // Combine with existing sources and remove duplicates
+            const allSourceIds = [
+              ...new Set([...existingSourceIds, ...newSourceIds]),
+            ];
+
+            await this.conversationService.updateSources(
+              conversationId,
+              allSourceIds,
+              client.user.id,
+            );
+
+            const updatedSources =
+              await this.sourceService.getSourcesByConversationId(
+                conversationId,
+                client.user.id,
+              );
+            this.server
+              .to(conversationId)
+              .emit('sourcesUpdated', updatedSources);
+          } catch (error) {
+            this.logger.error(
+              `Failed to add sources to conversation ${conversationId}: ${error.message}`,
+            );
+          }
+        }
+
         if (!content) {
           throw new WsException('content is required for sendMessage action');
         }
         const userMessage = await this.messageService.createMessage(
-          { role: 'user', content, metadata: {} },
+          { role: 'user', content: content, metadata: {} },
           conversationId,
         );
         this.server.to(conversationId).emit('conversationAction', {
@@ -121,7 +194,7 @@ export class ChatGateway
           conversationId,
           data: userMessage,
         });
-        this.messageService.generateAndStreamAiResponse(
+        this.messageService.generateAndStreamAiResponseWithTools(
           userMessage,
           this.server,
         );

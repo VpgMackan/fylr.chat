@@ -11,6 +11,9 @@ import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
+import { ToolService } from './tools/tool.service';
+
+import { tools as specialTools } from './tool';
 
 @Injectable()
 export class MessageService {
@@ -19,6 +22,7 @@ export class MessageService {
     private readonly llmService: LLMService,
     private readonly vectorService: AiVectorService,
     private sourceService: SourceService,
+    private readonly toolService: ToolService,
   ) {}
 
   async getMessages(conversationId: string) {
@@ -143,7 +147,7 @@ export class MessageService {
             relatedSources: relevantChunks.map((c) => ({
               id: c.id,
               sourceId: c.source.id,
-              pocketId: c.source.pocketId,
+              libraryId: c.source.libraryId,
               name: c.source.name,
               chunkIndex: c.chunkIndex,
             })),
@@ -159,6 +163,174 @@ export class MessageService {
     } else {
       // Handle no response
     }
+  }
+
+  async generateAndStreamAiResponseWithTools(
+    userMessage: any,
+    server: Server,
+  ): Promise<void> {
+    const { conversationId } = userMessage;
+    const MAX_ITERATIONS = 5;
+    let currentIteration = 0;
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new NotFoundException(
+        `Conversation with ID "${conversationId}" not found.`,
+      );
+    }
+    const messages = await this.prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const llmMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      tool_calls: m.toolCalls,
+    }));
+
+    while (currentIteration < MAX_ITERATIONS) {
+      currentIteration++;
+
+      const llmResponse = await this.llmService.generateWithTools(llmMessages, [
+        ...this.toolService.getAllToolDefinitions(),
+        ...specialTools,
+      ]);
+
+      const responseMessage = llmResponse.choices[0].message;
+
+      const thoughtMessage = await this.createMessage(
+        {
+          role: 'assistant',
+          reasoning: responseMessage.content,
+          toolCalls: responseMessage.tool_calls,
+        },
+        conversationId,
+      );
+
+      server.to(conversationId).emit('conversationAction', {
+        action: 'agentThought',
+        data: thoughtMessage,
+      });
+
+      if (
+        !responseMessage.tool_calls ||
+        responseMessage.tool_calls.length === 0
+      ) {
+        break;
+      }
+
+      const finalAnswerCall = responseMessage.tool_calls.find(
+        (tc) => tc.function.name === 'provide_final_answer',
+      );
+      if (finalAnswerCall) {
+        await this.synthesizeAndStreamFinalAnswer(
+          llmMessages,
+          conversationId,
+          server,
+        );
+        return;
+      }
+
+      const toolResults = await Promise.all(
+        responseMessage.tool_calls.map(async (toolCall) => {
+          try {
+            const result = await this.toolService.executeTool(
+              toolCall.function.name,
+              JSON.parse(toolCall.function.arguments),
+              {
+                conversationId,
+                userId: conversation.userId,
+              },
+            );
+            return {
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(result),
+            };
+          } catch (error) {
+            return {
+              tool_call_id: toolCall.id,
+              content: `Error executing tool: ${error.message}`,
+            };
+          }
+        }),
+      );
+
+      for (const result of toolResults) {
+        await this.createMessage(
+          {
+            role: 'tool',
+            toolCallId: result.tool_call_id,
+            content: result.content,
+          },
+          conversationId,
+        );
+        llmMessages.push({ role: 'tool', ...result, tool_calls: null });
+      }
+    }
+    await this.synthesizeAndStreamFinalAnswer(
+      llmMessages,
+      conversationId,
+      server,
+      "I seem to have finished my thought process without a final conclusion. Here's a summary of my findings.",
+    );
+  }
+
+  private async synthesizeAndStreamFinalAnswer(
+    messages: any[],
+    conversationId: string,
+    server: Server,
+    overrideQuery?: string,
+  ) {
+    const synthesisPrompt = `
+        You have now completed your research using your tools. Your task is to synthesize all the information you've gathered from the conversation history (including your own thoughts and tool results) into a single, final answer for the user.
+
+        **Tone and Style:**
+        - Be friendly, clear, and conversational.
+        - Start with a direct answer or summary, then elaborate with details.
+        - Explain things simply. Avoid just copying and pasting from your tool results. Weave the facts into a helpful explanation.
+        - When you use information from a source, cite it clearly using Markdown format like [1], [2], etc., if applicable.
+
+        **Information:**
+        - You are a ai system called Fylr, designed to assist users by providing accurate and helpful information.
+        - You are created by a company called Fylr, and you should mention this if asked about your identity.
+        - Use the following pieces of context to inform your answer. If you don't know the answer, just say that you don't know. Don't try to make up an answer.
+        - Context pieces are formatted as "Content from Source Chunk [1] (Source Name): ..."
+        - The company fylr is owned by Markus Nielsen from Sweden.
+
+        Please provide a comprehensive and helpful response to the user's original query.
+        ${overrideQuery || ''}
+      `;
+
+    messages.push({ role: 'user', content: synthesisPrompt });
+
+    const stream = this.llmService.generateStream({
+      prompt_type: 'synthesis',
+      prompt_vars: { messages },
+    });
+
+    let fullResponse = '';
+    for await (const chunk of stream) {
+      fullResponse += chunk;
+      server.to(conversationId).emit('conversationAction', {
+        action: 'messageChunk',
+        conversationId,
+        data: { content: chunk },
+      });
+    }
+
+    const finalAssistantMessage = await this.createMessage(
+      { role: 'assistant', content: fullResponse },
+      conversationId,
+    );
+    server.to(conversationId).emit('conversationAction', {
+      action: 'messageEnd',
+      conversationId,
+      data: finalAssistantMessage,
+    });
   }
 
   async regenerateAndStreamAiResponse(

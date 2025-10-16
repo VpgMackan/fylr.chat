@@ -13,6 +13,15 @@ interface ChatCompletionChoice {
   message: {
     role: string;
     content: string;
+    tool_calls?: {
+      id: string;
+      function: {
+        name: string;
+        arguments: any;
+      };
+      type: string;
+    }[];
+    reasoning?: string;
   };
   finish_reason: string | null;
 }
@@ -50,10 +59,13 @@ type TemplatePayload = {
   prompt_type: string;
   prompt_vars: Record<string, unknown>;
   prompt_version?: string;
+  messages?: any[];
+  tools?: any[];
 };
 
 type MessagePayload = {
-  messages: { role: string; content: string }[];
+  messages: any[];
+  tools?: any[];
 };
 
 @Injectable()
@@ -126,6 +138,27 @@ export class LLMService {
     return response.choices[0]?.message?.content || '';
   }
 
+  async generateWithTools(
+    messages: any[],
+    tools: any[],
+  ): Promise<ChatCompletionResponse> {
+    const payload = {
+      provider: 'auto',
+
+      prompt_type: 'agentic_system',
+
+      messages: messages,
+
+      tools,
+      stream: false,
+    };
+    const response = (await this._fetchChatCompletionFromAiGateway(
+      payload,
+      false,
+    )) as ChatCompletionResponse;
+    return response;
+  }
+
   async *generateStream(
     promptOrOptions: string | TemplatePayload,
   ): AsyncGenerator<string> {
@@ -154,12 +187,21 @@ export class LLMService {
 
         try {
           const parsed: StreamingChunk = JSON.parse(message);
-          const content = parsed.choices[0]?.delta?.content;
+
+          // Check if this is an error response
+          if ('error' in parsed) {
+            this.logger.error('Stream error from AI gateway:', parsed.error);
+            throw new Error(`AI Gateway error: ${parsed.error}`);
+          }
+
+          // Safely access the content
+          const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             yield content;
           }
         } catch (error) {
           this.logger.error('Error parsing stream chunk:', message, error);
+          throw error;
         }
       }
     }

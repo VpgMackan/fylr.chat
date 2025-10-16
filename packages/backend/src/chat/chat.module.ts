@@ -8,9 +8,10 @@ import { ChatGateway } from './chat.gateway';
 import { AuthModule } from 'src/auth/auth.module';
 import { AiModule } from 'src/ai/ai.module';
 import { SourceModule } from 'src/source/source.module';
+import { ToolsModule } from './tools/tools.module';
 
 @Module({
-  imports: [AuthModule, AiModule, SourceModule],
+  imports: [AuthModule, AiModule, SourceModule, ToolsModule],
   controllers: [ChatController],
   providers: [ConversationService, MessageService, ChatGateway],
 })

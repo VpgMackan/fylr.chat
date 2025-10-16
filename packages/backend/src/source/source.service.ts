@@ -30,17 +30,17 @@ export class SourceService {
 
   async createSource(
     file: Express.Multer.File,
-    pocketId: string,
+    libraryId: string,
     userId: string,
   ) {
-    const pocket = await this.prisma.pocket.findFirst({
-      where: { id: pocketId, userId },
+    const library = await this.prisma.library.findFirst({
+      where: { id: libraryId, userId },
     });
 
-    if (!pocket) {
+    if (!library) {
       await fs.unlink(file.path);
       throw new NotFoundException(
-        `Pocket with ID "${pocketId}" not found or you do not have permission to access it.`,
+        `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
       );
     }
 
@@ -60,7 +60,7 @@ export class SourceService {
     await fs.unlink(file.path);
 
     const data: Prisma.SourceCreateInput = {
-      pocket: { connect: { id: pocketId } },
+      library: { connect: { id: libraryId } },
       name: file.originalname,
       type: file.mimetype,
       url: s3Key,
@@ -85,35 +85,55 @@ export class SourceService {
     };
   }
 
-  async getSourcesByPocketId(pocketId: string, userId: string) {
+  async getSourcesByLibraryId(libraryId: string, userId: string) {
     return await this.prisma.source.findMany({
-      where: { pocketId, pocket: { userId } },
+      where: { libraryId, library: { userId } },
+      orderBy: { uploadTime: 'desc' },
+    });
+  }
+
+  async getSourcesByLibraryIds(libraryIds: string[], userId: string) {
+    return await this.prisma.source.findMany({
+      where: {
+        libraryId: { in: libraryIds },
+        library: { userId },
+      },
       orderBy: { uploadTime: 'desc' },
     });
   }
 
   async getSourcesByConversationId(conversationId: string, userId: string) {
+    // Verify user has access to this conversation
     const conversation = await this.prisma.conversation.findFirst({
-      where: { id: conversationId, pocket: { userId } },
-      select: { pocketId: true },
-    });
-    if (!conversation) {
-      throw new NotFoundException('Conversation not found or not accessible');
-    }
-    const pocketId = conversation.pocketId;
-    const sources = await this.prisma.source.findMany({
-      where: { pocketId },
+      where: { id: conversationId, userId },
       include: {
-        conversations: {
-          where: { id: conversationId },
+        sources: {
           select: { id: true },
         },
       },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or not accessible');
+    }
+
+    // Get the IDs of sources currently associated with this conversation
+    const conversationSourceIds = new Set(
+      conversation.sources.map((s) => s.id),
+    );
+
+    // Get all sources from user's libraries
+    const allSources = await this.prisma.source.findMany({
+      where: {
+        library: { userId },
+      },
       orderBy: { uploadTime: 'desc' },
     });
-    return sources.map(({ conversations, ...source }) => ({
+
+    // Map sources with isActive flag
+    return allSources.map((source) => ({
       ...source,
-      isActive: conversations.length > 0,
+      isActive: conversationSourceIds.has(source.id),
     }));
   }
 
@@ -130,7 +150,7 @@ export class SourceService {
         v.content,
         v.chunk_index as "chunkIndex",
         s.id AS "source.id",
-        s.pocket_id AS "source.pocketId",
+        s.library_id AS "source.libraryId",
         s.name AS "source.name"
       FROM "Vectors" v
       INNER JOIN "Sources" s ON s.id = v.file_id
@@ -146,7 +166,7 @@ export class SourceService {
       chunkIndex: item.chunkIndex,
       source: {
         id: item['source.id'],
-        pocketId: item['source.pocketId'],
+        libraryId: item['source.libraryId'],
         name: item['source.name'],
       },
     }));
@@ -154,7 +174,7 @@ export class SourceService {
 
   async getSourceURL(sourceId: string, userId: string) {
     return this.prisma.source.findFirst({
-      where: { id: sourceId, pocket: { userId } },
+      where: { id: sourceId, library: { userId } },
     });
   }
 
@@ -162,7 +182,7 @@ export class SourceService {
     const source = await this.prisma.source.findFirst({
       where: {
         id: fileId,
-        pocket: {
+        library: {
           userId: userId,
         },
       },
@@ -179,7 +199,7 @@ export class SourceService {
 
   async getVectorsBySourceId(sourceId: string, userId: string) {
     const source = await this.prisma.source.findFirst({
-      where: { id: sourceId, pocket: { userId } },
+      where: { id: sourceId, library: { userId } },
     });
     if (!source) {
       throw new NotFoundException('Source not found or not accessible');

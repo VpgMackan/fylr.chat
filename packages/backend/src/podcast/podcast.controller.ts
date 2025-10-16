@@ -13,12 +13,14 @@ import {
   Request,
   Response,
   StreamableFile,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { Response as ExpressResponse } from 'express';
 
 import { PodcastService } from './podcast.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { CreatePodcastDto } from '@fylr/types';
+import { CreatePodcastDto, UpdatePodcastDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 @UseGuards(AuthGuard)
@@ -26,16 +28,14 @@ import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface
 export class PodcastController {
   constructor(private podcastService: PodcastService) {}
 
-  @Get('pocket/:pocketId')
-  getPodcastsByPocketId(
-    @Param('pocketId') pocketId: string,
+  @Get('/')
+  getPodcastsByLibraryId(
     @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('searchTerm', new DefaultValuePipe('')) searchTerm: string,
     @Request() req: RequestWithUser,
   ) {
-    return this.podcastService.getPodcastsByPocketId(
-      pocketId,
+    return this.podcastService.getPodcastsByUserId(
       req.user.id,
       take,
       offset,
@@ -43,18 +43,13 @@ export class PodcastController {
     );
   }
 
-  @Post('pocket/:pocketId')
+  @Post('/')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   createPodcast(
-    @Param('pocketId') pocketId: string,
     @Body() createPodcastDto: CreatePodcastDto,
     @Request() req: RequestWithUser,
   ) {
-    return this.podcastService.createPodcast(
-      pocketId,
-      req.user.id,
-      createPodcastDto,
-    );
+    return this.podcastService.createPodcast(req.user.id, createPodcastDto);
   }
 
   @Get('/:podcastId')
@@ -84,5 +79,27 @@ export class PodcastController {
     });
 
     return new StreamableFile(audioStream);
+  }
+
+  @Patch('/:podcastId')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  updatePodcast(
+    @Param('podcastId') podcastId: string,
+    @Body() updatePodcastDto: UpdatePodcastDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.updatePodcast(
+      podcastId,
+      req.user.id,
+      updatePodcastDto.title,
+    );
+  }
+
+  @Delete('/:podcastId')
+  deletePodcast(
+    @Param('podcastId') podcastId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.podcastService.deletePodcast(podcastId, req.user.id);
   }
 }

@@ -1,5 +1,5 @@
 export * from './dto/auth.dto';
-export * from './dto/pocket.dto';
+export * from './dto/library.dto';
 export * from './dto/chat.dto';
 export * from './dto/source.dto';
 export * from './dto/summary.dto';

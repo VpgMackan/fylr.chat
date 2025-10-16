@@ -20,6 +20,14 @@ class BaseGenerator(ABC):
         """Publishes a status update message to the events exchange."""
         routing_key = f"{entity_type}.{entity_id}.status"
         try:
+            # Check if channel is still open before publishing
+            if not channel.is_open:
+                log.warning(
+                    f"Channel is closed, cannot publish status update for {entity_type} {entity_id}",
+                    method="",
+                )
+                return
+
             channel.basic_publish(
                 exchange="fylr-events",
                 routing_key=routing_key,
@@ -85,7 +93,15 @@ class BaseGenerator(ABC):
                 f"Successfully processed and updated {log_label} ID: {obj_id}",
                 method=log_label,
             )
-            channel.basic_ack(delivery_tag=method.delivery_tag)
+
+            # Check if channel is still open before acking
+            if channel.is_open:
+                channel.basic_ack(delivery_tag=method.delivery_tag)
+            else:
+                log.warning(
+                    f"Channel closed before ack for {log_label} ID: {obj_id}. Message may be redelivered.",
+                    method=log_label,
+                )
 
         except Exception as e:
             log.error(
@@ -93,7 +109,14 @@ class BaseGenerator(ABC):
                 exc_info=True,
                 method=log_label,
             )
-            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            # Check if channel is still open before nacking
+            if channel.is_open:
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            else:
+                log.warning(
+                    f"Channel closed before nack for {log_label} ID: {obj_id}. Message may be redelivered.",
+                    method=log_label,
+                )
 
     @abstractmethod
     def generate(
