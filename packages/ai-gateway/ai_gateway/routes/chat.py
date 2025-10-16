@@ -67,16 +67,32 @@ async def stream_provider_response(
                 ],
             }
             # Format as Server-Sent Event (SSE)
-            yield f"data: {json.dumps(chunk_data)}\n\n"
+            # Use ensure_ascii=False to handle unicode properly, but errors='surrogatepass'
+            # doesn't work with json.dumps, so we need to handle it differently
+            try:
+                json_str = json.dumps(chunk_data, ensure_ascii=False)
+                # Encode to bytes and decode back, replacing surrogates
+                json_str = json_str.encode("utf-8", errors="replace").decode("utf-8")
+                yield f"data: {json_str}\n\n"
+            except (UnicodeEncodeError, UnicodeDecodeError) as e:
+                # If we still can't encode, fall back to ASCII-safe encoding
+                json_str = json.dumps(chunk_data, ensure_ascii=True)
+                yield f"data: {json_str}\n\n"
 
         # Send the final DONE message
         yield "data: [DONE]\n\n"
 
     except Exception as e:
-        error_data = {
-            "error": f"An error occurred with the '{request.provider}' provider: {e}"
-        }
-        yield f"data: {json.dumps(error_data)}\n\n"
+        error_msg = (
+            f"An error occurred with the '{request.provider}' provider: {str(e)}"
+        )
+        error_data = {"error": error_msg}
+        try:
+            # Safely encode the error message
+            yield f"data: {json.dumps(error_data, ensure_ascii=True)}\n\n"
+        except Exception:
+            # Ultimate fallback with safe string
+            yield f"data: {json.dumps({'error': 'An error occurred during streaming'})}\n\n"
         yield "data: [DONE]\n\n"
 
 

@@ -93,7 +93,15 @@ class OpenaiCompatibleProvider(BaseProvider):
             chunk_data = {}
 
             if delta.content:
-                chunk_data["content"] = delta.content
+                # Sanitize content to remove invalid surrogates
+                content = delta.content
+                # Encode with surrogate replacement, then decode back
+                try:
+                    content = content.encode("utf-8", errors="replace").decode("utf-8")
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    # If encoding fails, use surrogatepass then replace
+                    content = content.encode("utf-8", errors="ignore").decode("utf-8")
+                chunk_data["content"] = content
 
             if delta.tool_calls:
                 chunk_data["tool_calls"] = [tc.model_dump() for tc in delta.tool_calls]

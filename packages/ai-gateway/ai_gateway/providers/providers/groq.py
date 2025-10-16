@@ -64,7 +64,9 @@ class GroqProvider(BaseProvider):
                 params["tools"] = []
                 for tool in request.tools:
                     tool_dict = tool.model_dump()
-                    tool_dict["name"] = tool.function.name  # Add name at top level for compatibility
+                    tool_dict["name"] = (
+                        tool.function.name
+                    )  # Add name at top level for compatibility
                     params["tools"].append(tool_dict)
             if request.tool_choice:
                 params["tool_choice"] = request.tool_choice
@@ -111,7 +113,9 @@ class GroqProvider(BaseProvider):
                 params["tools"] = []
                 for tool in request.tools:
                     tool_dict = tool.model_dump()
-                    tool_dict["name"] = tool.function.name  # Add name at top level for compatibility
+                    tool_dict["name"] = (
+                        tool.function.name
+                    )  # Add name at top level for compatibility
                     params["tools"].append(tool_dict)
             if request.tool_choice:
                 params["tool_choice"] = request.tool_choice
@@ -124,7 +128,17 @@ class GroqProvider(BaseProvider):
                 chunk_data = {}
 
                 if delta.content:
-                    chunk_data["content"] = delta.content
+                    # Sanitize content to remove invalid surrogates
+                    content = delta.content
+                    try:
+                        content = content.encode("utf-8", errors="replace").decode(
+                            "utf-8"
+                        )
+                    except (UnicodeEncodeError, UnicodeDecodeError):
+                        content = content.encode("utf-8", errors="ignore").decode(
+                            "utf-8"
+                        )
+                    chunk_data["content"] = content
 
                 if delta.tool_calls:
                     chunk_data["tool_calls"] = [

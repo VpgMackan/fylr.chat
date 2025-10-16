@@ -187,12 +187,21 @@ export class LLMService {
 
         try {
           const parsed: StreamingChunk = JSON.parse(message);
-          const content = parsed.choices[0]?.delta?.content;
+
+          // Check if this is an error response
+          if ('error' in parsed) {
+            this.logger.error('Stream error from AI gateway:', parsed.error);
+            throw new Error(`AI Gateway error: ${parsed.error}`);
+          }
+
+          // Safely access the content
+          const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             yield content;
           }
         } catch (error) {
           this.logger.error('Error parsing stream chunk:', message, error);
+          throw error;
         }
       }
     }

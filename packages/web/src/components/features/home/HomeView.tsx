@@ -33,11 +33,18 @@ export default function HomeView() {
 
   return (
     <div className="flex flex-col justify-center items-center h-full w-full px-4">
-      <div className="flex-grow flex items-center justify-center">
-        <RecentLibraryGrid />
-      </div>
-      <div className="w-full flex justify-center pb-8">
-        <ChatInput onSend={handleSend} className="w-full max-w-[40rem]" />
+      <div className="w-full max-w-3xl mx-auto space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-gray-600">
+            Welcome to Fylr Chat
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            Please leave, I don't want to answer your questions.
+          </p>
+        </div>
+        <div className="w-full">
+          <ChatInput onSend={handleSend} className="w-full" />
+        </div>
       </div>
     </div>
   );
