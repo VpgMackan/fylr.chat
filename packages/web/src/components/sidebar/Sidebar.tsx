@@ -238,7 +238,11 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         )}
 
         <div className="mt-auto pt-2">
-          <Button name="Account" icon="heroicons:user-16-solid" />
+          <Button
+            name="Account"
+            icon="heroicons:user-16-solid"
+            onClick={() => router.push('/profile')}
+          />
         </div>
       </div>
     </>
