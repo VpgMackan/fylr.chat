@@ -154,7 +154,7 @@ export default function ChatInput({
 
         <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
           <div className="flex gap-1.5">
-            <button className={buttonStyle} aria-label="Add attachment">
+            {/*TODO: <button className={buttonStyle} aria-label="Add attachment">
               <Icon icon="mdi:plus" width="18" height="18" />
             </button>
             <button className={buttonStyle} aria-label="Add web source">
@@ -162,13 +162,13 @@ export default function ChatInput({
             </button>
             <button className={buttonStyle} aria-label="More options">
               <Icon icon="mdi:dots-horizontal" width="18" height="18" />
-            </button>
+            </button>*/}
           </div>
 
           <div className="flex gap-2">
-            <button className={buttonStyle} aria-label="Voice input">
+            {/*TODO: <button className={buttonStyle} aria-label="Voice input">
               <Icon icon="mdi:microphone" width="20" height="20" />
-            </button>
+            </button>*/}
             <button
               className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSend}

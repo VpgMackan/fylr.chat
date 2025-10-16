@@ -153,6 +153,44 @@ export default function PodcastIdViewRefactored() {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   }
 
+  const handleDownload = async () => {
+    if (!selectedEpisode?.audioKey || !audioUrl) {
+      toast.error('No audio available to download');
+      return;
+    }
+
+    try {
+      const response = await fetch(audioUrl, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const blobUrl = URL.createObjectURL(audioBlob);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${selectedEpisode.title || 'podcast-episode'}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+
+      toast.success('Download started');
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      toast.error('Failed to download audio');
+    }
+  };
+
   // Custom episode card with microphone icon
   const renderEpisodeCard = (
     episode: PodcastEpisodeApiResponse,
@@ -184,8 +222,13 @@ export default function PodcastIdViewRefactored() {
 
   const headerActions = (
     <>
-      <Button name={'Share'} variant="secondary" />
-      <Button name={'Download'} variant="secondary" />
+      {/*TODO: <Button name={'Share'} variant="secondary" />*/}
+      <Button
+        name={'Download'}
+        variant="secondary"
+        onClick={handleDownload}
+        disabled={!selectedEpisode?.audioKey}
+      />
       <Button name="" icon="ph:gear-fill" variant="ghost" />
     </>
   );

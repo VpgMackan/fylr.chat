@@ -24,12 +24,6 @@ export default function SidebarActions({
         icon="heroicons-solid:plus-sm"
         onClick={onCreateContent}
       />
-      {/* Library selection menu. Select a Library to be used in a conversation*/}
-      <Button
-        name="Select library"
-        icon="heroicons-solid:collection"
-        onClick={onSelectLibrary}
-      />
     </div>
   );
 }
