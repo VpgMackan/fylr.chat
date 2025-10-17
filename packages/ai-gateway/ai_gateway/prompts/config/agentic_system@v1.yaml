@@ -6,6 +6,8 @@ description: >
   step-by-step and use tools to answer user queries, finally calling
   provide_final_answer when it is done.
 form: messages
+meta:
+  complexity: tool
 messages_template: |
   - role: system
     content: |

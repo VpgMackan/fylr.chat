@@ -14,18 +14,25 @@ import {
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
+
+interface MessageWithThought extends MessageApiResponse {
+  agentThoughts?: MessageApiResponse[];
+}
+
 interface ChatState {
-  messages: MessageApiResponse[];
+  messages: MessageWithThought[];
   sources: SourceApiResponseWithIsActive[];
   name: string;
   connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
+  currentThoughts: MessageApiResponse[];
 }
 
 type ChatAction =
   | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
+  | { type: 'ADD_AGENT_THOUGHT'; payload: MessageApiResponse }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
   | {
       type: 'APPEND_CHUNK';
@@ -43,6 +50,7 @@ const initialState: ChatState = {
   name: '',
   connectionStatus: 'connecting',
   status: null,
+  currentThoughts: [],
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -57,6 +65,15 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, name: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
+    case 'ADD_AGENT_THOUGHT':
+      // Prevent duplicate thoughts by checking if this thought ID already exists
+      if (state.currentThoughts.some((t) => t.id === action.payload.id)) {
+        return state;
+      }
+      return {
+        ...state,
+        currentThoughts: [...state.currentThoughts, action.payload],
+      };
     case 'ADD_MESSAGE':
       if (state.messages.some((m) => m.id === action.payload.id)) {
         return state;
@@ -92,7 +109,10 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
     }
     case 'FINALIZE_ASSISTANT_MESSAGE': {
-      const finalMsg = action.payload;
+      const finalMsg = action.payload as MessageWithThought;
+      // Attach collected thoughts to the final message
+      finalMsg.agentThoughts = state.currentThoughts;
+
       const newMessages = state.messages.map((m) =>
         m.id === STREAMING_ASSISTANT_ID ? finalMsg : m,
       );
@@ -103,6 +123,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         status: null,
         messages: newMessages,
+        currentThoughts: [], // Clear thoughts after attaching to message
       };
     }
     case 'DELETE_MESSAGE':
@@ -185,6 +206,9 @@ export function useChat(chatId: string | null) {
               case 'statusUpdate':
                 dispatch({ type: 'SET_STATUS', payload: data });
                 break;
+              case 'agentThought':
+                dispatch({ type: 'ADD_AGENT_THOUGHT', payload: data });
+                break;
               case 'newMessage':
                 dispatch({ type: 'ADD_MESSAGE', payload: data });
                 break;
@@ -225,7 +249,11 @@ export function useChat(chatId: string | null) {
     void connectSocket();
 
     return () => {
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [chatId]);
 
@@ -337,6 +365,7 @@ export function useChat(chatId: string | null) {
     name: state.name,
     connectionStatus: state.connectionStatus,
     status: state.status,
+    currentThoughts: state.currentThoughts,
     sendMessage,
     initiateAndSendMessage,
     deleteMessage,

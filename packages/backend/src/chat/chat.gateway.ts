@@ -96,13 +96,8 @@ export class ChatGateway
       case 'join': {
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
-        const allMessages =
-          await this.messageService.getMessages(conversationId);
-        // Filter to only show user messages and assistant messages with content
-        const messages = allMessages.filter(
-          (msg) =>
-            msg.role === 'user' || (msg.role === 'assistant' && msg.content),
-        );
+        const messages =
+          await this.messageService.getMessagesWithThoughts(conversationId);
         const sources = await this.sourceService.getSourcesByConversationId(
           conversationId,
           client.user.id,

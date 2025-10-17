@@ -38,6 +38,44 @@ export class MessageService {
     }
   }
 
+  async getMessagesWithThoughts(conversationId: string) {
+    try {
+      const allMessages = await this.prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Group messages: user messages, assistant messages with content, and attach thoughts
+      const displayMessages: any[] = [];
+      const thoughtBuffer: any[] = [];
+
+      for (const msg of allMessages) {
+        if (msg.role === 'user') {
+          displayMessages.push(msg);
+        } else if (msg.role === 'assistant') {
+          if (msg.content) {
+            // This is a final response - attach buffered thoughts
+            displayMessages.push({
+              ...msg,
+              agentThoughts:
+                thoughtBuffer.length > 0 ? [...thoughtBuffer] : undefined,
+            });
+            thoughtBuffer.length = 0; // Clear buffer
+          } else if (msg.reasoning || msg.toolCalls) {
+            // This is an agent thought - buffer it
+            thoughtBuffer.push(msg);
+          }
+        }
+      }
+
+      return displayMessages;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to retrieve messages for conversation ${conversationId}`,
+      );
+    }
+  }
+
   async createMessage(body: CreateMessageDto, conversationId: string) {
     try {
       if (typeof body.metadata === 'string') {
@@ -213,6 +251,7 @@ export class MessageService {
 
       server.to(conversationId).emit('conversationAction', {
         action: 'agentThought',
+        conversationId,
         data: thoughtMessage,
       });
 
@@ -285,31 +324,17 @@ export class MessageService {
     server: Server,
     overrideQuery?: string,
   ) {
-    const synthesisPrompt = `
-        You have now completed your research using your tools. Your task is to synthesize all the information you've gathered from the conversation history (including your own thoughts and tool results) into a single, final answer for the user.
-
-        **Tone and Style:**
-        - Be friendly, clear, and conversational.
-        - Start with a direct answer or summary, then elaborate with details.
-        - Explain things simply. Avoid just copying and pasting from your tool results. Weave the facts into a helpful explanation.
-        - When you use information from a source, cite it clearly using Markdown format like [1], [2], etc., if applicable.
-
-        **Information:**
-        - You are a ai system called Fylr, designed to assist users by providing accurate and helpful information.
-        - You are created by a company called Fylr, and you should mention this if asked about your identity.
-        - Use the following pieces of context to inform your answer. If you don't know the answer, just say that you don't know. Don't try to make up an answer.
-        - Context pieces are formatted as "Content from Source Chunk [1] (Source Name): ..."
-        - The company fylr is owned by Markus Nielsen from Sweden.
-
-        Please provide a comprehensive and helpful response to the user's original query.
-        ${overrideQuery || ''}
-      `;
-
-    messages.push({ role: 'user', content: synthesisPrompt });
+    const promptVars: { messages: any[]; overrideQuery?: string } = {
+      messages,
+    };
+    if (overrideQuery) {
+      promptVars.overrideQuery = overrideQuery;
+    }
 
     const stream = this.llmService.generateStream({
       prompt_type: 'synthesis',
-      prompt_vars: { messages },
+      prompt_version: 'v1',
+      prompt_vars: promptVars,
     });
 
     let fullResponse = '';

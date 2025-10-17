@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import ChatInput from '@/components/ui/ChatInput';
 import ChatBubble from '@/components/ui/ChatBubble';
+import AgentThoughts from '@/components/ui/AgentThought';
 import { useChat } from '@/hooks/useChat';
 import { Icon } from '@iconify/react';
 
@@ -19,13 +20,14 @@ export default function ConversationIdPageView() {
     deleteMessage,
     connectionStatus,
     status,
+    currentThoughts,
   } = useChat(conversationId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, currentThoughts]);
 
   return (
     <div className="w-full col-span-5 p-4 flex flex-col h-full">
@@ -33,15 +35,29 @@ export default function ConversationIdPageView() {
         <>
           <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4 pr-2">
             {messages.map((m) => (
-              <ChatBubble
-                key={m.id}
-                user={m.role === 'user'}
-                text={m.content || ''}
-                metadata={m.metadata}
-                onRegenerate={() => regenerateMessage(m.id)}
-                onDelete={() => deleteMessage(m.id)}
-              />
+              <div key={m.id}>
+                {/* Show agent thoughts before the assistant message */}
+                {m.role === 'assistant' &&
+                  m.agentThoughts &&
+                  m.agentThoughts.length > 0 && (
+                    <AgentThoughts thoughts={m.agentThoughts} />
+                  )}
+
+                <ChatBubble
+                  user={m.role === 'user'}
+                  text={m.content || ''}
+                  metadata={m.metadata}
+                  onRegenerate={() => regenerateMessage(m.id)}
+                  onDelete={() => deleteMessage(m.id)}
+                />
+              </div>
             ))}
+
+            {/* Show current thoughts while streaming */}
+            {currentThoughts.length > 0 && (
+              <AgentThoughts thoughts={currentThoughts} />
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
