@@ -5,12 +5,17 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { SourceModule } from 'src/source/source.module';
 import { SearchDocumentsTool } from './search-documents.tool';
 import { ListSourcesTool } from './list-sources.tool';
-import { WebSearchTool } from './web-search.tool';
+import { ReadDocumentTool } from './read-document.tool';
 import { ToolService } from './tool.service';
 
 @Module({
   imports: [HttpModule, AiModule, PrismaModule, SourceModule],
-  providers: [SearchDocumentsTool, ListSourcesTool, WebSearchTool, ToolService],
+  providers: [
+    SearchDocumentsTool,
+    ListSourcesTool,
+    ReadDocumentTool,
+    ToolService,
+  ],
   exports: [ToolService],
 })
 export class ToolsModule {}

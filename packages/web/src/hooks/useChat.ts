@@ -80,18 +80,26 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return { ...state, messages: [...state.messages, action.payload] };
     case 'APPEND_CHUNK': {
+      console.log('🔧 Reducer APPEND_CHUNK called');
       const streamingMsgIndex = state.messages.findIndex(
         (m) => m.id === STREAMING_ASSISTANT_ID,
       );
       if (streamingMsgIndex > -1) {
+        const existingMsg = state.messages[streamingMsgIndex];
+        const newContent = (existingMsg.content || '') + action.payload.content;
+
+        // Prevent duplicate appends by checking if content would be the same
+        if (existingMsg.content === newContent) {
+          console.log('⚠️ Skipping duplicate chunk');
+          return state;
+        }
+
         const newMessages = [...state.messages];
-        const updatedMsg = {
-          ...newMessages[streamingMsgIndex],
-          content:
-            (newMessages[streamingMsgIndex].content || '') +
-            action.payload.content,
+        newMessages[streamingMsgIndex] = {
+          ...existingMsg,
+          content: newContent,
         };
-        newMessages[streamingMsgIndex] = updatedMsg;
+        console.log('✅ Content updated:', newContent.slice(-50));
         return { ...state, messages: newMessages };
       } else {
         const newStreamingMsg: MessageApiResponse = {
@@ -151,6 +159,13 @@ export function useChat(chatId: string | null) {
 
   useEffect(() => {
     if (!chatId) return;
+
+    // Clean up any existing connection first
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
     const connectSocket = async () => {
       try {
@@ -213,10 +228,13 @@ export function useChat(chatId: string | null) {
                 dispatch({ type: 'ADD_MESSAGE', payload: data });
                 break;
               case 'messageChunk':
+                const chunkId = Math.random().toString(36);
+                console.log(`📦 Chunk received [${chunkId}]:`, data.content);
                 dispatch({
                   type: 'APPEND_CHUNK',
                   payload: { ...data, conversationId: chatId },
                 });
+                console.log(`✉️ Dispatched chunk [${chunkId}]`);
                 break;
 
               case 'messageEnd':

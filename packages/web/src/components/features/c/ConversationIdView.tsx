@@ -34,13 +34,19 @@ export default function ConversationIdPageView() {
       {connectionStatus === 'connected' ? (
         <>
           <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4 pr-2">
-            {messages.map((m) => (
+            {messages.map((m, index) => (
               <div key={m.id}>
                 {/* Show agent thoughts before the assistant message */}
                 {m.role === 'assistant' &&
                   m.agentThoughts &&
                   m.agentThoughts.length > 0 && (
                     <AgentThoughts thoughts={m.agentThoughts} />
+                  )}
+
+                {/* Show current thoughts before the streaming message */}
+                {m.id === 'streaming-assistant-msg' &&
+                  currentThoughts.length > 0 && (
+                    <AgentThoughts thoughts={currentThoughts} />
                   )}
 
                 <ChatBubble
@@ -52,11 +58,6 @@ export default function ConversationIdPageView() {
                 />
               </div>
             ))}
-
-            {/* Show current thoughts while streaming */}
-            {currentThoughts.length > 0 && (
-              <AgentThoughts thoughts={currentThoughts} />
-            )}
 
             <div ref={messagesEndRef} />
           </div>

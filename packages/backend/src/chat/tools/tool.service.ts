@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { BaseTool, ToolDefinition, ToolExecutionContext } from './base.tool';
 import { SearchDocumentsTool } from './search-documents.tool';
-import { ListSourcesTool } from './list-sources.tool'
+import { ListSourcesTool } from './list-sources.tool';
+import { ReadDocumentTool } from './read-document.tool';
 
 @Injectable()
 export class ToolService {
@@ -10,9 +11,11 @@ export class ToolService {
   constructor(
     private readonly searchDocumentsTool: SearchDocumentsTool,
     private readonly listSourcesTool: ListSourcesTool,
+    private readonly readDocumentTool: ReadDocumentTool,
   ) {
     this.registerTool(this.searchDocumentsTool);
     this.registerTool(this.listSourcesTool);
+    this.registerTool(this.readDocumentTool);
   }
 
   private registerTool(tool: BaseTool): void {
