@@ -112,133 +112,228 @@ export class ChatGateway
       }
 
       case 'sendMessage': {
-        const { content, sourceIds, libraryIds } = payload as {
-          content: string;
-          sourceIds?: string[];
-          libraryIds?: string[];
-        };
+        try {
+          const { content, sourceIds, libraryIds } = payload as {
+            content: string;
+            sourceIds?: string[];
+            libraryIds?: string[];
+          };
 
-        // Handle both sourceIds and libraryIds
-        if (
-          (sourceIds && sourceIds.length > 0) ||
-          (libraryIds && libraryIds.length > 0)
-        ) {
-          try {
-            const existingSourceIds =
-              await this.conversationService.getConversationSourceIds(
-                conversationId,
-                client.user.id,
-              );
-
-            // Collect new source IDs
-            let newSourceIds: string[] = [];
-
-            // Add direct source IDs
-            if (sourceIds && sourceIds.length > 0) {
-              newSourceIds = [...sourceIds];
-            }
-
-            // Fetch and add sources from libraries
-            if (libraryIds && libraryIds.length > 0) {
-              const librarySources =
-                await this.sourceService.getSourcesByLibraryIds(
-                  libraryIds,
+          // Handle both sourceIds and libraryIds
+          if (
+            (sourceIds && sourceIds.length > 0) ||
+            (libraryIds && libraryIds.length > 0)
+          ) {
+            try {
+              const existingSourceIds =
+                await this.conversationService.getConversationSourceIds(
+                  conversationId,
                   client.user.id,
                 );
-              newSourceIds = [
-                ...newSourceIds,
-                ...librarySources.map((s) => s.id),
+
+              // Collect new source IDs
+              let newSourceIds: string[] = [];
+
+              // Add direct source IDs
+              if (sourceIds && sourceIds.length > 0) {
+                newSourceIds = [...sourceIds];
+              }
+
+              // Fetch and add sources from libraries
+              if (libraryIds && libraryIds.length > 0) {
+                const librarySources =
+                  await this.sourceService.getSourcesByLibraryIds(
+                    libraryIds,
+                    client.user.id,
+                  );
+                newSourceIds = [
+                  ...newSourceIds,
+                  ...librarySources.map((s) => s.id),
+                ];
+              }
+
+              // Combine with existing sources and remove duplicates
+              const allSourceIds = [
+                ...new Set([...existingSourceIds, ...newSourceIds]),
               ];
-            }
 
-            // Combine with existing sources and remove duplicates
-            const allSourceIds = [
-              ...new Set([...existingSourceIds, ...newSourceIds]),
-            ];
-
-            await this.conversationService.updateSources(
-              conversationId,
-              allSourceIds,
-              client.user.id,
-            );
-
-            const updatedSources =
-              await this.sourceService.getSourcesByConversationId(
+              await this.conversationService.updateSources(
                 conversationId,
+                allSourceIds,
                 client.user.id,
               );
-            this.server
-              .to(conversationId)
-              .emit('sourcesUpdated', updatedSources);
-          } catch (error) {
-            this.logger.error(
-              `Failed to add sources to conversation ${conversationId}: ${error.message}`,
-            );
-          }
-        }
 
-        if (!content) {
-          throw new WsException('content is required for sendMessage action');
+              const updatedSources =
+                await this.sourceService.getSourcesByConversationId(
+                  conversationId,
+                  client.user.id,
+                );
+              this.server
+                .to(conversationId)
+                .emit('sourcesUpdated', updatedSources);
+            } catch (error) {
+              this.logger.error(
+                `Failed to add sources to conversation ${conversationId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              );
+              client.emit('conversationAction', {
+                action: 'streamError',
+                conversationId,
+                data: {
+                  message:
+                    'Failed to add sources to conversation. The message will still be sent.',
+                },
+              });
+            }
+          }
+
+          if (!content) {
+            throw new WsException('content is required for sendMessage action');
+          }
+
+          const userMessage = await this.messageService.createMessage(
+            { role: 'user', content: content, metadata: {} },
+            conversationId,
+          );
+          this.server.to(conversationId).emit('conversationAction', {
+            action: 'newMessage',
+            conversationId,
+            data: userMessage,
+          });
+
+          // Execute AI response generation without awaiting to not block
+          this.messageService
+            .generateAndStreamAiResponseWithTools(userMessage, this.server)
+            .catch((error) => {
+              this.logger.error(
+                `Error generating AI response for conversation ${conversationId}:`,
+                error,
+              );
+              this.server.to(conversationId).emit('conversationAction', {
+                action: 'streamError',
+                conversationId,
+                data: {
+                  message: 'Failed to generate AI response. Please try again.',
+                },
+              });
+            });
+        } catch (error) {
+          this.logger.error('Error in sendMessage handler:', error);
+          client.emit('conversationAction', {
+            action: 'streamError',
+            conversationId,
+            data: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to send message',
+            },
+          });
+          throw error;
         }
-        const userMessage = await this.messageService.createMessage(
-          { role: 'user', content: content, metadata: {} },
-          conversationId,
-        );
-        this.server.to(conversationId).emit('conversationAction', {
-          action: 'newMessage',
-          conversationId,
-          data: userMessage,
-        });
-        this.messageService.generateAndStreamAiResponseWithTools(
-          userMessage,
-          this.server,
-        );
         break;
       }
 
       case 'deleteMessage': {
-        const { messageId } = payload as {
-          messageId: string;
-        };
-        await this.messageService.deleteMessage(messageId);
-        this.server.to(conversationId).emit('conversationAction', {
-          action: 'messageDeleted',
-          conversationId,
-          data: { messageId },
-        });
+        try {
+          const { messageId } = payload as {
+            messageId: string;
+          };
+          await this.messageService.deleteMessage(messageId);
+          this.server.to(conversationId).emit('conversationAction', {
+            action: 'messageDeleted',
+            conversationId,
+            data: { messageId },
+          });
+        } catch (error) {
+          this.logger.error('Error in deleteMessage handler:', error);
+          client.emit('conversationAction', {
+            action: 'streamError',
+            conversationId,
+            data: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to delete message',
+            },
+          });
+          throw error;
+        }
         break;
       }
 
       case 'updateMessage': {
-        const { messageId, content: newContent } = payload as {
-          messageId: string;
-          content: string;
-        };
-        const updatedMessage = await this.messageService.updateMessage(
-          { content: newContent },
-          messageId,
-        );
-        this.server.to(conversationId).emit('conversationAction', {
-          action: 'messageUpdated',
-          conversationId,
-          data: updatedMessage,
-        });
+        try {
+          const { messageId, content: newContent } = payload as {
+            messageId: string;
+            content: string;
+          };
+          const updatedMessage = await this.messageService.updateMessage(
+            { content: newContent },
+            messageId,
+          );
+          this.server.to(conversationId).emit('conversationAction', {
+            action: 'messageUpdated',
+            conversationId,
+            data: updatedMessage,
+          });
+        } catch (error) {
+          this.logger.error('Error in updateMessage handler:', error);
+          client.emit('conversationAction', {
+            action: 'streamError',
+            conversationId,
+            data: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to update message',
+            },
+          });
+          throw error;
+        }
         break;
       }
 
       case 'regenerateMessage': {
-        const { messageId } = payload as {
-          messageId: string;
-        };
-        this.server.to(conversationId).emit('conversationAction', {
-          action: 'messageDeleted',
-          conversationId,
-          data: { messageId },
-        });
-        await this.messageService.regenerateAndStreamAiResponse(
-          messageId,
-          this.server,
-        );
+        try {
+          const { messageId } = payload as {
+            messageId: string;
+          };
+          this.server.to(conversationId).emit('conversationAction', {
+            action: 'messageDeleted',
+            conversationId,
+            data: { messageId },
+          });
+
+          // Execute regeneration without awaiting
+          this.messageService
+            .regenerateAndStreamAiResponse(messageId, this.server)
+            .catch((error) => {
+              this.logger.error(
+                `Error regenerating message ${messageId}:`,
+                error,
+              );
+              this.server.to(conversationId).emit('conversationAction', {
+                action: 'streamError',
+                conversationId,
+                data: {
+                  message: 'Failed to regenerate message. Please try again.',
+                },
+              });
+            });
+        } catch (error) {
+          this.logger.error('Error in regenerateMessage handler:', error);
+          client.emit('conversationAction', {
+            action: 'streamError',
+            conversationId,
+            data: {
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'Failed to regenerate message',
+            },
+          });
+          throw error;
+        }
         break;
       }
 

@@ -25,18 +25,43 @@ export class ListSourcesTool extends BaseTool {
   }
 
   async execute(args: any, context: ToolExecutionContext): Promise<any> {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: context.conversationId },
-      include: { sources: true },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found.');
+    try {
+      if (!context.conversationId) {
+        throw new Error('conversationId is required in execution context');
+      }
 
-    if (!conversation.sources || conversation.sources.length === 0) {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: context.conversationId },
+        include: { sources: true },
+      });
+
+      if (!conversation) {
+        throw new NotFoundException(
+          `Conversation not found: ${context.conversationId}`,
+        );
+      }
+
+      const sources = conversation.sources || [];
+
+      if (sources.length === 0) {
+        return {
+          sources: [],
+          count: 0,
+          message: 'No sources are associated with this conversation.',
+        };
+      }
+
       return {
-        message: 'There are no sources associated with this conversation.',
+        sources: sources.map((s) => ({
+          id: s.id,
+          name: s.name,
+          libraryId: s.libraryId,
+        })),
+        count: sources.length,
       };
+    } catch (error) {
+      console.error('[ListSourcesTool] Error:', error);
+      throw error;
     }
-
-    return conversation.sources;
   }
 }

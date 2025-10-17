@@ -3,10 +3,12 @@ import { BaseTool, ToolDefinition, ToolExecutionContext } from './base.tool';
 import { SearchDocumentsTool } from './search-documents.tool';
 import { ListSourcesTool } from './list-sources.tool';
 import { ReadDocumentTool } from './read-document.tool';
+import { withTimeout } from '../../utils/timeout.util';
 
 @Injectable()
 export class ToolService {
   private tools: Map<string, BaseTool> = new Map();
+  private readonly TOOL_TIMEOUT_MS = 30000; // 30 seconds timeout for tool execution
 
   constructor(
     private readonly searchDocumentsTool: SearchDocumentsTool,
@@ -34,11 +36,35 @@ export class ToolService {
   ): Promise<any> {
     const tool = this.tools.get(name);
     if (!tool) {
-      throw new Error(`Tool "${name}" not found.`);
+      const availableTools = Array.from(this.tools.keys()).join(', ');
+      throw new Error(
+        `Tool "${name}" not found. Available tools: ${availableTools}`,
+      );
     }
 
-    console.log(`Executing tool: ${name} with args:`, args);
-    return tool.execute(args, context);
+    try {
+      console.log(
+        `[ToolService] Executing tool: ${name} with args:`,
+        JSON.stringify(args),
+      );
+      const startTime = Date.now();
+
+      // Execute with timeout
+      const result = await withTimeout(
+        tool.execute(args, context),
+        this.TOOL_TIMEOUT_MS,
+        `Tool "${name}" execution timed out`,
+      );
+
+      const duration = Date.now() - startTime;
+      console.log(`[ToolService] Tool ${name} completed in ${duration}ms`);
+      return result;
+    } catch (error) {
+      console.error(`[ToolService] Error executing tool ${name}:`, error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new Error(`Failed to execute tool "${name}": ${errorMessage}`);
+    }
   }
 
   getTool(name: string): BaseTool | undefined {

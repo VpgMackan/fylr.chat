@@ -209,113 +209,241 @@ export class MessageService {
   ): Promise<void> {
     const { conversationId } = userMessage;
     const MAX_ITERATIONS = 5;
+    const MAX_CONTEXT_MESSAGES = 50; // Limit context size to prevent overflow
     let currentIteration = 0;
 
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-    });
-    if (!conversation) {
-      throw new NotFoundException(
-        `Conversation with ID "${conversationId}" not found.`,
-      );
-    }
-    const messages = await this.prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-    });
+    try {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+      });
+      if (!conversation) {
+        throw new NotFoundException(
+          `Conversation with ID "${conversationId}" not found.`,
+        );
+      }
 
-    const llmMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-      tool_calls: m.toolCalls,
-    }));
-
-    while (currentIteration < MAX_ITERATIONS) {
-      currentIteration++;
-
-      const llmResponse = await this.llmService.generateWithTools(llmMessages, [
-        ...this.toolService.getAllToolDefinitions(),
-        ...specialTools,
-      ]);
-
-      const responseMessage = llmResponse.choices[0].message;
-
-      const thoughtMessage = await this.createMessage(
-        {
-          role: 'assistant',
-          reasoning: responseMessage.content,
-          toolCalls: responseMessage.tool_calls,
-        },
-        conversationId,
-      );
-
-      server.to(conversationId).emit('conversationAction', {
-        action: 'agentThought',
-        conversationId,
-        data: thoughtMessage,
+      const messages = await this.prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
       });
 
-      if (
-        !responseMessage.tool_calls ||
-        responseMessage.tool_calls.length === 0
-      ) {
-        break;
-      }
-
-      const finalAnswerCall = responseMessage.tool_calls.find(
-        (tc) => tc.function.name === 'provide_final_answer',
+      // Build initial context with smart pruning
+      const llmMessages = this.buildContextMessages(
+        messages,
+        MAX_CONTEXT_MESSAGES,
       );
-      if (finalAnswerCall) {
-        await this.synthesizeAndStreamFinalAnswer(
-          llmMessages,
-          conversationId,
-          server,
-        );
-        return;
-      }
 
-      const toolResults = await Promise.all(
-        responseMessage.tool_calls.map(async (toolCall) => {
-          try {
-            const result = await this.toolService.executeTool(
-              toolCall.function.name,
-              JSON.parse(toolCall.function.arguments),
-              {
-                conversationId,
-                userId: conversation.userId,
-              },
+      while (currentIteration < MAX_ITERATIONS) {
+        currentIteration++;
+
+        try {
+          const llmResponse = await this.llmService.generateWithTools(
+            llmMessages,
+            [...this.toolService.getAllToolDefinitions(), ...specialTools],
+          );
+
+          const responseMessage = llmResponse.choices[0]?.message;
+          if (!responseMessage) {
+            throw new InternalServerErrorException(
+              'LLM returned empty response',
             );
-            return {
-              tool_call_id: toolCall.id,
-              content: JSON.stringify(result),
-            };
-          } catch (error) {
-            return {
-              tool_call_id: toolCall.id,
-              content: `Error executing tool: ${error.message}`,
-            };
           }
-        }),
-      );
 
-      for (const result of toolResults) {
-        await this.createMessage(
-          {
-            role: 'tool',
-            toolCallId: result.tool_call_id,
-            content: result.content,
-          },
-          conversationId,
-        );
-        llmMessages.push({ role: 'tool', ...result, tool_calls: null });
+          const thoughtMessage = await this.createMessage(
+            {
+              role: 'assistant',
+              reasoning: responseMessage.content,
+              toolCalls: responseMessage.tool_calls,
+            },
+            conversationId,
+          );
+
+          server.to(conversationId).emit('conversationAction', {
+            action: 'agentThought',
+            conversationId,
+            data: thoughtMessage,
+          });
+
+          // Add assistant response to context
+          llmMessages.push({
+            role: responseMessage.role,
+            content: responseMessage.content,
+            tool_calls: responseMessage.tool_calls,
+          });
+
+          if (
+            !responseMessage.tool_calls ||
+            responseMessage.tool_calls.length === 0
+          ) {
+            // No more tool calls, synthesize final answer
+            break;
+          }
+
+          const finalAnswerCall = responseMessage.tool_calls.find(
+            (tc) => tc.function.name === 'provide_final_answer',
+          );
+          if (finalAnswerCall) {
+            await this.synthesizeAndStreamFinalAnswer(
+              llmMessages,
+              conversationId,
+              server,
+            );
+            return;
+          }
+
+          // Execute tools in parallel with individual error handling
+          const toolResults = await Promise.all(
+            responseMessage.tool_calls.map(async (toolCall) => {
+              try {
+                const parsedArgs = JSON.parse(toolCall.function.arguments);
+                const result = await this.toolService.executeTool(
+                  toolCall.function.name,
+                  parsedArgs,
+                  {
+                    conversationId,
+                    userId: conversation.userId,
+                  },
+                );
+                return {
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify(result),
+                  success: true,
+                };
+              } catch (error) {
+                const errorMessage =
+                  error instanceof Error ? error.message : 'Unknown error';
+                console.error(
+                  `Tool execution error for ${toolCall.function.name}:`,
+                  error,
+                );
+                return {
+                  tool_call_id: toolCall.id,
+                  content: JSON.stringify({
+                    error: true,
+                    message: `Error executing ${toolCall.function.name}: ${errorMessage}`,
+                  }),
+                  success: false,
+                };
+              }
+            }),
+          );
+
+          // Save tool results and add to context
+          for (const result of toolResults) {
+            await this.createMessage(
+              {
+                role: 'tool',
+                toolCallId: result.tool_call_id,
+                content: result.content,
+              },
+              conversationId,
+            );
+            llmMessages.push({ role: 'tool', ...result, tool_calls: null });
+          }
+
+          // Prune context if it's getting too large
+          if (llmMessages.length > MAX_CONTEXT_MESSAGES) {
+            this.pruneContextMessages(llmMessages, MAX_CONTEXT_MESSAGES);
+          }
+        } catch (iterationError) {
+          console.error(
+            `Error in iteration ${currentIteration}:`,
+            iterationError,
+          );
+          // Emit error status to client
+          server.to(conversationId).emit('conversationAction', {
+            action: 'streamError',
+            conversationId,
+            data: {
+              message: `Error during processing: ${iterationError instanceof Error ? iterationError.message : 'Unknown error'}`,
+            },
+          });
+          throw iterationError;
+        }
       }
+
+      // If we exit the loop without calling provide_final_answer, synthesize anyway
+      if (currentIteration >= MAX_ITERATIONS) {
+        console.warn(
+          `Reached max iterations (${MAX_ITERATIONS}) for conversation ${conversationId}`,
+        );
+      }
+
+      await this.synthesizeAndStreamFinalAnswer(
+        llmMessages,
+        conversationId,
+        server,
+        currentIteration >= MAX_ITERATIONS
+          ? "I've completed my research but reached the maximum number of steps. Here's what I found:"
+          : "Here's a summary of my findings:",
+      );
+    } catch (error) {
+      console.error('Error in generateAndStreamAiResponseWithTools:', error);
+      // Emit error to client
+      server.to(conversationId).emit('conversationAction', {
+        action: 'streamError',
+        conversationId,
+        data: {
+          message:
+            error instanceof Error
+              ? error.message
+              : 'An unexpected error occurred during processing',
+        },
+      });
+      throw error;
     }
-    await this.synthesizeAndStreamFinalAnswer(
-      llmMessages,
-      conversationId,
-      server,
-      "I seem to have finished my thought process without a final conclusion. Here's a summary of my findings.",
+  }
+
+  /**
+   * Builds context messages from database messages, keeping most recent within limit
+   */
+  private buildContextMessages(messages: any[], maxMessages: number): any[] {
+    // Always include user messages and their immediate assistant responses
+    // Prioritize recent messages
+    const contextMessages = messages
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+        tool_calls: m.toolCalls,
+      }))
+      .filter((m) => m.content || m.tool_calls); // Filter out empty messages
+
+    // If within limit, return all
+    if (contextMessages.length <= maxMessages) {
+      return contextMessages;
+    }
+
+    // Otherwise, keep first message (usually user's original question) and most recent messages
+    const firstMessage = contextMessages[0];
+    const recentMessages = contextMessages.slice(-(maxMessages - 1));
+
+    return [firstMessage, ...recentMessages];
+  }
+
+  /**
+   * Prunes context messages to stay within limits while preserving conversation flow
+   */
+  private pruneContextMessages(messages: any[], maxMessages: number): void {
+    if (messages.length <= maxMessages) {
+      return;
+    }
+
+    // Keep system messages, first user message, and recent messages
+    const systemMessages = messages.filter((m) => m.role === 'system');
+    const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+
+    const firstUserMessage = nonSystemMessages.find((m) => m.role === 'user');
+    const recentMessages = nonSystemMessages.slice(
+      -(maxMessages - systemMessages.length - 1),
     );
+
+    // Rebuild the array in place
+    messages.length = 0;
+    messages.push(...systemMessages);
+    if (firstUserMessage && !recentMessages.includes(firstUserMessage)) {
+      messages.push(firstUserMessage);
+    }
+    messages.push(...recentMessages.filter((m) => m !== firstUserMessage));
   }
 
   private async synthesizeAndStreamFinalAnswer(
@@ -324,38 +452,61 @@ export class MessageService {
     server: Server,
     overrideQuery?: string,
   ) {
-    const promptVars: { messages: any[]; overrideQuery?: string } = {
-      messages,
-    };
-    if (overrideQuery) {
-      promptVars.overrideQuery = overrideQuery;
-    }
+    try {
+      const promptVars: { messages: any[]; overrideQuery?: string } = {
+        messages,
+      };
+      if (overrideQuery) {
+        promptVars.overrideQuery = overrideQuery;
+      }
 
-    const stream = this.llmService.generateStream({
-      prompt_type: 'synthesis',
-      prompt_version: 'v1',
-      prompt_vars: promptVars,
-    });
-
-    let fullResponse = '';
-    for await (const chunk of stream) {
-      fullResponse += chunk;
-      server.to(conversationId).emit('conversationAction', {
-        action: 'messageChunk',
-        conversationId,
-        data: { content: chunk },
+      const stream = this.llmService.generateStream({
+        prompt_type: 'synthesis',
+        prompt_version: 'v1',
+        prompt_vars: promptVars,
       });
-    }
 
-    const finalAssistantMessage = await this.createMessage(
-      { role: 'assistant', content: fullResponse },
-      conversationId,
-    );
-    server.to(conversationId).emit('conversationAction', {
-      action: 'messageEnd',
-      conversationId,
-      data: finalAssistantMessage,
-    });
+      let fullResponse = '';
+      try {
+        for await (const chunk of stream) {
+          fullResponse += chunk;
+          server.to(conversationId).emit('conversationAction', {
+            action: 'messageChunk',
+            conversationId,
+            data: { content: chunk },
+          });
+        }
+      } catch (streamError) {
+        console.error('Error during synthesis streaming:', streamError);
+        throw new InternalServerErrorException('Failed to stream final answer');
+      }
+
+      if (!fullResponse || fullResponse.trim().length === 0) {
+        console.warn('Synthesis produced empty response');
+        fullResponse =
+          'I apologize, but I was unable to generate a response. Please try again.';
+      }
+
+      const finalAssistantMessage = await this.createMessage(
+        { role: 'assistant', content: fullResponse },
+        conversationId,
+      );
+      server.to(conversationId).emit('conversationAction', {
+        action: 'messageEnd',
+        conversationId,
+        data: finalAssistantMessage,
+      });
+    } catch (error) {
+      console.error('Error in synthesizeAndStreamFinalAnswer:', error);
+      server.to(conversationId).emit('conversationAction', {
+        action: 'streamError',
+        conversationId,
+        data: {
+          message: 'Failed to generate final answer. Please try again.',
+        },
+      });
+      throw error;
+    }
   }
 
   async regenerateAndStreamAiResponse(
