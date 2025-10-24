@@ -29,7 +29,7 @@ class AutoProvider(BaseProvider):
         MODEL_MAP = {
             "default": ("openai", "z-ai/glm-4.5-air:free"),
             "tool": ("openai", "z-ai/glm-4.5-air:free"),
-            "synthesis": ("openai", "z-ai/glm-4.5-air:free"),
+            "synthesis": ("openai", "openai/gpt-4o-mini"),
         }
 
         if request.prompt_type:

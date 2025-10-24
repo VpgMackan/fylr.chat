@@ -89,6 +89,12 @@ export class MessageService {
       throw new InternalServerErrorException('Invalid JSON format in metadata');
     }
 
+    console.log('[MessageService] Creating message with content:', {
+      contentPreview: body.content?.substring(0, 200),
+      hasXmlTags: body.content?.includes('<library'),
+      role: body.role,
+    });
+
     const message = await this.prisma.message.create({
       data: {
         conversationId,
@@ -181,7 +187,7 @@ export class MessageService {
       server.to(conversationId).emit('conversationAction', {
         action: 'messageChunk',
         conversationId,
-        data: { 
+        data: {
           content: sanitizedChunk,
           chunkIndex: chunkIndex++,
           streamId,
@@ -482,7 +488,7 @@ export class MessageService {
       let fullResponse = '';
       let chunkIndex = 0;
       const streamId = `stream-${conversationId}-${Date.now()}`;
-      
+
       try {
         for await (const chunk of stream) {
           const sanitizedChunk = sanitizeText(chunk) || '';
@@ -490,7 +496,7 @@ export class MessageService {
           server.to(conversationId).emit('conversationAction', {
             action: 'messageChunk',
             conversationId,
-            data: { 
+            data: {
               content: sanitizedChunk,
               chunkIndex: chunkIndex++,
               streamId,

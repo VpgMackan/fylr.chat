@@ -19,18 +19,21 @@ export class SearchDocumentsTool extends BaseTool {
       type: 'function',
       function: {
         name: 'search_documents',
-        description: 'Searches for relevant text chunks within the library.',
+        description:
+          'Searches for relevant text chunks within the library documents. Use this when the user asks about information that might be in their documents, or when they explicitly mention a library (e.g., @LibraryName). Always prefer searching documents over relying on general knowledge when documents are available.',
         parameters: {
           type: 'object',
           properties: {
             query: {
               type: 'string',
-              description: 'The natural language query for the vector search.',
+              description:
+                'The natural language query for the vector search. Make this specific to find the most relevant chunks.',
             },
             source_ids: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Optional list of source IDs to restrict search.',
+              description:
+                'Optional list of source IDs to restrict search to specific documents.',
             },
           },
           required: ['query'],

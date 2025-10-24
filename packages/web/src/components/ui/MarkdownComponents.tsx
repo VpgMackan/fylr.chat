@@ -5,6 +5,15 @@ import remarkBreaks from 'remark-breaks';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 
 export default function MarkdownComponent({ text }: { text: string }) {
+  const processLibraryMentions = (content: string): string => {
+    return content.replace(
+      /<library id="([^"]*)" name="([^"]*)">(@[^<]*)<\/library>/g,
+      '$3',
+    );
+  };
+
+  const processedText = processLibraryMentions(text);
+
   const components: Components = {
     h1: ({ node, children, ...props }) => (
       <h1 className="text-2xl font-bold mt-6 mb-4" {...props}>
@@ -102,7 +111,7 @@ export default function MarkdownComponent({ text }: { text: string }) {
       ]}
       components={components}
     >
-      {text}
+      {processedText}
     </ReactMarkdown>
   );
 }

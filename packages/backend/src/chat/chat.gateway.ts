@@ -133,6 +133,13 @@ export class ChatGateway
             libraryIds?: string[];
           };
 
+          this.logger.log(
+            `[sendMessage] Received content: "${content.substring(0, 200)}${content.length > 200 ? '...' : ''}"`,
+          );
+          this.logger.log(
+            `[sendMessage] Has XML tags: ${content.includes('<library')}`,
+          );
+
           // Handle both sourceIds and libraryIds
           if (
             (sourceIds && sourceIds.length > 0) ||

@@ -1,7 +1,18 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union, Optional, Literal
 
 # --- Chat Completion ---
+
+
+class ReasoningConfig(BaseModel):
+    """
+    Configuration for reasoning/thinking tokens.
+    Based on OpenRouter's unified reasoning parameter.
+    """
+    enabled: Optional[bool] = None  # Enable reasoning with default parameters
+    effort: Optional[Literal["low", "medium", "high"]] = None  # OpenAI-style
+    max_tokens: Optional[int] = None  # Anthropic-style
+    exclude: Optional[bool] = None  # Exclude reasoning from response
 
 
 class FunctionDefinition(BaseModel):
@@ -50,6 +61,7 @@ class ChatCompletionRequest(BaseModel):
     tool_choice: Optional[Union[str, Dict[str, Any]]] = (
         None  # "auto", "none", or specific tool
     )
+    reasoning: Optional[Union[ReasoningConfig, bool]] = None
 
     @model_validator(mode="before")
     @classmethod

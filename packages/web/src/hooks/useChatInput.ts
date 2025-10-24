@@ -58,7 +58,28 @@ export function useChatInput(
 
     // Mentions are library IDs (from @ mentions)
     const libraryIds = mentions.map((m) => m.id);
-    onSend({ content: plainText, libraryIds });
+
+    let xmlContent = plainText;
+
+    mentions.forEach((mention) => {
+      const mentionPattern = new RegExp(
+        `@${mention.display.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'g',
+      );
+      xmlContent = xmlContent.replace(
+        mentionPattern,
+        `<library id="${mention.id}" name="${mention.display}">@${mention.display}</library>`,
+      );
+    });
+
+    console.log('[ChatInput] Sending message:', {
+      plainText,
+      xmlContent,
+      mentions,
+      libraryIds,
+    });
+
+    onSend({ content: xmlContent, libraryIds });
     setValue('');
     setPlainText('');
     setMentions([]);

@@ -98,6 +98,10 @@ async def create_chat_completion(request: ChatCompletionRequest):
     """
     Generates a chat completion. Now supports combining a `prompt_type`
     (as a system prompt) with a list of `messages`.
+    
+    The reasoning parameter controls the model's thinking mode:
+    - reasoning=True (default): Model uses thinking/reasoning mode
+    - reasoning=False: Model uses non-thinking mode for faster responses
     """
     base_messages = []
     user_messages = []
