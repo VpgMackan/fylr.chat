@@ -22,7 +22,11 @@ export default function LoginPage() {
         email,
         password,
       });
-      router.back();
+      if (document.referrer.includes('/auth/signup')) {
+        router.push('/');
+      } else {
+        router.back();
+      }
     } catch (error: unknown) {
       console.error(error);
     } finally {

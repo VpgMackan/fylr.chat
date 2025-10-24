@@ -87,10 +87,6 @@ messages_template: |
       - ✅ Do use varied sentence structures and natural transitions
       - ✅ Do make the information engaging and easy to follow
 
-      ### Identity Notes
-      - You are an AI system named **Fylr**, designed by **Fylr**, a company founded by **Markus Nielsen** in Sweden.
-      - Refer to yourself naturally as “Fylr” when needed, but keep focus on the answer.
-
       Please now compose a comprehensive, clear, and helpful synthesis for the user's original query.
 
       {% if overrideQuery is defined and overrideQuery %}

@@ -19,6 +19,13 @@ interface MessageWithThought extends MessageApiResponse {
   agentThoughts?: MessageApiResponse[];
 }
 
+interface StreamingState {
+  streamId: string | null;
+  expectedChunkIndex: number;
+  receivedChunks: Set<number>;
+  content: string;
+}
+
 interface ChatState {
   messages: MessageWithThought[];
   sources: SourceApiResponseWithIsActive[];
@@ -26,6 +33,7 @@ interface ChatState {
   connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
   currentThoughts: MessageApiResponse[];
+  streamingState: StreamingState;
 }
 
 type ChatAction =
@@ -36,13 +44,19 @@ type ChatAction =
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
   | {
       type: 'APPEND_CHUNK';
-      payload: { content: string; conversationId: string };
+      payload: {
+        content: string;
+        conversationId: string;
+        chunkIndex: number;
+        streamId: string;
+      };
     }
   | { type: 'FINALIZE_ASSISTANT_MESSAGE'; payload: MessageApiResponse }
   | { type: 'DELETE_MESSAGE'; payload: { messageId: string } }
   | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
   | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] }
-  | { type: 'SET_NAME'; payload: string };
+  | { type: 'SET_NAME'; payload: string }
+  | { type: 'RESET_STREAMING_STATE' };
 
 const initialState: ChatState = {
   messages: [],
@@ -51,6 +65,12 @@ const initialState: ChatState = {
   connectionStatus: 'connecting',
   status: null,
   currentThoughts: [],
+  streamingState: {
+    streamId: null,
+    expectedChunkIndex: 0,
+    receivedChunks: new Set(),
+    content: '',
+  },
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -80,40 +100,85 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return { ...state, messages: [...state.messages, action.payload] };
     case 'APPEND_CHUNK': {
-      console.log('🔧 Reducer APPEND_CHUNK called');
+      const { content, chunkIndex, streamId } = action.payload;
+
+      // Initialize or reset streaming state for new stream
+      if (state.streamingState.streamId !== streamId) {
+        console.log(`🆕 New stream started: ${streamId}`);
+        return {
+          ...state,
+          streamingState: {
+            streamId,
+            expectedChunkIndex: 0,
+            receivedChunks: new Set(),
+            content: '',
+          },
+        };
+      }
+
+      // Check for duplicate chunks
+      if (state.streamingState.receivedChunks.has(chunkIndex)) {
+        console.log(
+          `⚠️ Duplicate chunk ${chunkIndex} ignored for stream ${streamId}`,
+        );
+        return state;
+      }
+
+      // Check for out-of-order chunks (optional: you could buffer them)
+      if (chunkIndex !== state.streamingState.expectedChunkIndex) {
+        console.warn(
+          `⚠️ Out-of-order chunk: expected ${state.streamingState.expectedChunkIndex}, got ${chunkIndex}`,
+        );
+        // For now, we'll still process it but log the warning
+      }
+
+      // Update streaming state
+      const newReceivedChunks = new Set(state.streamingState.receivedChunks);
+      newReceivedChunks.add(chunkIndex);
+      const newContent = state.streamingState.content + content;
+
+      console.log(`✅ Chunk ${chunkIndex} processed (${content.length} chars)`);
+
+      // Update or create the streaming message
       const streamingMsgIndex = state.messages.findIndex(
         (m) => m.id === STREAMING_ASSISTANT_ID,
       );
+
+      const newStreamingState = {
+        streamId,
+        expectedChunkIndex: chunkIndex + 1,
+        receivedChunks: newReceivedChunks,
+        content: newContent,
+      };
+
       if (streamingMsgIndex > -1) {
-        const existingMsg = state.messages[streamingMsgIndex];
-        const newContent = (existingMsg.content || '') + action.payload.content;
-
-        // Prevent duplicate appends by checking if content would be the same
-        if (existingMsg.content === newContent) {
-          console.log('⚠️ Skipping duplicate chunk');
-          return state;
-        }
-
         const newMessages = [...state.messages];
         newMessages[streamingMsgIndex] = {
-          ...existingMsg,
+          ...newMessages[streamingMsgIndex],
           content: newContent,
         };
-        console.log('✅ Content updated:', newContent.slice(-50));
-        return { ...state, messages: newMessages };
+        return {
+          ...state,
+          messages: newMessages,
+          streamingState: newStreamingState,
+        };
       } else {
         const newStreamingMsg: MessageApiResponse = {
           id: STREAMING_ASSISTANT_ID,
           conversationId: action.payload.conversationId,
           role: 'assistant',
-          content: action.payload.content,
+          content: newContent,
           createdAt: new Date().toISOString(),
           metadata: {},
           reasoning: null,
           toolCalls: null,
           toolCallId: null,
         };
-        return { ...state, messages: [...state.messages, newStreamingMsg] };
+        return {
+          ...state,
+          messages: [...state.messages, newStreamingMsg],
+          streamingState: newStreamingState,
+        };
       }
     }
     case 'FINALIZE_ASSISTANT_MESSAGE': {
@@ -132,8 +197,24 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         status: null,
         messages: newMessages,
         currentThoughts: [], // Clear thoughts after attaching to message
+        streamingState: {
+          streamId: null,
+          expectedChunkIndex: 0,
+          receivedChunks: new Set(),
+          content: '',
+        },
       };
     }
+    case 'RESET_STREAMING_STATE':
+      return {
+        ...state,
+        streamingState: {
+          streamId: null,
+          expectedChunkIndex: 0,
+          receivedChunks: new Set(),
+          content: '',
+        },
+      };
     case 'DELETE_MESSAGE':
       return {
         ...state,
@@ -159,9 +240,11 @@ export function useChat(chatId: string | null) {
 
   useEffect(() => {
     if (!chatId) return;
+    let isActive = true;
 
     // Clean up any existing connection first
     if (socketRef.current) {
+      console.log('🧹 Cleaning up existing socket connection');
       socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
       socketRef.current = null;
@@ -169,22 +252,32 @@ export function useChat(chatId: string | null) {
 
     const connectSocket = async () => {
       try {
+        console.log(`🔌 Initiating socket connection for chat ${chatId}`);
+
         const { token } = await getConversationWsToken(chatId);
+
+        if (!isActive) {
+          console.log('⚠️ Connection aborted - component unmounted');
+          return;
+        }
+
         const socket = io(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
           auth: { token },
         });
         socketRef.current = socket;
 
         socket.on('connect', () => {
+          console.log('🔌 Socket connected, joining room...');
           socket.emit('conversationAction', {
             action: 'join',
             conversationId: chatId,
           });
         });
 
-        socket.on('disconnect', () =>
-          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'reconnecting' }),
-        );
+        socket.on('disconnect', (reason) => {
+          console.log('🔌 Socket disconnected:', reason);
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'reconnecting' });
+        });
 
         socket.on('connect_error', () =>
           dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'error' }),
@@ -228,13 +321,19 @@ export function useChat(chatId: string | null) {
                 dispatch({ type: 'ADD_MESSAGE', payload: data });
                 break;
               case 'messageChunk':
-                const chunkId = Math.random().toString(36);
-                console.log(`📦 Chunk received [${chunkId}]:`, data.content);
+                console.log(
+                  `📦 Chunk received [index: ${data.chunkIndex}]:`,
+                  data.content,
+                );
                 dispatch({
                   type: 'APPEND_CHUNK',
-                  payload: { ...data, conversationId: chatId },
+                  payload: {
+                    content: data.content,
+                    conversationId: chatId,
+                    chunkIndex: data.chunkIndex,
+                    streamId: data.streamId,
+                  },
                 });
-                console.log(`✉️ Dispatched chunk [${chunkId}]`);
                 break;
 
               case 'messageEnd':
@@ -267,6 +366,8 @@ export function useChat(chatId: string | null) {
     void connectSocket();
 
     return () => {
+      console.log('🧹 Cleanup: Disconnecting socket');
+      isActive = false;
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();

@@ -53,7 +53,11 @@ export interface WsNewMessageEvent {
 export interface WsMessageChunkEvent {
   action: 'messageChunk';
   conversationId: string;
-  data: { content: string };
+  data: {
+    content: string;
+    chunkIndex: number;
+    streamId: string;
+  };
 }
 
 export interface WsMessageEndEvent {

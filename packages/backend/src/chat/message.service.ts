@@ -12,6 +12,7 @@ import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
+import { sanitizeMessage, sanitizeText } from 'src/utils/text-sanitizer';
 
 import { tools as specialTools } from './tool';
 
@@ -27,10 +28,11 @@ export class MessageService {
 
   async getMessages(conversationId: string) {
     try {
-      return await this.prisma.message.findMany({
+      const messages = await this.prisma.message.findMany({
         where: { conversationId },
         orderBy: { createdAt: 'asc' },
       });
+      return messages.map((msg) => sanitizeMessage(msg));
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve messages for conversation ${conversationId}`,
@@ -50,20 +52,22 @@ export class MessageService {
       const thoughtBuffer: any[] = [];
 
       for (const msg of allMessages) {
+        const sanitizedMsg = sanitizeMessage(msg);
+
         if (msg.role === 'user') {
-          displayMessages.push(msg);
+          displayMessages.push(sanitizedMsg);
         } else if (msg.role === 'assistant') {
           if (msg.content) {
             // This is a final response - attach buffered thoughts
             displayMessages.push({
-              ...msg,
+              ...sanitizedMsg,
               agentThoughts:
                 thoughtBuffer.length > 0 ? [...thoughtBuffer] : undefined,
             });
             thoughtBuffer.length = 0; // Clear buffer
           } else if (msg.reasoning || msg.toolCalls) {
             // This is an agent thought - buffer it
-            thoughtBuffer.push(msg);
+            thoughtBuffer.push(sanitizedMsg);
           }
         }
       }
@@ -85,12 +89,14 @@ export class MessageService {
       throw new InternalServerErrorException('Invalid JSON format in metadata');
     }
 
-    return await this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: {
         conversationId,
         ...body,
       },
     });
+
+    return sanitizeMessage(message);
   }
 
   async generateAndStreamAiResponse(
@@ -166,13 +172,20 @@ export class MessageService {
       prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
     });
     let fullResponse = '';
+    let chunkIndex = 0;
+    const streamId = `stream-${conversationId}-${Date.now()}`;
 
     for await (const chunk of stream) {
-      fullResponse += chunk;
+      const sanitizedChunk = sanitizeText(chunk) || '';
+      fullResponse += sanitizedChunk;
       server.to(conversationId).emit('conversationAction', {
         action: 'messageChunk',
         conversationId,
-        data: { content: chunk },
+        data: { 
+          content: sanitizedChunk,
+          chunkIndex: chunkIndex++,
+          streamId,
+        },
       });
     }
 
@@ -467,13 +480,21 @@ export class MessageService {
       });
 
       let fullResponse = '';
+      let chunkIndex = 0;
+      const streamId = `stream-${conversationId}-${Date.now()}`;
+      
       try {
         for await (const chunk of stream) {
-          fullResponse += chunk;
+          const sanitizedChunk = sanitizeText(chunk) || '';
+          fullResponse += sanitizedChunk;
           server.to(conversationId).emit('conversationAction', {
             action: 'messageChunk',
             conversationId,
-            data: { content: chunk },
+            data: { 
+              content: sanitizedChunk,
+              chunkIndex: chunkIndex++,
+              streamId,
+            },
           });
         }
       } catch (streamError) {
@@ -545,9 +566,10 @@ export class MessageService {
 
   async getMessage(id: string) {
     try {
-      return await this.prisma.message.findUnique({
+      const message = await this.prisma.message.findUnique({
         where: { id },
       });
+      return message ? sanitizeMessage(message) : message;
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve message ${id}`,
@@ -558,10 +580,11 @@ export class MessageService {
   async updateMessage(body: UpdateMessageDto, id: string) {
     try {
       await this.getMessage(id);
-      return await this.prisma.message.update({
+      const message = await this.prisma.message.update({
         where: { id },
         data: body,
       });
+      return sanitizeMessage(message);
     } catch (error) {
       throw new InternalServerErrorException(`Failed to update message ${id}`);
     }

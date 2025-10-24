@@ -74,7 +74,13 @@ export class ChatGateway
   }
 
   handleDisconnect(client: SocketWithChatUser) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+    const rooms = Array.from(client.rooms).filter((room) => room !== client.id);
+    rooms.forEach((room) => {
+      client.leave(room);
+    });
+    this.logger.log(
+      `Client disconnected: ${client.id} (left ${rooms.length} rooms)`,
+    );
   }
 
   @SubscribeMessage('conversationAction')
@@ -94,6 +100,14 @@ export class ChatGateway
 
     switch (action) {
       case 'join': {
+        const rooms = Array.from(client.rooms).filter(
+          (room) => room !== client.id,
+        );
+        rooms.forEach((room) => {
+          client.leave(room);
+          this.logger.log(`Client ${client.id} left room ${room}`);
+        });
+
         client.join(conversationId);
         this.logger.log(`Client ${client.id} joined room ${conversationId}`);
         const messages =
