@@ -76,6 +76,7 @@ export class SourceService {
       s3Key,
       mimeType: file.mimetype,
       jobKey,
+      embeddingModel: library.defaultEmbeddingModel,
     });
 
     return {

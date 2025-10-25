@@ -157,13 +157,24 @@ def fetch_embeddings_from_ai_gateway(
 
 
 def update_source_status(
-    source_id: str, status: str, error_message: Optional[str] = None
+    source_id: str,
+    status: str,
+    error_message: Optional[str] = None,
+    ingestor_type: Optional[str] = None,
+    ingestor_version: Optional[str] = None,
+    embedding_model: Optional[str] = None,
 ):
-    """Updates the status of a source record."""
     with get_db_session() as session:
         try:
             source = session.query(Source).filter(Source.id == source_id).first()
             if source:
+                source.status = status
+                if ingestor_type:
+                    source.ingestor_type = ingestor_type
+                if ingestor_version:
+                    source.ingestor_version = ingestor_version
+                if embedding_model:
+                    source.embedding_model = embedding_model
                 source.status = status
                 # You could add an error message column to the Source model if desired
                 log.info(
@@ -195,7 +206,11 @@ def vectorize_text(
 
 
 def save_text_chunks_as_vectors(
-    docs: List[Document], file_id: str, job_key: str, info_callback: callable
+    docs: List[Document],
+    file_id: str,
+    job_key: str,
+    info_callback: callable,
+    embedding_model: str,
 ) -> List[DocumentVector]:
     """Save text chunks as vectors in the database."""
     if not docs:
@@ -207,7 +222,7 @@ def save_text_chunks_as_vectors(
     chunks = [doc.page_content for doc in docs]
 
     try:
-        embeddings = vectorize_text(chunks, job_key, info_callback)
+        embeddings = vectorize_text(chunks, job_key, info_callback, embedding_model)
 
         info_callback(f"Saving {len(embeddings)} vectors to the database...", job_key)
         with get_db_session() as session:

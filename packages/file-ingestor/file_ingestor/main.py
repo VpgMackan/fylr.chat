@@ -67,7 +67,7 @@ class FileIngestor:
             },
         )
 
-    def parse_message_body(self, body: bytes) -> Tuple[str, str, str]:
+    def parse_message_body(self, body: bytes) -> Tuple[str, str, str, str, str]:
         """Parse the message body to extract source ID, file key and type."""
         try:
             decoded_body = body.decode("utf-8")
@@ -77,8 +77,9 @@ class FileIngestor:
             s3_key = message_data.get("s3Key")
             mime_type = message_data.get("mimeType")
             job_key = message_data.get("jobKey")
+            embedding_model = message_data.get("embeddingModel")
 
-            if not all([source_id, s3_key, mime_type, job_key]):
+            if not all([source_id, s3_key, mime_type, job_key, embedding_model]):
                 missing_fields = [
                     field
                     for field, value in [
@@ -86,6 +87,7 @@ class FileIngestor:
                         ("s3Key", s3_key),
                         ("mimeType", mime_type),
                         ("jobKey", job_key),
+                        ("embeddingModel", embedding_model),
                     ]
                     if not value
                 ]
@@ -93,7 +95,7 @@ class FileIngestor:
                     f"Missing required fields: {', '.join(missing_fields)}"
                 )
 
-            return source_id, s3_key, mime_type, job_key
+            return source_id, s3_key, mime_type, job_key, embedding_model
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON message format: {e}")
@@ -105,7 +107,9 @@ class FileIngestor:
         job_key = None
         source_id = None
         try:
-            source_id, file_key, file_type, job_key = self.parse_message_body(body)
+            source_id, file_key, file_type, job_key, embedding_model = (
+                self.parse_message_body(body)
+            )
             self.info(
                 f"Processing file: {file_key} (sourceId: {source_id}) with type: {file_type}",
                 job_key=job_key,
@@ -142,14 +146,22 @@ class FileIngestor:
                     "message": f"Generating embeddings for {len(docs)} chunks...",
                 },
             )
-            save_text_chunks_as_vectors(docs, source_id, job_key, self.info)
+            save_text_chunks_as_vectors(
+                docs, source_id, job_key, self.info, embedding_model
+            )
 
             self.info(
                 f"Successfully processed file: {file_key}",
                 job_key=job_key,
                 payload={"stage": "COMPLETED", "message": "Processing complete!"},
             )
-            update_source_status(source_id, "COMPLETED")
+            update_source_status(
+                source_id,
+                "COMPLETED",
+                ingestor_type=f"{file_type}-handler",
+                ingestor_version=manager.get_handler_version(file_type),
+                embedding_model=embedding_model,
+            )
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:

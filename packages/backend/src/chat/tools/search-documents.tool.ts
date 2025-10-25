@@ -48,7 +48,11 @@ export class SearchDocumentsTool extends BaseTool {
         throw new Error('Invalid query: must be a non-empty string');
       }
 
-      const embedding = await this.vectorService.search(args.query);
+      // Use the embedding model from context if available
+      const embedding = await this.vectorService.search(
+        args.query,
+        context.embeddingModel,
+      );
       if (!embedding || embedding.length === 0) {
         throw new Error('Failed to generate embeddings for query');
       }

@@ -14,6 +14,7 @@ export interface ToolDefinition {
 export interface ToolExecutionContext {
   conversationId: string;
   userId?: string;
+  embeddingModel?: string;
 }
 
 export abstract class BaseTool {
