@@ -18,6 +18,7 @@ interface ChatInputProps {
     isActive: boolean;
     [key: string]: any;
   }>;
+  disabled?: boolean;
 }
 
 const mentionsInputStyle = {
@@ -80,6 +81,7 @@ export default function ChatInput({
   className = '',
   showSourceMenu = false,
   conversationSources = [],
+  disabled = false,
 }: ChatInputProps) {
   const {
     value,
@@ -133,10 +135,11 @@ export default function ChatInput({
             singleLine={false}
             className="flex-1 mentions-input"
             style={mentionsInputStyle}
-            placeholder="Ask anything, or type @ to select a library..."
+            placeholder={disabled ? "Connecting..." : "Ask anything, or type @ to select a library..."}
             value={value}
             onChange={handleChange}
             forceSuggestionsAboveCursor
+            disabled={disabled}
           >
             <Mention
               trigger="@"
@@ -172,7 +175,7 @@ export default function ChatInput({
             <button
               className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSend}
-              disabled={!plainText.trim()}
+              disabled={disabled || !plainText.trim()}
               aria-label="Send message"
             >
               <Icon icon="mdi:arrow-up" width="20" height="20" />

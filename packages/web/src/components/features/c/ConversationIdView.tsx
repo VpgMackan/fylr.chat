@@ -31,7 +31,7 @@ export default function ConversationIdPageView() {
 
   return (
     <div className="w-full col-span-5 p-4 flex flex-col h-full">
-      {connectionStatus === 'connected' ? (
+      {connectionStatus === 'connected' || messages.length > 0 ? (
         <>
           <div className="flex flex-col gap-4 flex-grow overflow-y-auto mb-4 pr-2">
             {messages.map((m, index) => (
@@ -65,6 +65,14 @@ export default function ConversationIdPageView() {
                 <AgentThoughts thoughts={currentThoughts} />
               )}
 
+            {/* Show connecting indicator if still connecting but have messages */}
+            {connectionStatus !== 'connected' && messages.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Icon icon="line-md:loading-loop" className="w-4 h-4" />
+                <span>Connecting...</span>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -78,6 +86,7 @@ export default function ConversationIdPageView() {
             onSend={sendMessage}
             showSourceMenu={true}
             conversationSources={sources}
+            disabled={connectionStatus !== 'connected'}
           />
         </>
       ) : (
