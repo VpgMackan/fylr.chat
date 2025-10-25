@@ -89,12 +89,6 @@ export class MessageService {
       throw new InternalServerErrorException('Invalid JSON format in metadata');
     }
 
-    console.log('[MessageService] Creating message with content:', {
-      contentPreview: body.content?.substring(0, 200),
-      hasXmlTags: body.content?.includes('<library'),
-      role: body.role,
-    });
-
     const message = await this.prisma.message.create({
       data: {
         conversationId,
@@ -241,6 +235,20 @@ export class MessageService {
         );
       }
 
+      const initialThought = await this.createMessage(
+        {
+          role: 'assistant',
+          reasoning: 'Processing your request...',
+        },
+        conversationId,
+      );
+
+      server.to(conversationId).emit('conversationAction', {
+        action: 'agentThought',
+        conversationId,
+        data: initialThought,
+      });
+
       const messages = await this.prisma.message.findMany({
         where: { conversationId },
         orderBy: { createdAt: 'asc' },
@@ -357,7 +365,11 @@ export class MessageService {
               },
               conversationId,
             );
-            llmMessages.push({ role: 'tool', ...result, tool_calls: null });
+            llmMessages.push({
+              role: 'tool',
+              tool_call_id: result.tool_call_id,
+              content: result.content,
+            });
           }
 
           // Prune context if it's getting too large
@@ -414,18 +426,107 @@ export class MessageService {
   }
 
   /**
+   * Converts tool-calling conversation history into plain text messages
+   * for models that don't support tool calling (e.g., for synthesis)
+   */
+  private convertToolMessagesToPlainText(messages: any[]): any[] {
+    const plainTextMessages: any[] = [];
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        plainTextMessages.push({
+          role: 'user',
+          content: msg.content || '',
+        });
+      } else if (msg.role === 'assistant') {
+        let content = msg.content || '';
+
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+          const toolCallsText = msg.tool_calls
+            .map((tc: any) => {
+              const args =
+                typeof tc.function.arguments === 'string'
+                  ? tc.function.arguments
+                  : JSON.stringify(tc.function.arguments);
+              return `Called tool: ${tc.function.name}(${args})`;
+            })
+            .join('\n');
+
+          content = content ? `${content}\n\n${toolCallsText}` : toolCallsText;
+        }
+
+        if (content) {
+          plainTextMessages.push({
+            role: 'assistant',
+            content,
+          });
+        }
+      } else if (msg.role === 'tool') {
+        let toolContent = msg.content || '';
+
+        try {
+          const parsed = JSON.parse(toolContent);
+          if (parsed.error) {
+            toolContent = `Tool error: ${parsed.message || 'Unknown error'}`;
+          } else {
+            toolContent = `Tool result: ${JSON.stringify(parsed, null, 2)}`;
+          }
+        } catch {
+          toolContent = `Tool result: ${toolContent}`;
+        }
+
+        plainTextMessages.push({
+          role: 'assistant',
+          content: toolContent,
+        });
+      }
+    }
+
+    return plainTextMessages;
+  }
+
+  /**
+   * Extracts the most recent user question from the conversation history
+   */
+  private getMostRecentUserQuestion(messages: any[]): string {
+    // Find the last user message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user' && messages[i].content) {
+        return messages[i].content;
+      }
+    }
+    return '';
+  }
+
+  /**
    * Builds context messages from database messages, keeping most recent within limit
    */
   private buildContextMessages(messages: any[], maxMessages: number): any[] {
     // Always include user messages and their immediate assistant responses
     // Prioritize recent messages
     const contextMessages = messages
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-        tool_calls: m.toolCalls,
-      }))
-      .filter((m) => m.content || m.tool_calls); // Filter out empty messages
+      .map((m) => {
+        const msg: any = {
+          role: m.role,
+          content: m.content,
+        };
+
+        // Add tool_calls for assistant messages
+        if (m.toolCalls) {
+          msg.tool_calls = m.toolCalls;
+        }
+
+        // Add tool_call_id for tool messages
+        if (m.role === 'tool' && m.toolCallId) {
+          msg.tool_call_id = m.toolCallId;
+        }
+
+        return msg;
+      })
+      .filter((m) => {
+        // Keep messages that have content, tool_calls, or are tool responses
+        return m.content || m.tool_calls || m.role === 'tool';
+      });
 
     // If within limit, return all
     if (contextMessages.length <= maxMessages) {
@@ -472,11 +573,24 @@ export class MessageService {
     overrideQuery?: string,
   ) {
     try {
-      const promptVars: { messages: any[]; overrideQuery?: string } = {
-        messages,
+      const plainTextMessages = this.convertToolMessagesToPlainText(messages);
+
+      // Get the most recent user question to ensure synthesis focuses on it
+      const recentUserQuestion = this.getMostRecentUserQuestion(messages);
+
+      const promptVars: {
+        messages: any[];
+        overrideQuery?: string;
+        userQuestion?: string;
+      } = {
+        messages: plainTextMessages,
       };
+
       if (overrideQuery) {
         promptVars.overrideQuery = overrideQuery;
+      } else if (recentUserQuestion) {
+        // Include the recent user question to help focus the synthesis
+        promptVars.userQuestion = recentUserQuestion;
       }
 
       const stream = this.llmService.generateStream({
@@ -492,6 +606,12 @@ export class MessageService {
       try {
         for await (const chunk of stream) {
           const sanitizedChunk = sanitizeText(chunk) || '';
+
+          // Skip empty chunks to avoid issues with first chunk
+          if (!sanitizedChunk) {
+            continue;
+          }
+
           fullResponse += sanitizedChunk;
           server.to(conversationId).emit('conversationAction', {
             action: 'messageChunk',

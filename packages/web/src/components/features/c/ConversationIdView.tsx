@@ -59,6 +59,12 @@ export default function ConversationIdPageView() {
               </div>
             ))}
 
+            {/* Show current thoughts even if no streaming message exists yet */}
+            {currentThoughts.length > 0 &&
+              !messages.some((m) => m.id === 'streaming-assistant-msg') && (
+                <AgentThoughts thoughts={currentThoughts} />
+              )}
+
             <div ref={messagesEndRef} />
           </div>
 

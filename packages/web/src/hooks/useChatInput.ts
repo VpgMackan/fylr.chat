@@ -62,13 +62,16 @@ export function useChatInput(
     let xmlContent = plainText;
 
     mentions.forEach((mention) => {
+      // The mention.display may have spaces, so we need to trim it
+      const displayName = mention.display.trim();
+      // Create pattern that matches the mention in the plain text
       const mentionPattern = new RegExp(
-        `@${mention.display.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        `${displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
         'g',
       );
       xmlContent = xmlContent.replace(
         mentionPattern,
-        `<library id="${mention.id}" name="${mention.display}">@${mention.display}</library>`,
+        `<library id="${mention.id}" name="${displayName}">${displayName}</library>`,
       );
     });
 

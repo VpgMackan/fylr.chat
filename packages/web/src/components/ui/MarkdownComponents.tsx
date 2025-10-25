@@ -5,9 +5,11 @@ import remarkBreaks from 'remark-breaks';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 
 export default function MarkdownComponent({ text }: { text: string }) {
+  // Parse library mentions from XML tags for display
   const processLibraryMentions = (content: string): string => {
+    // Replace <library id="..." name="...">@Name</library> with just @Name
     return content.replace(
-      /<library id="([^"]*)" name="([^"]*)">(@[^<]*)<\/library>/g,
+      /<library id="([^"]*)" name="([^"]*)">([^<]*)<\/library>/g,
       '$3',
     );
   };

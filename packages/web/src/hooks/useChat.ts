@@ -103,21 +103,19 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const { content, chunkIndex, streamId } = action.payload;
 
       // Initialize or reset streaming state for new stream
+      let currentStreamingState = state.streamingState;
       if (state.streamingState.streamId !== streamId) {
         console.log(`🆕 New stream started: ${streamId}`);
-        return {
-          ...state,
-          streamingState: {
-            streamId,
-            expectedChunkIndex: 0,
-            receivedChunks: new Set(),
-            content: '',
-          },
+        currentStreamingState = {
+          streamId,
+          expectedChunkIndex: 0,
+          receivedChunks: new Set(),
+          content: '',
         };
       }
 
       // Check for duplicate chunks
-      if (state.streamingState.receivedChunks.has(chunkIndex)) {
+      if (currentStreamingState.receivedChunks.has(chunkIndex)) {
         console.log(
           `⚠️ Duplicate chunk ${chunkIndex} ignored for stream ${streamId}`,
         );
@@ -125,17 +123,17 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
 
       // Check for out-of-order chunks (optional: you could buffer them)
-      if (chunkIndex !== state.streamingState.expectedChunkIndex) {
+      if (chunkIndex !== currentStreamingState.expectedChunkIndex) {
         console.warn(
-          `⚠️ Out-of-order chunk: expected ${state.streamingState.expectedChunkIndex}, got ${chunkIndex}`,
+          `⚠️ Out-of-order chunk: expected ${currentStreamingState.expectedChunkIndex}, got ${chunkIndex}`,
         );
         // For now, we'll still process it but log the warning
       }
 
       // Update streaming state
-      const newReceivedChunks = new Set(state.streamingState.receivedChunks);
+      const newReceivedChunks = new Set(currentStreamingState.receivedChunks);
       newReceivedChunks.add(chunkIndex);
-      const newContent = state.streamingState.content + content;
+      const newContent = currentStreamingState.content + content;
 
       console.log(`✅ Chunk ${chunkIndex} processed (${content.length} chars)`);
 
