@@ -228,7 +228,14 @@ export class MessageService {
     try {
       const conversation = await this.prisma.conversation.findUnique({
         where: { id: conversationId },
-        include: { sources: { select: { id: true, embeddingModel: true } } },
+        include: {
+          sources: {
+            select: {
+              id: true,
+              library: { select: { defaultEmbeddingModel: true } },
+            },
+          },
+        },
       });
       if (!conversation) {
         throw new NotFoundException(
@@ -236,11 +243,9 @@ export class MessageService {
         );
       }
 
-      // Determine the embedding model to use from the conversation's sources
-      // If multiple sources have different models, we use the first one's model
       const embeddingModel =
         conversation.sources.length > 0
-          ? conversation.sources[0].embeddingModel
+          ? conversation.sources[0].library.defaultEmbeddingModel
           : undefined;
 
       const initialThought = await this.createMessage(
@@ -337,7 +342,7 @@ export class MessageService {
                   {
                     conversationId,
                     userId: conversation.userId,
-                    embeddingModel: embeddingModel,
+                    embeddingModel: embeddingModel || '',
                   },
                 );
                 return {

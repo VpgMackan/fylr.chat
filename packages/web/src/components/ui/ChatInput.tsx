@@ -110,6 +110,8 @@ export default function ChatInput({
   const buttonStyle =
     'p-2 bg-white/80 text-gray-600 rounded-full hover:bg-blue-200 hover:text-blue-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95';
 
+  const agenticButtonStyle =
+    'p-2 px-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-medium rounded-full hover:from-purple-600 hover:to-indigo-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5';
   return (
     <div className={`w-full relative ${className}`}>
       {showSourceMenu && (
@@ -135,7 +137,11 @@ export default function ChatInput({
             singleLine={false}
             className="flex-1 mentions-input"
             style={mentionsInputStyle}
-            placeholder={disabled ? "Connecting..." : "Ask anything, or type @ to select a library..."}
+            placeholder={
+              disabled
+                ? 'Connecting...'
+                : 'Ask anything, or type @ to select a library...'
+            }
             value={value}
             onChange={handleChange}
             forceSuggestionsAboveCursor
@@ -157,7 +163,14 @@ export default function ChatInput({
 
         <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
           <div className="flex gap-1.5">
-            {/*TODO: <button className={buttonStyle} aria-label="Add attachment">
+            <button
+              className={agenticButtonStyle}
+              aria-label="Enable agentic mode"
+            >
+              <Icon icon="mdi:robot" width="16" height="16" />
+              <span>Agentic Mode</span>
+            </button>
+            <button className={buttonStyle} aria-label="Add attachment">
               <Icon icon="mdi:plus" width="18" height="18" />
             </button>
             <button className={buttonStyle} aria-label="Add web source">
@@ -165,13 +178,13 @@ export default function ChatInput({
             </button>
             <button className={buttonStyle} aria-label="More options">
               <Icon icon="mdi:dots-horizontal" width="18" height="18" />
-            </button>*/}
+            </button>
           </div>
 
           <div className="flex gap-2">
-            {/*TODO: <button className={buttonStyle} aria-label="Voice input">
+            <button className={buttonStyle} aria-label="Voice input">
               <Icon icon="mdi:microphone" width="20" height="20" />
-            </button>*/}
+            </button>
             <button
               className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSend}

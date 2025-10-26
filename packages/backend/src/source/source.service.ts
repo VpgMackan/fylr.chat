@@ -62,7 +62,7 @@ export class SourceService {
     const data: Prisma.SourceCreateInput = {
       library: { connect: { id: libraryId } },
       name: file.originalname,
-      type: file.mimetype,
+      mimeType: file.mimetype,
       url: s3Key,
       size: file.size,
       jobKey,
@@ -193,7 +193,7 @@ export class SourceService {
     const stream = await this.s3Service.getObject(this.s3Bucket, source.url);
     return {
       stream,
-      contentType: source.type,
+      contentType: source.mimeType,
       filename: source.name,
     };
   }

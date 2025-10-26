@@ -54,7 +54,6 @@ model Source {
 
   ingestorType    String?
   ingestorVersion String?
-  embeddingModel  String?
 
   conversations Conversation[] @relation("ConversationSources")
   summaries     Summary[]      @relation("SummarySources")
