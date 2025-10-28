@@ -92,6 +92,7 @@ const CreateLibraryContent = forwardRef<
         description: 'test',
         icon: 'mdi:folder',
         tags: ['test'],
+        defaultEmbeddingModel: 'jina-clip-v2',
       };
 
       const response = await axios.post('/library', libraryData);

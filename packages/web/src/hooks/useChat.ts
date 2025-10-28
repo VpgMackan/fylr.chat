@@ -98,7 +98,13 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       if (state.messages.some((m) => m.id === action.payload.id)) {
         return state;
       }
-      return { ...state, messages: [...state.messages, action.payload] };
+      // Clear current thoughts when a new user message is added
+      const shouldClearThoughts = action.payload.role === 'user';
+      return {
+        ...state,
+        messages: [...state.messages, action.payload],
+        currentThoughts: shouldClearThoughts ? [] : state.currentThoughts,
+      };
     case 'APPEND_CHUNK': {
       const { content, chunkIndex, streamId } = action.payload;
 
@@ -379,6 +385,7 @@ export function useChat(chatId: string | null) {
       content: string;
       sourceIds?: string[];
       libraryIds?: string[];
+      agenticMode?: boolean;
     }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
         socketRef.current.emit('conversationAction', {
@@ -387,6 +394,7 @@ export function useChat(chatId: string | null) {
           content: payload.content,
           sourceIds: payload.sourceIds,
           libraryIds: payload.libraryIds,
+          agenticMode: payload.agenticMode,
         });
       }
     },
@@ -399,7 +407,7 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'deleteMessage',
           conversationId: chatId,
-          payload: { messageId },
+          messageId,
         });
       }
     },
@@ -412,7 +420,8 @@ export function useChat(chatId: string | null) {
         socketRef.current.emit('conversationAction', {
           action: 'updateMessage',
           conversationId: chatId,
-          payload: { messageId, content },
+          messageId,
+          content,
         });
       }
     },
@@ -455,6 +464,7 @@ export function useChat(chatId: string | null) {
       content: string;
       sourceIds?: string[];
       libraryIds?: string[];
+      agenticMode?: boolean;
     }) => {
       if (chatId) {
         sendMessage(payload);

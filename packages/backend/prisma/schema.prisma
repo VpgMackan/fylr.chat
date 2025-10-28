@@ -154,6 +154,11 @@ model Message {
 
   metadata Json?
 
+  // Parent message ID - for grouping thoughts and responses to a user message
+  parentMessageId String?   @map("parent_message_id")
+  parentMessage   Message?  @relation("MessageThread", fields: [parentMessageId], references: [id], onDelete: Cascade)
+  childMessages   Message[] @relation("MessageThread")
+
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("Messages")

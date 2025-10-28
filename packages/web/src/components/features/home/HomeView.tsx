@@ -16,6 +16,8 @@ export default function HomeView() {
   const handleSend = async (payload: {
     content: string;
     sourceIds?: string[];
+    libraryIds?: string[];
+    agenticMode?: boolean;
   }) => {
     if (isSending) return;
     setIsSending(true);

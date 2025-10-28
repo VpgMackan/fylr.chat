@@ -19,7 +19,9 @@ export function useChatInput(
     content: string;
     sourceIds?: string[];
     libraryIds?: string[];
+    agenticMode?: boolean;
   }) => void,
+  agenticMode: boolean = false,
 ) {
   const [value, setValue] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -80,9 +82,10 @@ export function useChatInput(
       xmlContent,
       mentions,
       libraryIds,
+      agenticMode,
     });
 
-    onSend({ content: xmlContent, libraryIds });
+    onSend({ content: xmlContent, libraryIds, agenticMode });
     setValue('');
     setPlainText('');
     setMentions([]);

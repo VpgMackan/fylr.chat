@@ -4,6 +4,7 @@ export interface WsSendMessagePayload {
   action: 'sendMessage';
   conversationId: string;
   content: string;
+  agenticMode?: boolean;
 }
 
 export interface WsDeleteMessagePayload {

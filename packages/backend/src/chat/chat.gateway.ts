@@ -127,10 +127,11 @@ export class ChatGateway
 
       case 'sendMessage': {
         try {
-          const { content, sourceIds, libraryIds } = payload as {
+          const { content, sourceIds, libraryIds, agenticMode } = payload as {
             content: string;
             sourceIds?: string[];
             libraryIds?: string[];
+            agenticMode?: boolean;
           };
 
           // Handle both sourceIds and libraryIds
@@ -205,7 +206,11 @@ export class ChatGateway
           }
 
           const userMessage = await this.messageService.createMessage(
-            { role: 'user', content: content, metadata: {} },
+            {
+              role: 'user',
+              content: content,
+              metadata: { agenticMode: agenticMode !== false }, // Store mode in metadata
+            },
             conversationId,
           );
           this.server.to(conversationId).emit('conversationAction', {
@@ -215,21 +220,44 @@ export class ChatGateway
           });
 
           // Execute AI response generation without awaiting to not block
-          this.messageService
-            .generateAndStreamAiResponseWithTools(userMessage, this.server)
-            .catch((error) => {
-              this.logger.error(
-                `Error generating AI response for conversation ${conversationId}:`,
-                error,
-              );
-              this.server.to(conversationId).emit('conversationAction', {
-                action: 'streamError',
-                conversationId,
-                data: {
-                  message: 'Failed to generate AI response. Please try again.',
-                },
+          // Use agenticMode flag to determine which method to call (default to true for agentic)
+          const useAgenticMode = agenticMode !== false; // Default to true
+
+          if (useAgenticMode) {
+            this.messageService
+              .generateAndStreamAiResponseWithTools(userMessage, this.server)
+              .catch((error) => {
+                this.logger.error(
+                  `Error generating AI response for conversation ${conversationId}:`,
+                  error,
+                );
+                this.server.to(conversationId).emit('conversationAction', {
+                  action: 'streamError',
+                  conversationId,
+                  data: {
+                    message:
+                      'Failed to generate AI response. Please try again.',
+                  },
+                });
               });
-            });
+          } else {
+            this.messageService
+              .generateAndStreamAiResponse(userMessage, this.server)
+              .catch((error) => {
+                this.logger.error(
+                  `Error generating AI response for conversation ${conversationId}:`,
+                  error,
+                );
+                this.server.to(conversationId).emit('conversationAction', {
+                  action: 'streamError',
+                  conversationId,
+                  data: {
+                    message:
+                      'Failed to generate AI response. Please try again.',
+                  },
+                });
+              });
+          }
         } catch (error) {
           this.logger.error('Error in sendMessage handler:', error);
           client.emit('conversationAction', {
@@ -252,12 +280,48 @@ export class ChatGateway
           const { messageId } = payload as {
             messageId: string;
           };
-          await this.messageService.deleteMessage(messageId);
-          this.server.to(conversationId).emit('conversationAction', {
-            action: 'messageDeleted',
-            conversationId,
-            data: { messageId },
-          });
+
+          // Get the message before deleting to check if it's a user message
+          const message = await this.messageService.getMessage(messageId);
+
+          if (message && message.role === 'user') {
+            // Find all child messages (thoughts, tool calls, and responses) linked to this user message
+            const childMessages = await this.messageService[
+              'prisma'
+            ].message.findMany({
+              where: {
+                parentMessageId: messageId,
+              },
+              select: { id: true },
+            });
+
+            // Delete the user message (this will cascade delete child messages due to onDelete: Cascade in schema)
+            await this.messageService.deleteMessage(messageId);
+
+            // Emit deletion events for the user message
+            this.server.to(conversationId).emit('conversationAction', {
+              action: 'messageDeleted',
+              conversationId,
+              data: { messageId },
+            });
+
+            // Emit deletion events for all child messages
+            for (const msg of childMessages) {
+              this.server.to(conversationId).emit('conversationAction', {
+                action: 'messageDeleted',
+                conversationId,
+                data: { messageId: msg.id },
+              });
+            }
+          } else {
+            // Just delete the single message (assistant response or thought)
+            await this.messageService.deleteMessage(messageId);
+            this.server.to(conversationId).emit('conversationAction', {
+              action: 'messageDeleted',
+              conversationId,
+              data: { messageId },
+            });
+          }
         } catch (error) {
           this.logger.error('Error in deleteMessage handler:', error);
           client.emit('conversationAction', {

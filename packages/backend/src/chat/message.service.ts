@@ -248,14 +248,17 @@ export class MessageService {
           ? conversation.sources[0].library.defaultEmbeddingModel
           : undefined;
 
+      // Create and emit initial thought, linking it to the user message
       const initialThought = await this.createMessage(
         {
           role: 'assistant',
           reasoning: 'Processing your request...',
+          parentMessageId: userMessage.id,
         },
         conversationId,
       );
 
+      // Emit the initial thought to all clients in the room
       server.to(conversationId).emit('conversationAction', {
         action: 'agentThought',
         conversationId,
@@ -294,6 +297,7 @@ export class MessageService {
               role: 'assistant',
               reasoning: responseMessage.content,
               toolCalls: responseMessage.tool_calls,
+              parentMessageId: userMessage.id,
             },
             conversationId,
           );
@@ -327,6 +331,7 @@ export class MessageService {
               llmMessages,
               conversationId,
               server,
+              userMessage.id,
             );
             return;
           }
@@ -376,6 +381,7 @@ export class MessageService {
                 role: 'tool',
                 toolCallId: result.tool_call_id,
                 content: result.content,
+                parentMessageId: userMessage.id,
               },
               conversationId,
             );
@@ -418,6 +424,7 @@ export class MessageService {
         llmMessages,
         conversationId,
         server,
+        userMessage.id,
         currentIteration >= MAX_ITERATIONS
           ? "I've completed my research but reached the maximum number of steps. Here's what I found:"
           : "Here's a summary of my findings:",
@@ -584,6 +591,7 @@ export class MessageService {
     messages: any[],
     conversationId: string,
     server: Server,
+    userMessageId: string,
     overrideQuery?: string,
   ) {
     try {
@@ -649,7 +657,11 @@ export class MessageService {
       }
 
       const finalAssistantMessage = await this.createMessage(
-        { role: 'assistant', content: fullResponse },
+        {
+          role: 'assistant',
+          content: fullResponse,
+          parentMessageId: userMessageId,
+        },
         conversationId,
       );
       server.to(conversationId).emit('conversationAction', {
@@ -695,13 +707,34 @@ export class MessageService {
       );
     }
 
+    // Delete the assistant message
     await this.prisma.message.delete({
       where: {
         id: assistantMessageId,
       },
     });
 
-    await this.generateAndStreamAiResponse(userMessage, server);
+    // Also delete any agent thought messages between the user message and assistant message
+    await this.prisma.message.deleteMany({
+      where: {
+        conversationId: assistantMessage.conversationId,
+        createdAt: {
+          gt: userMessage.createdAt,
+          lt: assistantMessage.createdAt,
+        },
+        role: 'assistant',
+        content: null, // Agent thoughts have null content
+      },
+    });
+
+    // Determine which mode to use based on the user message metadata
+    const agenticMode = userMessage.metadata?.['agenticMode'] !== false; // Default to true
+
+    if (agenticMode) {
+      await this.generateAndStreamAiResponseWithTools(userMessage, server);
+    } else {
+      await this.generateAndStreamAiResponse(userMessage, server);
+    }
   }
 
   async getMessage(id: string) {
@@ -732,7 +765,21 @@ export class MessageService {
 
   async deleteMessage(id: string) {
     try {
-      await this.getMessage(id);
+      const message = await this.getMessage(id);
+      if (!message) {
+        throw new NotFoundException(`Message ${id} not found`);
+      }
+
+      // If deleting a user message, also delete all child messages (thoughts, tool calls, and assistant responses)
+      if (message.role === 'user') {
+        await this.prisma.message.deleteMany({
+          where: {
+            parentMessageId: id,
+          },
+        });
+      }
+
+      // Delete the message itself
       return await this.prisma.message.delete({ where: { id } });
     } catch (error) {
       throw new InternalServerErrorException(`Failed to delete message ${id}`);

@@ -68,10 +68,7 @@ def fetch_embeddings_from_ai_gateway(
         raise ValueError("No chunks provided for embedding")
 
     options = options or {}
-    request_payload = {
-        "input": chunks,
-        "options": options,
-    }
+    request_payload = {"input": chunks, "options": options, "provider": "jina"}
 
     # Add model if specified (otherwise AI Gateway will use default)
     if model:
@@ -195,14 +192,16 @@ def update_source_status(
 
 
 def vectorize_text(
-    chunks: List[str], job_key: str, info_callback: callable
+    chunks: List[str], job_key: str, info_callback: callable, embedding_model: str
 ) -> List[List[float]]:
     """Convert text chunks to embeddings."""
     if not chunks:
         raise ValueError("No chunks provided for vectorization")
 
     info_callback("Starting vectorization process...", job_key)
-    return fetch_embeddings_from_ai_gateway(chunks, job_key, info_callback)
+    return fetch_embeddings_from_ai_gateway(
+        chunks, job_key, info_callback, model=embedding_model
+    )
 
 
 def save_text_chunks_as_vectors(

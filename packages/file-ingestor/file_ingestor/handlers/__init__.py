@@ -95,6 +95,15 @@ class HandlerManager:
             )
             raise RuntimeError(error_message)
 
+    def get_handler_version(self, file_type: str) -> str:
+        """
+        Returns the version of the handler for the given file type, if available.
+        """
+        handler = self._handlers.get(file_type)
+        if handler and hasattr(handler, "version"):
+            return handler.version
+        return "unknown"
+
 
 _current_dir = Path(__file__).parent
 manager = HandlerManager(_current_dir)
