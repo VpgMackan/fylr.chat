@@ -138,7 +138,11 @@ export class SourceService {
     }));
   }
 
-  async findByVector(vector: number[], sourceIds: string[]) {
+  async findByVector(
+    vector: number[],
+    sourceIds: string[],
+    limit: number = 5,
+  ) {
     if (sourceIds.length === 0) {
       return [];
     }
@@ -157,7 +161,7 @@ export class SourceService {
       INNER JOIN "Sources" s ON s.id = v.file_id
       WHERE s.id IN (${Prisma.join(sourceIds)})
       ORDER BY v.embedding <-> ${vectorSql}::vector
-      LIMIT 5
+      LIMIT ${limit}
     `;
 
     return result.map((item) => ({

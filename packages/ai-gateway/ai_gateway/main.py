@@ -10,6 +10,7 @@ from .config import settings
 from .routes.chat import router as chat_router
 from .routes.embedding import router as embedding_router
 from .routes.tts import router as tts_router
+from .routes.rerank import router as rerank_router
 
 app = FastAPI(
     title="AI Gateway",
@@ -27,6 +28,7 @@ log = structlog.get_logger()
 app.include_router(chat_router)
 app.include_router(embedding_router)
 app.include_router(tts_router)
+app.include_router(rerank_router)
 
 
 @app.get("/")

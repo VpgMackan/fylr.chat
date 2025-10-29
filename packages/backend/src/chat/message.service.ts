@@ -10,6 +10,7 @@ import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
+import { RerankingService } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
 import {
@@ -26,6 +27,7 @@ export class MessageService {
     private prisma: PrismaService,
     private readonly llmService: LLMService,
     private readonly vectorService: AiVectorService,
+    private readonly rerankingService: RerankingService,
     private sourceService: SourceService,
     private readonly toolService: ToolService,
   ) {}
@@ -153,34 +155,46 @@ export class MessageService {
       const searchQueryEmbedding =
         await this.vectorService.search(hypotheticalAnswer);
 
-      relevantChunks = await this.sourceService.findByVector(
+      const vectorResults = await this.sourceService.findByVector(
         searchQueryEmbedding,
         sourceIds,
+        25,
       );
+
+      // Apply reranking if we have results
+      if (vectorResults.length > 0) {
+        try {
+          emitStatus('reranking', 'Re-ranking results for relevance...');
+          relevantChunks = await this.rerankingService.rerankVectorResults(
+            userQuery, // Use the actual user query for reranking
+            vectorResults,
+            5,
+          );
+        } catch (rerankError) {
+          console.error('Reranking failed, using vector results:', rerankError);
+          relevantChunks = vectorResults.slice(0, 5);
+        }
+      }
     }
 
     emitStatus('generation', 'Generating response...');
 
     let stream: AsyncGenerator<string>;
 
-    // If no relevant chunks found, use conversational mode instead of RAG
-    if (relevantChunks.length === 0) {
-      // Build message history for conversational response
-      const messages = recentMessages.map((m) => ({
-        role: m.role,
-        content: m.content || '',
-      }));
+    // Build message history for synthesis
+    const messages = recentMessages.map((m) => ({
+      role: m.role,
+      content: m.content || '',
+    }));
 
-      stream = this.llmService.generateStream({
-        prompt_type: 'synthesis',
-        prompt_version: 'v1',
-        prompt_vars: {
-          messages,
-          userQuestion: userQuery,
-        },
-      });
-    } else {
-      // Use RAG mode with source context
+    // Prepare prompt variables - synthesis handles both RAG and conversational modes
+    const promptVars: any = {
+      messages,
+      userQuestion: userQuery,
+    };
+
+    // If we have relevant chunks, add RAG-specific context
+    if (relevantChunks.length > 0) {
       const sourceReferenceList = relevantChunks.map((chunk, index) => ({
         number: index + 1,
         name: chunk.source.name,
@@ -195,12 +209,16 @@ export class MessageService {
         })
         .join('\n\n---\n\n');
 
-      stream = this.llmService.generateStream({
-        prompt_type: 'final_rag',
-        prompt_version: 'v1',
-        prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
-      });
+      promptVars.context = context;
+      promptVars.sourceReferenceList = sourceReferenceList;
     }
+
+    // Use synthesis for both conversational and RAG modes
+    stream = this.llmService.generateStream({
+      prompt_type: 'synthesis',
+      prompt_version: 'v1',
+      prompt_vars: promptVars,
+    });
     let fullResponse = '';
     let chunkIndex = 0;
     const streamId = `stream-${conversationId}-${Date.now()}`;
