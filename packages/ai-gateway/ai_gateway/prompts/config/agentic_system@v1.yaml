@@ -64,6 +64,52 @@ messages_template: |
         - Ensure you've covered all aspects of the query before concluding.
         - Record any data gaps or missing information objectively (e.g., "No information found on topic X in available sources").
 
+      ### Error Recovery and Self-Correction
+      When a tool returns an error or empty results, analyze the structured error response provided:
+      
+      - **error_type**: Identifies the category of error (not_found, network, timeout, empty_result, etc.)
+      - **suggested_actions**: Specific recommendations for how to proceed
+      - **alternative_tools**: Other tools that might work better
+      - **retry_recommended**: Whether retrying the same action makes sense
+
+      **Common Error Scenarios and Recovery Strategies:**
+
+      1. **Empty Results (no data found)**
+        - Reformulate your search with broader terms or synonyms
+        - Break down complex queries into simpler component searches
+        - Try different aspects or angles of the question
+        - Enable multi-query mode: `search_documents(query="...", use_multi_query=true)` to automatically try multiple query variations
+        - Consider if the information exists in available sources
+        - Use `list_sources_in_library()` to understand what's available
+
+      2. **Not Found Errors (resource doesn't exist)**
+        - Verify IDs, references, or parameters are correct
+        - Search more broadly to locate the correct resource
+        - Try alternative tools suggested in the error response
+        - Inform the user objectively if a specific resource is unavailable
+
+      3. **Network/Timeout Errors (connectivity issues)**
+        - Try alternative URLs or sources for web content
+        - Use cached or local sources when possible
+        - Break complex requests into simpler parts
+        - Consider the information may be temporarily unavailable
+
+      4. **Validation Errors (invalid parameters)**
+        - Review the tool's expected parameters carefully
+        - Ensure required fields are present and correctly formatted
+        - Try reformulating with corrected parameters
+
+      **Self-Correction Loop:**
+      - Read the `suggested_actions` from error responses carefully
+      - Try at least 2-3 different approaches before concluding information is unavailable
+      - When trying alternative approaches, vary your strategy meaningfully:
+        * Use different keywords or phrasings
+        * Try broader or narrower search scopes
+        * Switch to alternative tools
+        * Break down or combine queries differently
+      - Document your attempts: show what you tried and why it didn't work
+      - Only after exhausting reasonable alternatives should you conclude data is unavailable
+
       5. **Hand off to synthesis**
         - When you have extracted all relevant data to address the query, call `provide_final_answer()`.
         - **Do NOT summarize or formulate thoughts** — the synthesis phase will handle all interpretation, analysis, and conclusion-drawing.

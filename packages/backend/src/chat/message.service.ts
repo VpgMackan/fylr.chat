@@ -18,6 +18,10 @@ import {
   sanitizeText,
   sanitizeObject,
 } from 'src/utils/text-sanitizer';
+import {
+  createStructuredError,
+  createEmptyResultResponse,
+} from './tools/error-handler';
 
 import { tools as specialTools } from './tool';
 
@@ -105,6 +109,80 @@ export class MessageService {
     return sanitizeMessage(message);
   }
 
+  /**
+   * Generates multiple query variations for improved retrieval coverage.
+   * Uses the multi_query prompt to create 3-5 different phrasings of the same query.
+   */
+  private async generateQueryVariations(
+    originalQuery: string,
+  ): Promise<string[]> {
+    try {
+      const response = await this.llmService.generate({
+        prompt_type: 'multi_query',
+        prompt_vars: { query: originalQuery },
+      });
+
+      // Parse the response - expect one query per line
+      const variations = response
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.match(/^[0-9]+\.|^[-*•]/)) // Remove numbering/bullets
+        .slice(0, 5); // Max 5 variations
+
+      console.log(
+        `[RAG Pipeline] Generated ${variations.length} query variations for: "${originalQuery}"`,
+      );
+      return variations.length > 0 ? variations : [originalQuery];
+    } catch (error) {
+      console.error(
+        '[RAG Pipeline] Failed to generate query variations:',
+        error,
+      );
+      // Fallback to original query on error
+      return [originalQuery];
+    }
+  }
+
+  /**
+   * Performs multi-query retrieval: searches with multiple query variations and combines results.
+   */
+  private async multiQueryRetrieval(
+    queries: string[],
+    sourceIds: string[],
+    limit: number = 25,
+  ): Promise<any[]> {
+    console.log(
+      `[RAG Pipeline] Performing multi-query retrieval with ${queries.length} queries`,
+    );
+
+    // Search with each query variation
+    const allResults = await Promise.all(
+      queries.map(async (query) => {
+        const embedding = await this.vectorService.search(query);
+        return this.sourceService.findByVector(
+          embedding,
+          sourceIds,
+          Math.ceil(limit / queries.length), // Distribute limit across queries
+        );
+      }),
+    );
+
+    // Combine and deduplicate results by ID
+    const resultsMap = new Map();
+    allResults.flat().forEach((result) => {
+      if (!resultsMap.has(result.id)) {
+        resultsMap.set(result.id, result);
+      }
+    });
+
+    const uniqueResults = Array.from(resultsMap.values()).slice(0, limit);
+    console.log(
+      `[RAG Pipeline] Multi-query retrieved ${uniqueResults.length} unique results from ${allResults.flat().length} total`,
+    );
+
+    return uniqueResults;
+  }
+
   async generateAndStreamAiResponse(
     userMessage,
     server: Server,
@@ -145,18 +223,23 @@ export class MessageService {
 
     // Only do vector search if sources are available
     if (sourceIds.length > 0) {
-      emitStatus('searchQuery', 'Formulating search query...');
+      emitStatus('searchQuery', 'Formulating search queries...');
+
+      // Generate hypothetical answer using HyDE
       const hypotheticalAnswer = await this.llmService.generate({
         prompt_type: 'hyde',
         prompt_vars: { chatHistory, userQuery },
       });
 
-      emitStatus('retrieval', 'Searching relevant sources...');
-      const searchQueryEmbedding =
-        await this.vectorService.search(hypotheticalAnswer);
+      // Generate query variations for multi-query retrieval
+      const queryVariations = await this.generateQueryVariations(userQuery);
 
-      const vectorResults = await this.sourceService.findByVector(
-        searchQueryEmbedding,
+      emitStatus('retrieval', 'Searching with multiple query perspectives...');
+
+      // Combine HyDE with query variations for comprehensive retrieval
+      const allQueries = [hypotheticalAnswer, ...queryVariations];
+      const vectorResults = await this.multiQueryRetrieval(
+        allQueries,
         sourceIds,
         25,
       );
@@ -174,6 +257,10 @@ export class MessageService {
           console.error('Reranking failed, using vector results:', rerankError);
           relevantChunks = vectorResults.slice(0, 5);
         }
+      } else {
+        console.log(
+          '[RAG Pipeline] No results found with multi-query retrieval',
+        );
       }
     }
 
@@ -411,6 +498,56 @@ export class MessageService {
                   Array.isArray(result.results)
                 ) {
                   usedSourceChunks.push(...result.results);
+
+                  // Check for empty results and provide guidance
+                  if (result.results.length === 0) {
+                    const emptyResultError = createEmptyResultResponse(
+                      toolCall.function.name,
+                      parsedArgs.query || 'query',
+                    );
+
+                    return {
+                      tool_call_id: toolCall.id,
+                      content: JSON.stringify(emptyResultError),
+                      success: false,
+                    };
+                  }
+                }
+
+                // Check for empty results from web_search
+                if (
+                  toolCall.function.name === 'web_search' &&
+                  result.results &&
+                  Array.isArray(result.results) &&
+                  result.results.length === 0
+                ) {
+                  const emptyResultError = createEmptyResultResponse(
+                    toolCall.function.name,
+                    parsedArgs.query || 'query',
+                  );
+
+                  return {
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify(emptyResultError),
+                    success: false,
+                  };
+                }
+
+                // Check for failed webpage fetches
+                if (
+                  toolCall.function.name === 'fetch_webpage' &&
+                  result.success === false
+                ) {
+                  const emptyResultError = createEmptyResultResponse(
+                    toolCall.function.name,
+                    parsedArgs.url || 'URL',
+                  );
+
+                  return {
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify(emptyResultError),
+                    success: false,
+                  };
                 }
 
                 // Sanitize the result to remove problematic Unicode characters
@@ -422,18 +559,20 @@ export class MessageService {
                   success: true,
                 };
               } catch (error) {
-                const errorMessage =
-                  error instanceof Error ? error.message : 'Unknown error';
                 console.error(
                   `Tool execution error for ${toolCall.function.name}:`,
                   error,
                 );
+
+                // Create structured error with self-correction guidance
+                const structuredError = createStructuredError(
+                  error,
+                  toolCall.function.name,
+                );
+
                 return {
                   tool_call_id: toolCall.id,
-                  content: JSON.stringify({
-                    error: true,
-                    message: `Error executing ${toolCall.function.name}: ${errorMessage}`,
-                  }),
+                  content: JSON.stringify(structuredError),
                   success: false,
                 };
               }

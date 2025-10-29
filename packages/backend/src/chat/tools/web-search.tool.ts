@@ -121,7 +121,7 @@ export class WebSearchTool extends BaseTool {
         `Calling Tavily API with query: "${query}", max_results: ${numResults}`,
       );
 
-      const response = await firstValueFrom(
+      const apiResponse = await firstValueFrom(
         this.httpService.post<TavilyResponse>(searchUrl, {
           api_key: tavilyApiKey,
           query,
@@ -133,11 +133,11 @@ export class WebSearchTool extends BaseTool {
         }),
       );
 
-      if (!response || !response.data) {
+      if (!apiResponse || !apiResponse.data) {
         throw new Error('No response from Tavily API');
       }
 
-      const data = response.data;
+      const data = apiResponse.data;
       const results: SearchResult[] = [];
 
       if (data.results && Array.isArray(data.results)) {
@@ -160,6 +160,13 @@ export class WebSearchTool extends BaseTool {
       this.logger.log(
         `Web search completed in ${duration}ms - found ${results.length} results`,
       );
+
+      // Add a hint if no results found
+      if (results.length === 0) {
+        this.logger.warn(
+          `Web search returned no results for query: "${query}"`,
+        );
+      }
 
       return {
         query,
