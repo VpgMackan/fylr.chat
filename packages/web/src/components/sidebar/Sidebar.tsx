@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Icon } from '@iconify/react';
 
 import Button from '@/components/ui/Button';
 import Dropdown from '@/components/ui/Dropdown';
@@ -43,7 +44,15 @@ export default function Sidebar({ selectedId }: SidebarProps) {
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+
+  // Filter items based on search query
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+    const query = searchQuery.toLowerCase();
+    return items.filter((item) => item.title?.toLowerCase().includes(query));
+  }, [items, searchQuery]);
 
   useEffect(() => {
     const savedType = localStorage.getItem('sidebarContentType') as ContentType;
@@ -192,56 +201,139 @@ export default function Sidebar({ selectedId }: SidebarProps) {
     }
   };
 
+  const getEmptyMessage = () => {
+    switch (contentType) {
+      case 'Conversations':
+        return 'No conversations yet. Start a new chat!';
+      case 'Summaries':
+        return 'No summaries yet. Create your first summary!';
+      case 'Podcasts':
+        return 'No podcasts yet. Create your first podcast!';
+      case 'Libraries':
+        return 'No libraries yet. Create your first library!';
+      default:
+        return 'No items found';
+    }
+  };
+
   return (
     <>
       <CreateContentModal
         isOpen={createContentModalOpen}
         onClose={() => setCreateContentModalOpen(false)}
       />
-      <div className="bg-blue-100 p-2 flex flex-col h-full w-64">
+      <div className="bg-gradient-to-b from-blue-50 to-blue-100 p-3 flex flex-col h-full w-64 shadow-lg">
         <SidebarActions
           onCreateChat={onCreateChat}
           onCreateContent={() => setCreateContentModalOpen(true)}
         />
-        <hr className="my-2 text-gray-600" />
-        <div className="mb-3">
+
+        <hr className="border-blue-200 my-3" />
+
+        <div className="space-y-3">
           <Dropdown
             options={['Conversations', 'Summaries', 'Podcasts', 'Libraries']}
             selectedOption={contentType}
             onSelect={(option) => setContentType(option as ContentType)}
           />
+
+          {/* Search Bar */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={`Search ${contentType.toLowerCase()}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2.5 pl-10 pr-10 text-sm bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all placeholder-gray-400"
+              aria-label={`Search ${contentType.toLowerCase()}`}
+            />
+            <Icon
+              icon="heroicons-solid:search"
+              width="18"
+              height="18"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Clear search"
+              >
+                <Icon icon="heroicons-solid:x" width="18" height="18" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* 4. Conditionally render the correct list */}
-        {isLoading ? (
-          <p className="text-sm text-gray-600 text-center p-4">Loading...</p>
-        ) : (
-          <ConversationList
-            items={items.map((item) => ({ id: item.id, name: item.title }))}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            onRename={
-              contentType === 'Conversations' ||
-              contentType === 'Summaries' ||
-              contentType === 'Podcasts'
-                ? handleRename
-                : undefined
-            }
-            onDelete={
-              contentType === 'Conversations' ||
-              contentType === 'Summaries' ||
-              contentType === 'Podcasts'
-                ? handleDelete
-                : undefined
-            }
-          />
-        )}
+        {/* List Container */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          {isLoading ? (
+            <div className="space-y-2 p-2 animate-pulse">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 bg-blue-200/50 rounded-lg"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                />
+              ))}
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+              <div className="bg-white/60 rounded-full p-4 mb-4">
+                <Icon
+                  icon={
+                    contentType === 'Conversations'
+                      ? 'heroicons-solid:chat-alt-2'
+                      : contentType === 'Summaries'
+                        ? 'heroicons-solid:book-open'
+                        : contentType === 'Libraries'
+                          ? 'heroicons-solid:library'
+                          : 'heroicons-solid:microphone'
+                  }
+                  width="32"
+                  height="32"
+                  className="text-blue-400"
+                />
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {searchQuery
+                  ? `No results found for "${searchQuery}"`
+                  : getEmptyMessage()}
+              </p>
+            </div>
+          ) : (
+            <ConversationList
+              items={filteredItems.map((item) => ({
+                id: item.id,
+                name: item.title,
+              }))}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              onRename={
+                contentType === 'Conversations' ||
+                contentType === 'Summaries' ||
+                contentType === 'Podcasts'
+                  ? handleRename
+                  : undefined
+              }
+              onDelete={
+                contentType === 'Conversations' ||
+                contentType === 'Summaries' ||
+                contentType === 'Podcasts'
+                  ? handleDelete
+                  : undefined
+              }
+            />
+          )}
+        </div>
 
-        <div className="mt-auto pt-2">
+        {/* Account Button */}
+        <div className="pt-3 border-t border-blue-200">
           <Button
             name="Account"
             icon="heroicons:user-16-solid"
             onClick={() => router.push('/profile')}
+            variant="ghost"
           />
         </div>
       </div>

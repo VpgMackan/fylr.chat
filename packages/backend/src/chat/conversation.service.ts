@@ -141,6 +141,7 @@ export class ConversationService {
     userId: string,
     sourceIds?: string[],
     libraryIds?: string[],
+    agenticMode?: boolean,
   ) {
     // Collect all source IDs from both sourceIds and libraryIds
     let allSourceIds: string[] = [];
@@ -182,7 +183,7 @@ export class ConversationService {
       data: {
         userId,
         title: content.split(' ').slice(0, 5).join(' ') + '...',
-        metadata: {},
+        metadata: { agenticMode: agenticMode !== false }, // Store in conversation metadata
         sources:
           allSourceIds.length > 0
             ? { connect: allSourceIds.map((id) => ({ id })) }
@@ -191,6 +192,7 @@ export class ConversationService {
           create: {
             role: 'user',
             content: content,
+            metadata: { agenticMode: agenticMode !== false }, // Also store in message metadata
           },
         },
       },
@@ -201,14 +203,27 @@ export class ConversationService {
 
     if (this.server && newConversation.messages.length > 0) {
       const userMessage = newConversation.messages[0];
-      this.messageService
-        .generateAndStreamAiResponseWithTools(userMessage, this.server)
-        .catch((error) => {
-          console.error(
-            `Failed to generate AI response for conversation ${newConversation.id}:`,
-            error,
-          );
-        });
+      const useAgenticMode = agenticMode !== false; // Default to true
+      
+      if (useAgenticMode) {
+        this.messageService
+          .generateAndStreamAiResponseWithTools(userMessage, this.server)
+          .catch((error) => {
+            console.error(
+              `Failed to generate AI response for conversation ${newConversation.id}:`,
+              error,
+            );
+          });
+      } else {
+        this.messageService
+          .generateAndStreamAiResponse(userMessage, this.server)
+          .catch((error) => {
+            console.error(
+              `Failed to generate AI response for conversation ${newConversation.id}:`,
+              error,
+            );
+          });
+      }
     }
 
     return newConversation;

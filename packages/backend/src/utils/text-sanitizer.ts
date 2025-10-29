@@ -8,8 +8,14 @@ export function sanitizeText(text: string | null | undefined): string | null {
   try {
     // Replace invalid UTF-8 sequences and normalize Unicode
     let sanitized = text
-      // Replace invalid surrogate pairs
+      // Replace invalid surrogate pairs (U+D800 to U+DFFF)
       .replace(/[\uD800-\uDFFF]/g, '')
+      // Remove control characters except newline, tab, and carriage return
+      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+      // Normalize various Unicode spaces to regular space
+      .replace(/[\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
+      // Remove zero-width characters
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
       // Normalize Unicode to NFC (composed form)
       .normalize('NFC')
       // Replace NULL bytes which can cause issues

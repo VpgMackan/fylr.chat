@@ -34,6 +34,7 @@ interface ChatState {
   status: { stage: string; message: string } | null;
   currentThoughts: MessageApiResponse[];
   streamingState: StreamingState;
+  metadata: any;
 }
 
 type ChatAction =
@@ -56,6 +57,7 @@ type ChatAction =
   | { type: 'UPDATE_MESSAGE'; payload: MessageApiResponse }
   | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] }
   | { type: 'SET_NAME'; payload: string }
+  | { type: 'SET_METADATA'; payload: any }
   | { type: 'RESET_STREAMING_STATE' };
 
 const initialState: ChatState = {
@@ -65,6 +67,7 @@ const initialState: ChatState = {
   connectionStatus: 'connecting',
   status: null,
   currentThoughts: [],
+  metadata: {},
   streamingState: {
     streamId: null,
     expectedChunkIndex: 0,
@@ -83,6 +86,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, sources: action.payload };
     case 'SET_NAME':
       return { ...state, name: action.payload };
+    case 'SET_METADATA':
+      return { ...state, metadata: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
     case 'ADD_AGENT_THOUGHT':
@@ -297,6 +302,7 @@ export function useChat(chatId: string | null) {
             dispatch({ type: 'SET_HISTORY', payload: history.messages });
             dispatch({ type: 'SET_SOURCES', payload: history.sources });
             dispatch({ type: 'SET_NAME', payload: history.name });
+            dispatch({ type: 'SET_METADATA', payload: history.metadata || {} });
             dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
           },
         );
@@ -388,6 +394,10 @@ export function useChat(chatId: string | null) {
       agenticMode?: boolean;
     }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
+        console.log(
+          '📤 Sending message with agenticMode:',
+          payload.agenticMode,
+        );
         socketRef.current.emit('conversationAction', {
           action: 'sendMessage',
           conversationId: chatId,
@@ -472,10 +482,15 @@ export function useChat(chatId: string | null) {
       }
 
       try {
+        console.log(
+          '🚀 Initiating conversation with agenticMode:',
+          payload.agenticMode,
+        );
         const newConversation: any = await apiInitiateConversation(
           payload.content,
           payload.sourceIds,
           payload.libraryIds,
+          payload.agenticMode,
         );
         return newConversation;
       } catch (error) {
@@ -493,6 +508,7 @@ export function useChat(chatId: string | null) {
     connectionStatus: state.connectionStatus,
     status: state.status,
     currentThoughts: state.currentThoughts,
+    agenticMode: state.metadata?.agenticMode !== false, // Default to true
     sendMessage,
     initiateAndSendMessage,
     deleteMessage,

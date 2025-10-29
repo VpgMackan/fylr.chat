@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { MentionsInput, Mention } from 'react-mentions';
 import type { SuggestionDataItem } from 'react-mentions';
 import SourceMenu from './SourceMenu';
 import { useChatInput } from '@/hooks/useChatInput';
+import type { SourceApiResponseWithIsActive } from '@fylr/types';
 
 interface ChatInputProps {
   onSend: (payload: {
@@ -14,12 +15,9 @@ interface ChatInputProps {
   }) => void;
   className?: string;
   showSourceMenu?: boolean;
-  conversationSources?: Array<{
-    id: string;
-    isActive: boolean;
-    [key: string]: any;
-  }>;
+  conversationSources?: SourceApiResponseWithIsActive[];
   disabled?: boolean;
+  initialAgenticMode?: boolean;
 }
 
 const mentionsInputStyle = {
@@ -83,8 +81,14 @@ export default function ChatInput({
   showSourceMenu = false,
   conversationSources = [],
   disabled = false,
+  initialAgenticMode = true,
 }: ChatInputProps) {
-  const [agenticMode, setAgenticMode] = useState(true); // Default to agentic mode
+  const [agenticMode, setAgenticMode] = useState(initialAgenticMode);
+
+  // Update local state when initialAgenticMode changes
+  useEffect(() => {
+    setAgenticMode(initialAgenticMode);
+  }, [initialAgenticMode]);
 
   const {
     value,
@@ -116,6 +120,7 @@ export default function ChatInput({
   const agenticButtonStyle = agenticMode
     ? 'p-2 px-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-medium rounded-full hover:from-purple-600 hover:to-indigo-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5'
     : 'p-2 px-3 bg-white/80 text-gray-600 text-sm font-medium rounded-full hover:bg-purple-100 hover:text-purple-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95 flex items-center gap-1.5';
+
   return (
     <div className={`w-full relative ${className}`}>
       {showSourceMenu && (
@@ -131,80 +136,92 @@ export default function ChatInput({
         />
       )}
       <div
-        className={`flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 ${
-          showSourceMenu ? 'rounded-l-2xl rounded-bl-2xl' : 'rounded-2xl'
-        } border border-blue-200 shadow-lg hover:shadow-xl transition-shadow duration-200 p-3`}
+        className={`relative ${showSourceMenu ? 'rounded-l-2xl rounded-bl-2xl' : 'rounded-2xl'} p-[2px]`}
+        style={{
+          background:
+            'linear-gradient(90deg, #60a5fa, #a78bfa, #ec4899, #60a5fa)',
+          backgroundSize: '200% 200%',
+          animation: 'gradient-shift 8s ease infinite',
+        }}
       >
-        <div className="flex items-center flex-wrap px-2 py-1 relative min-h-[2.5rem]">
-          <MentionsInput
-            inputRef={textareaRef}
-            singleLine={false}
-            className="flex-1 mentions-input"
-            style={mentionsInputStyle}
-            placeholder={
-              disabled
-                ? 'Connecting...'
-                : 'Ask anything, or type @ to select a library...'
-            }
-            value={value}
-            onChange={handleChange}
-            forceSuggestionsAboveCursor
-            disabled={disabled}
-          >
-            <Mention
-              trigger="@"
-              data={libraryData}
-              markup="@@@____id__^^^____display__@@@^^^"
-              displayTransform={(_, display) => ` @${display} `}
-              style={mentionStyle}
-              appendSpaceOnAdd
-              renderSuggestion={(suggestion: SuggestionDataItem) => (
-                <span className="font-medium">{suggestion.display}</span>
-              )}
-            />
-          </MentionsInput>
-        </div>
-
-        <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
-          <div className="flex gap-1.5">
-            <button
-              className={agenticButtonStyle}
-              onClick={() => setAgenticMode(!agenticMode)}
-              aria-label={
-                agenticMode ? 'Disable agentic mode' : 'Enable agentic mode'
+        <div
+          className={`flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 ${
+            showSourceMenu
+              ? 'rounded-l-[14px] rounded-bl-[14px]'
+              : 'rounded-[14px]'
+          } shadow-lg hover:shadow-xl transition-shadow duration-200 p-3`}
+        >
+          <div className="flex items-center flex-wrap px-2 py-1 relative min-h-[2.5rem]">
+            <MentionsInput
+              inputRef={textareaRef}
+              singleLine={false}
+              className="flex-1 mentions-input"
+              style={mentionsInputStyle}
+              placeholder={
+                disabled
+                  ? 'Connecting...'
+                  : 'Ask anything, or type @ to select a library...'
               }
-              title={
-                agenticMode
-                  ? 'Using Agentic Mode (Tools & Reasoning)'
-                  : 'Using RAG Mode (Vector Search)'
-              }
+              value={value}
+              onChange={handleChange}
+              forceSuggestionsAboveCursor
+              disabled={disabled}
             >
-              <Icon icon="mdi:robot" width="16" height="16" />
-              <span>Agentic Mode</span>
-            </button>
-            <button className={buttonStyle} aria-label="Add attachment">
-              <Icon icon="mdi:plus" width="18" height="18" />
-            </button>
-            <button className={buttonStyle} aria-label="Add web source">
-              <Icon icon="mdi:web" width="18" height="18" />
-            </button>
-            <button className={buttonStyle} aria-label="More options">
-              <Icon icon="mdi:dots-horizontal" width="18" height="18" />
-            </button>
+              <Mention
+                trigger="@"
+                data={libraryData}
+                markup="@@@____id__^^^____display__@@@^^^"
+                displayTransform={(_, display) => ` @${display} `}
+                style={mentionStyle}
+                appendSpaceOnAdd
+                renderSuggestion={(suggestion: SuggestionDataItem) => (
+                  <span className="font-medium">{suggestion.display}</span>
+                )}
+              />
+            </MentionsInput>
           </div>
 
-          <div className="flex gap-2">
-            <button className={buttonStyle} aria-label="Voice input">
-              <Icon icon="mdi:microphone" width="20" height="20" />
-            </button>
-            <button
-              className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSend}
-              disabled={disabled || !plainText.trim()}
-              aria-label="Send message"
-            >
-              <Icon icon="mdi:arrow-up" width="20" height="20" />
-            </button>
+          <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
+            <div className="flex gap-1.5">
+              <button
+                className={agenticButtonStyle}
+                onClick={() => setAgenticMode(!agenticMode)}
+                aria-label={
+                  agenticMode ? 'Disable agentic mode' : 'Enable agentic mode'
+                }
+                title={
+                  agenticMode
+                    ? 'Using Agentic Mode (Tools & Reasoning)'
+                    : 'Using RAG Mode (Vector Search)'
+                }
+              >
+                <Icon icon="mdi:robot" width="16" height="16" />
+                <span>Agentic Mode</span>
+              </button>
+              <button className={buttonStyle} aria-label="Add attachment">
+                <Icon icon="mdi:plus" width="18" height="18" />
+              </button>
+              <button className={buttonStyle} aria-label="Add web source">
+                <Icon icon="mdi:web" width="18" height="18" />
+              </button>
+              <button className={buttonStyle} aria-label="More options">
+                <Icon icon="mdi:dots-horizontal" width="18" height="18" />
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <button className={buttonStyle} aria-label="Voice input">
+                <Icon icon="mdi:microphone" width="20" height="20" />
+              </button>
+              <button
+                className="p-2.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-150 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSend}
+                disabled={disabled || !plainText.trim()}
+                aria-label="Send message"
+              >
+                <Icon icon="mdi:arrow-up" width="20" height="20" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

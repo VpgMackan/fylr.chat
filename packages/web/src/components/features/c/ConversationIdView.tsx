@@ -21,6 +21,7 @@ export default function ConversationIdPageView() {
     connectionStatus,
     status,
     currentThoughts,
+    agenticMode,
   } = useChat(conversationId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -87,6 +88,7 @@ export default function ConversationIdPageView() {
             showSourceMenu={true}
             conversationSources={sources}
             disabled={connectionStatus !== 'connected'}
+            initialAgenticMode={agenticMode}
           />
         </>
       ) : (

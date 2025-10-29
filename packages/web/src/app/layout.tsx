@@ -3,6 +3,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import './globals.css';
 import { NextIntlClientProvider } from 'next-intl';
 import { Toaster } from 'react-hot-toast';
+import CursorFollower from '@/components/CursorFollower';
 
 export const metadata: Metadata = {
   title: 'Flyr.Chat',
@@ -24,6 +25,8 @@ export default async function RootLayout({
           <Toaster position="top-right" reverseOrder={false} />
           {children}
         </NextIntlClientProvider>
+
+        <CursorFollower />
       </body>
     </html>
   );

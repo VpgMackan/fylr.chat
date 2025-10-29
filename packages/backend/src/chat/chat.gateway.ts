@@ -121,7 +121,13 @@ export class ChatGateway
           client.user.id,
         );
         const name = conversation.title;
-        client.emit('conversationHistory', { messages, sources, name });
+        const metadata = conversation.metadata;
+        client.emit('conversationHistory', {
+          messages,
+          sources,
+          name,
+          metadata,
+        });
         break;
       }
 
@@ -133,6 +139,11 @@ export class ChatGateway
             libraryIds?: string[];
             agenticMode?: boolean;
           };
+
+          // Log the received agenticMode value for debugging
+          this.logger.log(
+            `SendMessage - agenticMode received: ${agenticMode} (type: ${typeof agenticMode})`,
+          );
 
           // Handle both sourceIds and libraryIds
           if (
@@ -205,11 +216,19 @@ export class ChatGateway
             throw new WsException('content is required for sendMessage action');
           }
 
+          // Update conversation metadata with the current agenticMode setting
+          const useAgenticMode = agenticMode !== false; // Default to true
+          await this.conversationService.updateConversation(
+            { metadata: { agenticMode: useAgenticMode } },
+            conversationId,
+            client.user.id,
+          );
+
           const userMessage = await this.messageService.createMessage(
             {
               role: 'user',
               content: content,
-              metadata: { agenticMode: agenticMode !== false }, // Store mode in metadata
+              metadata: { agenticMode: useAgenticMode }, // Store mode in metadata
             },
             conversationId,
           );
@@ -221,7 +240,10 @@ export class ChatGateway
 
           // Execute AI response generation without awaiting to not block
           // Use agenticMode flag to determine which method to call (default to true for agentic)
-          const useAgenticMode = agenticMode !== false; // Default to true
+
+          this.logger.log(
+            `Using ${useAgenticMode ? 'AGENTIC' : 'RAG'} mode for conversation ${conversationId}`,
+          );
 
           if (useAgenticMode) {
             this.messageService

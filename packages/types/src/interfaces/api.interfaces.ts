@@ -57,6 +57,7 @@ export interface MessageAndSourceApiResponse {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
   name: string;
+  metadata?: any;
 }
 
 export interface SummaryEpisodeApiResponse {

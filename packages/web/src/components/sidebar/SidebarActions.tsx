@@ -12,17 +12,18 @@ export default function SidebarActions({
   onSelectLibrary,
 }: SidebarActionsProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="space-y-2">
       <Button
         name="New Chat"
-        icon="heroicons-solid:plus-sm"
+        icon="heroicons-solid:plus"
         onClick={onCreateChat}
+        variant="primary"
       />
-      {/* QUICK CREATE BUTTON (OPENS MODAL FOR Library CREATION AND CONTENT CREATION) */}
       <Button
-        name="Create content"
-        icon="heroicons-solid:plus-sm"
+        name="Create Content"
+        icon="heroicons-solid:sparkles"
         onClick={onCreateContent}
+        variant="secondary"
       />
     </div>
   );

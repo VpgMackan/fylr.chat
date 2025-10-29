@@ -3,6 +3,8 @@ import { BaseTool, ToolDefinition, ToolExecutionContext } from './base.tool';
 import { SearchDocumentsTool } from './search-documents.tool';
 import { ListSourcesTool } from './list-sources.tool';
 import { ReadDocumentTool } from './read-document.tool';
+import { WebSearchTool } from './web-search.tool';
+import { FetchWebpageTool } from './fetch-webpage.tool';
 import { withTimeout } from '../../utils/timeout.util';
 
 @Injectable()
@@ -14,10 +16,14 @@ export class ToolService {
     private readonly searchDocumentsTool: SearchDocumentsTool,
     private readonly listSourcesTool: ListSourcesTool,
     private readonly readDocumentTool: ReadDocumentTool,
+    private readonly webSearchTool: WebSearchTool,
+    private readonly fetchWebpageTool: FetchWebpageTool,
   ) {
     this.registerTool(this.searchDocumentsTool);
     this.registerTool(this.listSourcesTool);
     this.registerTool(this.readDocumentTool);
+    this.registerTool(this.webSearchTool);
+    this.registerTool(this.fetchWebpageTool);
   }
 
   private registerTool(tool: BaseTool): void {

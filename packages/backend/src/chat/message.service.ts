@@ -12,7 +12,11 @@ import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
-import { sanitizeMessage, sanitizeText } from 'src/utils/text-sanitizer';
+import {
+  sanitizeMessage,
+  sanitizeText,
+  sanitizeObject,
+} from 'src/utils/text-sanitizer';
 
 import { tools as specialTools } from './tool';
 
@@ -134,43 +138,69 @@ export class MessageService {
       .map((m) => `${m.role}: ${m.content}`)
       .join('\n');
 
-    emitStatus('searchQuery', 'Formulating search query...');
-    const hypotheticalAnswer = await this.llmService.generate({
-      prompt_type: 'hyde',
-      prompt_vars: { chatHistory, userQuery },
-    });
-
-    emitStatus('retrieval', 'Searching relevant sources...');
-    const searchQueryEmbedding =
-      await this.vectorService.search(hypotheticalAnswer);
-
     const sourceIds = conversation.sources.map((s) => s.id);
-    const relevantChunks =
-      sourceIds.length > 0
-        ? await this.sourceService.findByVector(searchQueryEmbedding, sourceIds)
-        : [];
+    let relevantChunks: any[] = [];
 
-    const sourceReferenceList = relevantChunks.map((chunk, index) => ({
-      number: index + 1,
-      name: chunk.source.name,
-      chunkIndex: chunk.chunkIndex,
-    }));
+    // Only do vector search if sources are available
+    if (sourceIds.length > 0) {
+      emitStatus('searchQuery', 'Formulating search query...');
+      const hypotheticalAnswer = await this.llmService.generate({
+        prompt_type: 'hyde',
+        prompt_vars: { chatHistory, userQuery },
+      });
 
-    const context = relevantChunks
-      .map((chunk, index) => {
-        return `Content from Source Chunk [${index + 1}] (${
-          chunk.source.name
-        }):\n${chunk.content}`;
-      })
-      .join('\n\n---\n\n');
+      emitStatus('retrieval', 'Searching relevant sources...');
+      const searchQueryEmbedding =
+        await this.vectorService.search(hypotheticalAnswer);
+
+      relevantChunks = await this.sourceService.findByVector(
+        searchQueryEmbedding,
+        sourceIds,
+      );
+    }
 
     emitStatus('generation', 'Generating response...');
 
-    const stream = this.llmService.generateStream({
-      prompt_type: 'final_rag',
-      prompt_version: 'v1',
-      prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
-    });
+    let stream: AsyncGenerator<string>;
+
+    // If no relevant chunks found, use conversational mode instead of RAG
+    if (relevantChunks.length === 0) {
+      // Build message history for conversational response
+      const messages = recentMessages.map((m) => ({
+        role: m.role,
+        content: m.content || '',
+      }));
+
+      stream = this.llmService.generateStream({
+        prompt_type: 'synthesis',
+        prompt_version: 'v1',
+        prompt_vars: {
+          messages,
+          userQuestion: userQuery,
+        },
+      });
+    } else {
+      // Use RAG mode with source context
+      const sourceReferenceList = relevantChunks.map((chunk, index) => ({
+        number: index + 1,
+        name: chunk.source.name,
+        chunkIndex: chunk.chunkIndex,
+      }));
+
+      const context = relevantChunks
+        .map((chunk, index) => {
+          return `Content from Source Chunk [${index + 1}] (${
+            chunk.source.name
+          }):\n${chunk.content}`;
+        })
+        .join('\n\n---\n\n');
+
+      stream = this.llmService.generateStream({
+        prompt_type: 'final_rag',
+        prompt_version: 'v1',
+        prompt_vars: { context, chatHistory, userQuery, sourceReferenceList },
+      });
+    }
     let fullResponse = '';
     let chunkIndex = 0;
     const streamId = `stream-${conversationId}-${Date.now()}`;
@@ -194,15 +224,18 @@ export class MessageService {
         {
           role: 'assistant',
           content: fullResponse,
-          metadata: {
-            relatedSources: relevantChunks.map((c) => ({
-              id: c.id,
-              sourceId: c.source.id,
-              libraryId: c.source.libraryId,
-              name: c.source.name,
-              chunkIndex: c.chunkIndex,
-            })),
-          },
+          metadata:
+            relevantChunks.length > 0
+              ? {
+                  relatedSources: relevantChunks.map((c) => ({
+                    id: c.id,
+                    sourceId: c.source.id,
+                    libraryId: c.source.libraryId,
+                    name: c.source.name,
+                    chunkIndex: c.chunkIndex,
+                  })),
+                }
+              : {},
         },
         conversationId,
       );
@@ -224,6 +257,7 @@ export class MessageService {
     const MAX_ITERATIONS = 5;
     const MAX_CONTEXT_MESSAGES = 50; // Limit context size to prevent overflow
     let currentIteration = 0;
+    const usedSourceChunks: any[] = []; // Track all source chunks used
 
     try {
       const conversation = await this.prisma.conversation.findUnique({
@@ -332,6 +366,7 @@ export class MessageService {
               conversationId,
               server,
               userMessage.id,
+              usedSourceChunks,
             );
             return;
           }
@@ -350,9 +385,22 @@ export class MessageService {
                     embeddingModel: embeddingModel || '',
                   },
                 );
+
+                // Track source chunks from search_documents tool
+                if (
+                  toolCall.function.name === 'search_documents' &&
+                  result.results &&
+                  Array.isArray(result.results)
+                ) {
+                  usedSourceChunks.push(...result.results);
+                }
+
+                // Sanitize the result to remove problematic Unicode characters
+                const sanitizedResult = sanitizeObject(result);
+
                 return {
                   tool_call_id: toolCall.id,
-                  content: JSON.stringify(result),
+                  content: JSON.stringify(sanitizedResult),
                   success: true,
                 };
               } catch (error) {
@@ -425,6 +473,7 @@ export class MessageService {
         conversationId,
         server,
         userMessage.id,
+        usedSourceChunks,
         currentIteration >= MAX_ITERATIONS
           ? "I've completed my research but reached the maximum number of steps. Here's what I found:"
           : "Here's a summary of my findings:",
@@ -592,6 +641,7 @@ export class MessageService {
     conversationId: string,
     server: Server,
     userMessageId: string,
+    sourceChunks: any[] = [],
     overrideQuery?: string,
   ) {
     try {
@@ -656,11 +706,28 @@ export class MessageService {
           'I apologize, but I was unable to generate a response. Please try again.';
       }
 
+      // Deduplicate source chunks and prepare metadata
+      const uniqueChunks = Array.from(
+        new Map(sourceChunks.map((chunk) => [chunk.id, chunk])).values(),
+      );
+
       const finalAssistantMessage = await this.createMessage(
         {
           role: 'assistant',
           content: fullResponse,
           parentMessageId: userMessageId,
+          metadata:
+            uniqueChunks.length > 0
+              ? {
+                  relatedSources: uniqueChunks.map((c) => ({
+                    id: c.id,
+                    sourceId: c.source.id,
+                    libraryId: c.source.libraryId,
+                    name: c.source.name,
+                    chunkIndex: c.chunkIndex,
+                  })),
+                }
+              : {},
         },
         conversationId,
       );

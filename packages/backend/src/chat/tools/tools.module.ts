@@ -6,6 +6,8 @@ import { SourceModule } from 'src/source/source.module';
 import { SearchDocumentsTool } from './search-documents.tool';
 import { ListSourcesTool } from './list-sources.tool';
 import { ReadDocumentTool } from './read-document.tool';
+import { WebSearchTool } from './web-search.tool';
+import { FetchWebpageTool } from './fetch-webpage.tool';
 import { ToolService } from './tool.service';
 
 @Module({
@@ -14,6 +16,8 @@ import { ToolService } from './tool.service';
     SearchDocumentsTool,
     ListSourcesTool,
     ReadDocumentTool,
+    WebSearchTool,
+    FetchWebpageTool,
     ToolService,
   ],
   exports: [ToolService],
