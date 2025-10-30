@@ -15,7 +15,7 @@ variables:
 template: |
   You are a query expansion expert. Given a search query, generate 3-5 different variations of the query from different perspectives or phrasings. Each variation should target the same information need but use different terminology, structure, or focus.
 
-  {% if context %}
+  {% if context is defined and context %}
   CONTEXT:
   {{ context }}
   {% endif %}

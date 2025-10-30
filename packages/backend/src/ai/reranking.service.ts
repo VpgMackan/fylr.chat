@@ -76,7 +76,7 @@ export class RerankingService {
           requestPayload,
           {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 30000, // 30 second timeout for reranking
+            timeout: 45000, // 45 second timeout for reranking (Jina API can be slow)
           },
         ),
       );

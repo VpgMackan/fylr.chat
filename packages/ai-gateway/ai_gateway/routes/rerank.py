@@ -85,7 +85,7 @@ async def rerank(request: RerankRequest):
         log.info(
             "rerank_success",
             num_results=len(results),
-            top_score=results[0]["relevance_score"] if results else None,
+            top_score=results[0].relevance_score if results else None,
         )
 
         return RerankResponse(

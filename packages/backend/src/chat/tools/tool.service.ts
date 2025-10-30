@@ -10,7 +10,7 @@ import { withTimeout } from '../../utils/timeout.util';
 @Injectable()
 export class ToolService {
   private tools: Map<string, BaseTool> = new Map();
-  private readonly TOOL_TIMEOUT_MS = 30000; // 30 seconds timeout for tool execution
+  private readonly TOOL_TIMEOUT_MS = 60000; // 60 seconds timeout for tool execution (reranking can be slow)
 
   constructor(
     private readonly searchDocumentsTool: SearchDocumentsTool,

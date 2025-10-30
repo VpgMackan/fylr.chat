@@ -981,6 +981,12 @@ export class MessageService {
     assistantMessageId: string,
     server: Server,
   ) {
+    if (!assistantMessageId) {
+      throw new NotFoundException(
+        'Assistant message ID is required for regeneration.',
+      );
+    }
+
     const assistantMessage = await this.prisma.message.findUnique({
       where: { id: assistantMessageId },
     });
@@ -988,13 +994,25 @@ export class MessageService {
       throw new NotFoundException('Assistant message to regenerate not found.');
     }
 
-    const userMessage = await this.prisma.message.findFirst({
-      where: {
-        conversationId: assistantMessage.conversationId,
-        createdAt: { lt: assistantMessage.createdAt },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    // Find the user message using parentMessageId if available, otherwise find the most recent user message
+    let userMessage;
+
+    if (assistantMessage.parentMessageId) {
+      // This assistant message has a parent - use it
+      userMessage = await this.prisma.message.findUnique({
+        where: { id: assistantMessage.parentMessageId },
+      });
+    } else {
+      // Fallback: find the most recent user message before this assistant message
+      userMessage = await this.prisma.message.findFirst({
+        where: {
+          conversationId: assistantMessage.conversationId,
+          createdAt: { lt: assistantMessage.createdAt },
+          role: 'user', // Ensure we get a user message
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     if (!userMessage || userMessage.role !== 'user') {
       throw new NotFoundException(
@@ -1023,7 +1041,8 @@ export class MessageService {
     });
 
     // Determine which mode to use based on the user message metadata
-    const agenticMode = userMessage.metadata?.['agenticMode'] !== false; // Default to true
+    const userMetadata = userMessage.metadata as any;
+    const agenticMode = userMetadata?.agenticMode !== false; // Default to true
 
     if (agenticMode) {
       await this.generateAndStreamAiResponseWithTools(userMessage, server);

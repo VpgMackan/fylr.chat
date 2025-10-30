@@ -412,9 +412,14 @@ export class ChatGateway
 
       case 'regenerateMessage': {
         try {
-          const { messageId } = payload as {
-            messageId: string;
-          };
+          // Handle both direct messageId and nested payload structure
+          const messageId = (payload as any).messageId || (payload as any).payload?.messageId;
+
+          if (!messageId) {
+            this.logger.error('regenerateMessage: messageId is missing', payload);
+            throw new WsException('messageId is required for regenerateMessage action');
+          }
+
           this.server.to(conversationId).emit('conversationAction', {
             action: 'messageDeleted',
             conversationId,
