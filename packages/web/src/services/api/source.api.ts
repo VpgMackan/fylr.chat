@@ -32,3 +32,8 @@ export const getVectorsBySourceId = async (
   const { data } = await axios.get<VectorChunk[]>(`source/${sourceId}/vectors`);
   return data;
 };
+
+export const requeueSource = async (sourceId: string): Promise<any> => {
+  const { data } = await axios.post(`source/${sourceId}/requeue`);
+  return data;
+};

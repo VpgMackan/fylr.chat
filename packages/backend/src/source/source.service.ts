@@ -209,4 +209,40 @@ export class SourceService {
       orderBy: { chunkIndex: 'asc' },
     });
   }
+
+  async requeueSource(sourceId: string, userId: string) {
+    const source = await this.prisma.source.findFirst({
+      where: { id: sourceId, library: { userId } },
+      include: { library: true },
+    });
+
+    if (!source) {
+      throw new NotFoundException('Source not found or not accessible');
+    }
+
+    const newJobKey = uuidv4();
+
+    // Update the source with new job key and reset status
+    const updatedSource = await this.prisma.source.update({
+      where: { id: sourceId },
+      data: {
+        jobKey: newJobKey,
+        status: 'QUEUED',
+      },
+    });
+
+    // Publish new processing job
+    await this.rabbitMQService.publishFileProcessingJob({
+      sourceId: source.id,
+      s3Key: source.url,
+      jobKey: newJobKey,
+      embeddingModel: source.library.defaultEmbeddingModel,
+    });
+
+    return {
+      message: 'Source re-queued for processing successfully.',
+      jobKey: newJobKey,
+      source: updatedSource,
+    };
+  }
 }

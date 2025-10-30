@@ -119,4 +119,13 @@ export class SourceController {
   ) {
     return this.sourceService.getVectorsBySourceId(sourceId, req.user.id);
   }
+
+  @Post(':sourceId/requeue')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requeueSource(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.requeueSource(sourceId, req.user.id);
+  }
 }
