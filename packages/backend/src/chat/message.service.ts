@@ -367,6 +367,15 @@ export class MessageService {
     let currentIteration = 0;
     const usedSourceChunks: any[] = []; // Track all source chunks used
 
+    // Helper function to emit granular tool progress updates
+    const emitToolProgress = (toolName: string, message: string) => {
+      server.to(conversationId).emit('conversationAction', {
+        action: 'toolProgress',
+        conversationId,
+        data: { toolName, message },
+      });
+    };
+
     try {
       const conversation = await this.prisma.conversation.findUnique({
         where: { id: conversationId },
@@ -505,6 +514,39 @@ export class MessageService {
             responseMessage.tool_calls.map(async (toolCall) => {
               try {
                 const parsedArgs = JSON.parse(toolCall.function.arguments);
+
+                // Emit tool-specific progress updates
+                if (toolCall.function.name === 'search_documents') {
+                  emitToolProgress(
+                    'search_documents',
+                    'Performing advanced document search...',
+                  );
+                } else if (toolCall.function.name === 'web_search') {
+                  emitToolProgress('web_search', 'Searching the web...');
+                } else if (toolCall.function.name === 'fetch_webpage') {
+                  emitToolProgress(
+                    'fetch_webpage',
+                    `Fetching webpage: ${parsedArgs.url || 'URL'}...`,
+                  );
+                } else if (toolCall.function.name === 'read_document_chunk') {
+                  emitToolProgress(
+                    'read_document_chunk',
+                    'Reading document content...',
+                  );
+                } else if (
+                  toolCall.function.name === 'list_associated_sources'
+                ) {
+                  emitToolProgress(
+                    'list_associated_sources',
+                    'Listing available sources...',
+                  );
+                } else {
+                  emitToolProgress(
+                    toolCall.function.name,
+                    `Executing ${toolCall.function.name}...`,
+                  );
+                }
+
                 const result = await this.toolService.executeTool(
                   toolCall.function.name,
                   parsedArgs,

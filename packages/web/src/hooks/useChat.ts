@@ -32,6 +32,7 @@ interface ChatState {
   name: string;
   connectionStatus: ConnectionStatus;
   status: { stage: string; message: string } | null;
+  toolProgress: { toolName: string; message: string } | null;
   currentThoughts: MessageApiResponse[];
   streamingState: StreamingState;
   metadata: any;
@@ -41,6 +42,7 @@ type ChatAction =
   | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
+  | { type: 'SET_TOOL_PROGRESS'; payload: { toolName: string; message: string } | null }
   | { type: 'ADD_AGENT_THOUGHT'; payload: MessageApiResponse }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
   | {
@@ -66,6 +68,7 @@ const initialState: ChatState = {
   name: '',
   connectionStatus: 'connecting',
   status: null,
+  toolProgress: null,
   currentThoughts: [],
   metadata: {},
   streamingState: {
@@ -90,6 +93,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, metadata: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
+    case 'SET_TOOL_PROGRESS':
+      return { ...state, toolProgress: action.payload };
     case 'ADD_AGENT_THOUGHT':
       // Prevent duplicate thoughts by checking if this thought ID already exists
       if (state.currentThoughts.some((t) => t.id === action.payload.id)) {
@@ -204,6 +209,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         status: null,
+        toolProgress: null, // Clear tool progress when message finalizes
         messages: newMessages,
         currentThoughts: [], // Clear thoughts after attaching to message
         streamingState: {
@@ -323,6 +329,9 @@ export function useChat(chatId: string | null) {
             switch (action) {
               case 'statusUpdate':
                 dispatch({ type: 'SET_STATUS', payload: data });
+                break;
+              case 'toolProgress':
+                dispatch({ type: 'SET_TOOL_PROGRESS', payload: data });
                 break;
               case 'agentThought':
                 dispatch({ type: 'ADD_AGENT_THOUGHT', payload: data });
@@ -515,6 +524,7 @@ export function useChat(chatId: string | null) {
     name: state.name,
     connectionStatus: state.connectionStatus,
     status: state.status,
+    toolProgress: state.toolProgress,
     currentThoughts: state.currentThoughts,
     agenticMode: state.metadata?.agenticMode !== false, // Default to true
     sendMessage,

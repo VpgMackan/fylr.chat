@@ -45,12 +45,12 @@ export class SearchDocumentsTool extends BaseTool {
             use_reranking: {
               type: 'boolean',
               description:
-                'Whether to use advanced re-ranking for better relevance (default: true). Re-ranking uses a cross-encoder model to improve result quality.',
+                'Whether to use advanced re-ranking. Default is true for highest quality. Set to false for a much faster search if speed is critical.',
             },
             use_multi_query: {
               type: 'boolean',
               description:
-                'Whether to use multi-query expansion (default: false). When enabled, generates multiple query variations and combines results for better coverage. Useful when initial search returns few or no results.',
+                'Generates multiple query variations for better search coverage. Default is false. Set to true if an initial search yields poor results.',
             },
           },
           required: ['query'],

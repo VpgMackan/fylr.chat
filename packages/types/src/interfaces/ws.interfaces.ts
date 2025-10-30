@@ -97,6 +97,12 @@ export interface WsAgentThoughtEvent {
   data: MessageApiResponse;
 }
 
+export interface WsToolProgressEvent {
+  action: 'toolProgress';
+  conversationId: string;
+  data: { toolName: string; message: string };
+}
+
 export type WsServerEventPayload =
   | WsNewMessageEvent
   | WsMessageChunkEvent
@@ -105,4 +111,5 @@ export type WsServerEventPayload =
   | WsMessageDeletedEvent
   | WsMessageUpdatedEvent
   | WsStatusUpdateEvent
-  | WsAgentThoughtEvent;
+  | WsAgentThoughtEvent
+  | WsToolProgressEvent;

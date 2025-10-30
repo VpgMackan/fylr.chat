@@ -20,6 +20,7 @@ export default function ConversationIdPageView() {
     deleteMessage,
     connectionStatus,
     status,
+    toolProgress,
     currentThoughts,
     agenticMode,
   } = useChat(conversationId);
@@ -77,9 +78,22 @@ export default function ConversationIdPageView() {
             <div ref={messagesEndRef} />
           </div>
 
-          {status && (
-            <div className="text-center text-sm text-gray-500 mb-2 animate-pulse">
-              {status.stage}: {status.message}
+          {(status || toolProgress) && (
+            <div className="flex flex-col gap-1 mb-2">
+              {status && (
+                <div className="text-center text-sm text-gray-500 animate-pulse">
+                  {status.stage}: {status.message}
+                </div>
+              )}
+              {toolProgress && (
+                <div className="text-center text-sm text-blue-500 animate-pulse flex items-center justify-center gap-2">
+                  <Icon icon="line-md:loading-loop" className="w-4 h-4" />
+                  <span>
+                    {toolProgress.toolName.replace(/_/g, ' ')}:{' '}
+                    {toolProgress.message}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

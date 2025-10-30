@@ -64,6 +64,8 @@ messages_template: |
       - For current events, general knowledge, or topics not in documents, use web tools.
       - Combine both source types when appropriate for comprehensive answers.
 
+      **Performance Note:** Using `search_documents` with `use_reranking=true` provides the best results but can be slow. If you need a faster answer, you can set `use_reranking=false`. If your initial search fails, you can retry with `use_multi_query=true` to broaden the search.
+
       ### Workflow (Flexible and Adaptive)
       1. **Understand the query and available tools**
         - Parse the user's request carefully and recall any relevant previous discussion or tool results.
