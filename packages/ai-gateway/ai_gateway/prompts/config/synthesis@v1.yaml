@@ -136,7 +136,7 @@ messages_template: |
       {% endfor %}
 
       **Context from sources:**
-      {{ context if context else 'No context was provided.' }}
+      {{ context | tojson if context else 'No context was provided.' }}
 
       Remember to cite these sources appropriately using [1], [2], etc. when you use information from them.
       ---

@@ -9,6 +9,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 
+import { UserRole } from '@prisma/client';
+
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { RerankingService } from 'src/ai/reranking.service';
@@ -203,7 +205,7 @@ export class MessageService {
     emitStatus('history', 'Analyzing conversation history...');
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { sources: true },
+      include: { sources: true, user: { select: { role: true } } },
     });
     if (!conversation) {
       throw new NotFoundException(
@@ -248,11 +250,11 @@ export class MessageService {
       );
 
       // Apply reranking if we have results
-      if (vectorResults.length > 0) {
+      if (vectorResults.length > 0 && conversation.user.role === UserRole.PRO) {
         try {
           emitStatus('reranking', 'Re-ranking results for relevance...');
           relevantChunks = await this.rerankingService.rerankVectorResults(
-            userQuery, // Use the actual user query for reranking
+            userQuery,
             vectorResults,
             5,
           );
@@ -261,9 +263,12 @@ export class MessageService {
           relevantChunks = vectorResults.slice(0, 5);
         }
       } else {
-        console.log(
-          '[RAG Pipeline] No results found with multi-query retrieval',
-        );
+        relevantChunks = vectorResults.slice(0, 5);
+        if (conversation.user.role === UserRole.PRO) {
+          console.log(
+            '[RAG Pipeline] No results found with multi-query retrieval',
+          );
+        }
       }
     }
 

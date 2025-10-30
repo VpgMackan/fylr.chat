@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { getProfile, updateProfile, logout } from '@/services/api/auth.api';
 import { UserApiResponse } from '@fylr/types';
 import SessionsManager from '@/components/features/profile/SessionsManager';
+import SubscriptionManager from '@/components/features/profile/SubscriptionManager';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -120,6 +121,11 @@ export default function ProfilePage() {
               Manage your account information
             </p>
           </div>
+        </div>
+
+        {/* Subscription Section (ADD THIS) */}
+        <div className="mt-8 pt-6 border-t">
+          <SubscriptionManager />
         </div>
 
         {/* Profile Form */}
