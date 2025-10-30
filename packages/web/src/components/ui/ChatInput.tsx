@@ -12,6 +12,7 @@ interface ChatInputProps {
     sourceIds?: string[];
     libraryIds?: string[];
     agenticMode?: boolean;
+    webSearchEnabled?: boolean;
   }) => void;
   className?: string;
   showSourceMenu?: boolean;
@@ -84,11 +85,19 @@ export default function ChatInput({
   initialAgenticMode = true,
 }: ChatInputProps) {
   const [agenticMode, setAgenticMode] = useState(initialAgenticMode);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
   // Update local state when initialAgenticMode changes
   useEffect(() => {
     setAgenticMode(initialAgenticMode);
   }, [initialAgenticMode]);
+
+  // Disable web search when agentic mode is turned off
+  useEffect(() => {
+    if (!agenticMode && webSearchEnabled) {
+      setWebSearchEnabled(false);
+    }
+  }, [agenticMode, webSearchEnabled]);
 
   const {
     value,
@@ -104,7 +113,7 @@ export default function ChatInput({
     isLibrarySelected,
     libraryData,
     plainText,
-  } = useChatInput(onSend, agenticMode);
+  } = useChatInput(onSend, agenticMode, webSearchEnabled);
 
   const getConversationSourceIds = (): Set<string> => {
     const sourceIds = new Set<string>();
@@ -115,11 +124,17 @@ export default function ChatInput({
   };
 
   const buttonStyle =
-    'p-2 bg-white/80 text-gray-600 rounded-full hover:bg-blue-200 hover:text-blue-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95';
+    'p-2 bg-white/80 text-gray-600 rounded-full hover:bg-blue-200 hover:text-blue-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/80 disabled:hover:text-gray-600';
 
   const agenticButtonStyle = agenticMode
     ? 'p-2 px-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-medium rounded-full hover:from-purple-600 hover:to-indigo-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5'
     : 'p-2 px-3 bg-white/80 text-gray-600 text-sm font-medium rounded-full hover:bg-purple-100 hover:text-purple-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95 flex items-center gap-1.5';
+
+  const webSearchButtonStyle = !agenticMode
+    ? 'p-2 bg-white/80 text-gray-400 rounded-full transition-all duration-150 shadow-sm opacity-40 cursor-not-allowed'
+    : webSearchEnabled
+      ? 'p-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full hover:from-green-600 hover:to-emerald-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95'
+      : buttonStyle;
 
   return (
     <div className={`w-full relative ${className}`}>
@@ -201,7 +216,25 @@ export default function ChatInput({
               <button className={buttonStyle} aria-label="Add attachment">
                 <Icon icon="mdi:plus" width="18" height="18" />
               </button>
-              <button className={buttonStyle} aria-label="Add web source">
+              <button
+                className={webSearchButtonStyle}
+                onClick={() => agenticMode && setWebSearchEnabled(!webSearchEnabled)}
+                disabled={!agenticMode}
+                aria-label={
+                  !agenticMode
+                    ? 'Web search only available in Agentic Mode'
+                    : webSearchEnabled
+                      ? 'Disable web search'
+                      : 'Enable web search'
+                }
+                title={
+                  !agenticMode
+                    ? 'Enable Agentic Mode to use web search'
+                    : webSearchEnabled
+                      ? 'Web Search Enabled'
+                      : 'Click to enable web search'
+                }
+              >
                 <Icon icon="mdi:web" width="18" height="18" />
               </button>
               <button className={buttonStyle} aria-label="More options">

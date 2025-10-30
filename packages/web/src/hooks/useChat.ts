@@ -392,11 +392,14 @@ export function useChat(chatId: string | null) {
       sourceIds?: string[];
       libraryIds?: string[];
       agenticMode?: boolean;
+      webSearchEnabled?: boolean;
     }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
         console.log(
           '📤 Sending message with agenticMode:',
           payload.agenticMode,
+          'webSearchEnabled:',
+          payload.webSearchEnabled,
         );
         socketRef.current.emit('conversationAction', {
           action: 'sendMessage',
@@ -405,6 +408,7 @@ export function useChat(chatId: string | null) {
           sourceIds: payload.sourceIds,
           libraryIds: payload.libraryIds,
           agenticMode: payload.agenticMode,
+          webSearchEnabled: payload.webSearchEnabled,
         });
       }
     },
@@ -475,6 +479,7 @@ export function useChat(chatId: string | null) {
       sourceIds?: string[];
       libraryIds?: string[];
       agenticMode?: boolean;
+      webSearchEnabled?: boolean;
     }) => {
       if (chatId) {
         sendMessage(payload);
@@ -485,12 +490,15 @@ export function useChat(chatId: string | null) {
         console.log(
           '🚀 Initiating conversation with agenticMode:',
           payload.agenticMode,
+          'webSearchEnabled:',
+          payload.webSearchEnabled,
         );
         const newConversation: any = await apiInitiateConversation(
           payload.content,
           payload.sourceIds,
           payload.libraryIds,
           payload.agenticMode,
+          payload.webSearchEnabled,
         );
         return newConversation;
       } catch (error) {

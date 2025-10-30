@@ -20,8 +20,10 @@ export function useChatInput(
     sourceIds?: string[];
     libraryIds?: string[];
     agenticMode?: boolean;
+    webSearchEnabled?: boolean;
   }) => void,
   agenticMode: boolean = false,
+  webSearchEnabled: boolean = false,
 ) {
   const [value, setValue] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -83,9 +85,10 @@ export function useChatInput(
       mentions,
       libraryIds,
       agenticMode,
+      webSearchEnabled,
     });
 
-    onSend({ content: xmlContent, libraryIds, agenticMode });
+    onSend({ content: xmlContent, libraryIds, agenticMode, webSearchEnabled });
     setValue('');
     setPlainText('');
     setMentions([]);

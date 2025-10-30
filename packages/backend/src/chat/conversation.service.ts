@@ -142,6 +142,7 @@ export class ConversationService {
     sourceIds?: string[],
     libraryIds?: string[],
     agenticMode?: boolean,
+    webSearchEnabled?: boolean,
   ) {
     // Collect all source IDs from both sourceIds and libraryIds
     let allSourceIds: string[] = [];
@@ -179,11 +180,18 @@ export class ConversationService {
       }
     }
 
+    // Web search is only available in agentic mode
+    const useAgenticMode = agenticMode !== false;
+    const useWebSearch = useAgenticMode && webSearchEnabled === true;
+
     const newConversation = await this.prisma.conversation.create({
       data: {
         userId,
         title: content.split(' ').slice(0, 5).join(' ') + '...',
-        metadata: { agenticMode: agenticMode !== false }, // Store in conversation metadata
+        metadata: {
+          agenticMode: useAgenticMode,
+          webSearchEnabled: useWebSearch,
+        }, // Store in conversation metadata
         sources:
           allSourceIds.length > 0
             ? { connect: allSourceIds.map((id) => ({ id })) }
@@ -192,7 +200,10 @@ export class ConversationService {
           create: {
             role: 'user',
             content: content,
-            metadata: { agenticMode: agenticMode !== false }, // Also store in message metadata
+            metadata: {
+              agenticMode: useAgenticMode,
+              webSearchEnabled: useWebSearch,
+            }, // Also store in message metadata
           },
         },
       },
@@ -203,7 +214,6 @@ export class ConversationService {
 
     if (this.server && newConversation.messages.length > 0) {
       const userMessage = newConversation.messages[0];
-      const useAgenticMode = agenticMode !== false; // Default to true
       
       if (useAgenticMode) {
         this.messageService

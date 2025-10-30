@@ -60,6 +60,7 @@ export class ChatController {
       sourceIds?: string[];
       libraryIds?: string[];
       agenticMode?: boolean;
+      webSearchEnabled?: boolean;
     },
     @Request() req: RequestWithUser,
   ) {
@@ -69,6 +70,7 @@ export class ChatController {
       body.sourceIds,
       body.libraryIds,
       body.agenticMode,
+      body.webSearchEnabled,
     );
   }
 

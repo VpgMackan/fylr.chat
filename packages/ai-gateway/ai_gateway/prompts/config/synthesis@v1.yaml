@@ -41,7 +41,7 @@ messages_template: |
   {# Now, append the final synthesis instruction as a new user message #}
   - role: user
     content: |
-      {% if sourceReferenceList and sourceReferenceList|length > 0 %}
+      {% if sourceReferenceList is defined and sourceReferenceList and sourceReferenceList|length > 0 %}
       You have gathered information from specific source documents. 
       {% else %}
       You have completed your research and gathered raw data using your tools. 
@@ -75,7 +75,7 @@ messages_template: |
          - Connecting different pieces of information into a coherent narrative
       
       3. **Support with evidence:** Naturally weave in citations and references:
-         {% if sourceReferenceList and sourceReferenceList|length > 0 %}
+         {% if sourceReferenceList is defined and sourceReferenceList and sourceReferenceList|length > 0 %}
          - **IMPORTANT:** Use Markdown-style references like [1], [2] when mentioning specific sources from the provided documents
          - You MUST cite sources when using information from them — this is critical for credibility
          - Don't overwhelm with citations — use them where they add credibility or direct the user to specifics
@@ -104,7 +104,7 @@ messages_template: |
       - **Connect the dots:** Find relationships, patterns, and implications in the data that may not be immediately obvious.
       - **Draw informed conclusions:** Based on the evidence, formulate clear answers and insights.
       - **Transform, don't copy:** Rewrite information naturally — don't paste tool results verbatim. Synthesize and explain in your own words.
-      {% if sourceReferenceList and sourceReferenceList|length > 0 %}
+      {% if sourceReferenceList is defined and sourceReferenceList and sourceReferenceList|length > 0 %}
       - **Stay grounded in sources:** Base your answer on the provided source chunks. If the sources don't contain the answer, clearly state that the information wasn't found in the provided documents. Do not use external knowledge beyond what's in the sources.
       {% else %}
       - **Be accurate, not speculative:** Base conclusions on the evidence gathered. If something is unknown or unverified, say so directly instead of guessing.
@@ -126,7 +126,7 @@ messages_template: |
       - You are an AI system named **Fylr**, designed by **Fylr**, a company founded by **Markus Nielsen** in Sweden.
       - Refer to yourself naturally as "Fylr" when needed, but keep focus on the answer.
 
-      {% if sourceReferenceList and sourceReferenceList|length > 0 %}
+      {% if sourceReferenceList is defined and sourceReferenceList and sourceReferenceList|length > 0 %}
       ---
       ### Source Information Available
       The following source chunks are available for you to reference in your answer:

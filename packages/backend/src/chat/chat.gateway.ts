@@ -133,11 +133,18 @@ export class ChatGateway
 
       case 'sendMessage': {
         try {
-          const { content, sourceIds, libraryIds, agenticMode } = payload as {
+          const {
+            content,
+            sourceIds,
+            libraryIds,
+            agenticMode,
+            webSearchEnabled,
+          } = payload as {
             content: string;
             sourceIds?: string[];
             libraryIds?: string[];
             agenticMode?: boolean;
+            webSearchEnabled?: boolean;
           };
 
           // Log the received agenticMode value for debugging
@@ -216,10 +223,17 @@ export class ChatGateway
             throw new WsException('content is required for sendMessage action');
           }
 
-          // Update conversation metadata with the current agenticMode setting
+          // Update conversation metadata with the current agenticMode and webSearchEnabled settings
           const useAgenticMode = agenticMode !== false; // Default to true
+          // Web search is only available in agentic mode
+          const useWebSearch = useAgenticMode && webSearchEnabled === true;
           await this.conversationService.updateConversation(
-            { metadata: { agenticMode: useAgenticMode } },
+            {
+              metadata: {
+                agenticMode: useAgenticMode,
+                webSearchEnabled: useWebSearch,
+              },
+            },
             conversationId,
             client.user.id,
           );
@@ -228,7 +242,10 @@ export class ChatGateway
             {
               role: 'user',
               content: content,
-              metadata: { agenticMode: useAgenticMode }, // Store mode in metadata
+              metadata: {
+                agenticMode: useAgenticMode,
+                webSearchEnabled: useWebSearch,
+              }, // Store mode and web search in metadata
             },
             conversationId,
           );

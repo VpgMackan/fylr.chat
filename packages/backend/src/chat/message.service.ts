@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -27,6 +28,8 @@ import { tools as specialTools } from './tool';
 
 @Injectable()
 export class MessageService {
+  private readonly logger = new Logger(MessageService.name);
+
   constructor(
     private prisma: PrismaService,
     private readonly llmService: LLMService,
@@ -387,6 +390,27 @@ export class MessageService {
           ? conversation.sources[0].library.defaultEmbeddingModel
           : undefined;
 
+      // Determine which tools to load based on conversation state
+      const hasSources = conversation.sources.length > 0;
+      const userMetadata = userMessage.metadata as any;
+      const conversationMetadata = conversation.metadata as any;
+      const webSearchEnabled =
+        userMetadata?.webSearchEnabled === true ||
+        conversationMetadata?.webSearchEnabled === true;
+
+      const availableTools = this.getAvailableTools(
+        hasSources,
+        webSearchEnabled,
+      );
+
+      // If no tools are available and web search is not enabled, fall back to RAG mode
+      if (availableTools.length === 0) {
+        this.logger.log(
+          `No tools available for conversation ${conversationId}, falling back to RAG mode`,
+        );
+        return this.generateAndStreamAiResponse(userMessage, server);
+      }
+
       // Create and emit initial thought, linking it to the user message
       const initialThought = await this.createMessage(
         {
@@ -421,7 +445,7 @@ export class MessageService {
         try {
           const llmResponse = await this.llmService.generateWithTools(
             llmMessages,
-            [...this.toolService.getAllToolDefinitions(), ...specialTools],
+            availableTools,
           );
 
           const responseMessage = llmResponse.choices[0]?.message;
@@ -728,6 +752,53 @@ export class MessageService {
   /**
    * Builds context messages from database messages, keeping most recent within limit
    */
+  /**
+   * Get available tools based on conversation state
+   * @param hasSources Whether the conversation has sources
+   * @param webSearchEnabled Whether web search is enabled
+   * @returns Array of tool definitions to provide to the LLM
+   */
+  private getAvailableTools(
+    hasSources: boolean,
+    webSearchEnabled: boolean,
+  ): any[] {
+    const tools: any[] = [];
+
+    // Get all tool definitions
+    const allToolDefinitions = this.toolService.getAllToolDefinitions();
+
+    // Document-related tools (only if sources exist)
+    if (hasSources) {
+      const documentTools = [
+        'search_documents',
+        'read_document_chunk',
+        'list_sources_in_library',
+      ];
+      tools.push(
+        ...allToolDefinitions.filter((tool) =>
+          documentTools.includes(tool.function.name),
+        ),
+      );
+    }
+
+    // Web-related tools (only if web search is enabled)
+    if (webSearchEnabled) {
+      const webTools = ['web_search', 'fetch_webpage'];
+      tools.push(
+        ...allToolDefinitions.filter((tool) =>
+          webTools.includes(tool.function.name),
+        ),
+      );
+    }
+
+    // Always add the provide_final_answer tool when tools are available
+    if (tools.length > 0) {
+      tools.push(...specialTools);
+    }
+
+    return tools;
+  }
+
   private buildContextMessages(messages: any[], maxMessages: number): any[] {
     // Always include user messages and their immediate assistant responses
     // Prioritize recent messages
