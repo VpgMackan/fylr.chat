@@ -67,15 +67,12 @@ async def stream_provider_response(
                 ],
             }
             # Format as Server-Sent Event (SSE)
-            # Use ensure_ascii=False to handle unicode properly, but errors='surrogatepass'
-            # doesn't work with json.dumps, so we need to handle it differently
             try:
+                # Ensure proper UTF-8 encoding without replacement characters
                 json_str = json.dumps(chunk_data, ensure_ascii=False)
-                # Encode to bytes and decode back, replacing surrogates
-                json_str = json_str.encode("utf-8", errors="replace").decode("utf-8")
                 yield f"data: {json_str}\n\n"
-            except (UnicodeEncodeError, UnicodeDecodeError) as e:
-                # If we still can't encode, fall back to ASCII-safe encoding
+            except (UnicodeEncodeError, UnicodeDecodeError, TypeError) as e:
+                # If encoding fails, use ASCII-safe encoding
                 json_str = json.dumps(chunk_data, ensure_ascii=True)
                 yield f"data: {json_str}\n\n"
 
@@ -101,6 +98,10 @@ async def create_chat_completion(request: ChatCompletionRequest):
     """
     Generates a chat completion. Now supports combining a `prompt_type`
     (as a system prompt) with a list of `messages`.
+    
+    The reasoning parameter controls the model's thinking mode:
+    - reasoning=True (default): Model uses thinking/reasoning mode
+    - reasoning=False: Model uses non-thinking mode for faster responses
     """
     base_messages = []
     user_messages = []

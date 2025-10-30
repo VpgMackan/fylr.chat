@@ -55,17 +55,26 @@ interface StreamingChunk {
   choices: StreamingChoice[];
 }
 
+interface ReasoningConfig {
+  enabled?: boolean;
+  effort?: 'low' | 'medium' | 'high';
+  max_tokens?: number;
+  exclude?: boolean;
+}
+
 type TemplatePayload = {
   prompt_type: string;
   prompt_vars: Record<string, unknown>;
   prompt_version?: string;
   messages?: any[];
   tools?: any[];
+  reasoning?: ReasoningConfig | boolean;
 };
 
 type MessagePayload = {
   messages: any[];
   tools?: any[];
+  reasoning?: ReasoningConfig | boolean;
 };
 
 @Injectable()

@@ -21,22 +21,27 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { CreateSourceDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
-const allowedMimeTypes = [
-  'application/pdf',
-  'text/plain',
-  'text/markdown',
-  'application/octet-stream',
+const allowedExtensions = [
+  '.pdf',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.docx',
+  '.pptx',
 ];
 
 export const fileFilter = (_req, file, cb) => {
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const extension = file.originalname.toLowerCase().split('.').pop();
+  const extensionWithDot = `.${extension}`;
+
+  if (allowedExtensions.includes(extensionWithDot)) {
     cb(null, true);
   } else {
     cb(
       new BadRequestException(
-        `Invalid file type. Allowed types: ${allowedMimeTypes.join(
+        `Invalid file type. Allowed extensions: ${allowedExtensions.join(
           ', ',
-        )}. Received: ${file.mimetype}`,
+        )}. Received: ${file.originalname}`,
       ),
       false,
     );
@@ -120,5 +125,14 @@ export class SourceController {
     @Request() req: RequestWithUser,
   ) {
     return this.sourceService.getVectorsBySourceId(sourceId, req.user.id);
+  }
+
+  @Post(':sourceId/requeue')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async requeueSource(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.requeueSource(sourceId, req.user.id);
   }
 }

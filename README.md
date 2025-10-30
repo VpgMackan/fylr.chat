@@ -37,7 +37,7 @@ npm install
 
 # Install all Python dependencies
 cd packages/ai-gateway && poetry install && cd ../..
-cd packages/file-ingestor && poetry install && cd ../..
+cd packages/ingestor/ingestors/text-python-1 && poetry install && cd ../../../..
 cd packages/generator && poetry install && cd ../..
 ```
 
@@ -67,8 +67,8 @@ cd packages/generator && poetry install && cd ../..
     # AI Gateway
     cd packages/ai-gateway && poetry run gateway
 
-    # File Ingestor
-    cd packages/file-ingestor && poetry run ingest
+    # File Ingestor (Text/PDF/Markdown)
+    cd packages/ingestor/ingestors/text-python-1 && poetry run ingest
 
     # Summary Generator
     cd packages/generator && poetry run generator
@@ -90,7 +90,7 @@ This project is a monorepo containing several packages:
 -   `packages/web`: The Next.js frontend application.
 -   `packages/backend`: The NestJS backend API that serves as the central orchestrator.
 -   `packages/ai-gateway`: A FastAPI service that provides a unified interface to AI models.
--   `packages/file-ingestor`: A Python worker for processing and embedding uploaded files.
+-   `packages/ingestor`: Contains versioned ingestor services for processing and embedding uploaded files (e.g., `text-python-1` for PDF, Markdown, and plain text).
 -   `packages/generator`: A Python worker for generating summaries.
 -   `packages/types`: Shared TypeScript types and DTOs used across the backend and frontend.
 -   `docs`: Contains detailed documentation on architecture, setup, and more.

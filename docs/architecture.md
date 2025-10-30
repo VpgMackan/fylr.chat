@@ -25,7 +25,7 @@ Fylr.Chat is built on a microservices architecture to ensure scalability, mainta
 -   **Responsibilities**:
     -   Provides a unified, internal API for accessing different AI models.
     -   Abstracts the specific logic for various LLM and embedding providers (e.g., OpenAI, Jina).
-    -   Manages a registry of prompt templates (`hyde`, `final_rag`, `summary`, etc.) to standardize interactions with LLMs.
+    -   Manages a registry of prompt templates (`hyde`, `synthesis`, `summary`, etc.) to standardize interactions with LLMs.
     -   This component allows the rest of the system to be model-agnostic.
 
 #### 4. File Ingestor (`packages/file-ingestor`)
@@ -65,5 +65,5 @@ Fylr.Chat is built on a microservices architecture to ensure scalability, mainta
 2.  The **Backend API** receives the message via a WebSocket connection.
 3.  The **Backend** calls the **AI Gateway** with a `hyde` prompt to generate a hypothetical answer, which is great for semantic search.
 4.  The **Backend** uses the hypothetical answer to query the **Pgvector** database for the most relevant document chunks.
-5.  The **Backend** calls the **AI Gateway** again, this time with a `final_rag` prompt that includes the original question, chat history, and the retrieved document chunks as context.
-6.  The **AI Gateway** returns a streaming response, which the **Backend** forwards to the **Web UI** in real-time.
+5.  The **Backend** calls the **AI Gateway** again, this time with a `synthesis` prompt that includes the conversation history and, if relevant chunks are found, the retrieved document chunks as context with citations.
+6.  The **AI Gateway** returns a streaming response with natural, conversational answers (and citations when using source documents), which the **Backend** forwards to the **Web UI** in real-time.

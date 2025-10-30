@@ -19,7 +19,11 @@ export function useChatInput(
     content: string;
     sourceIds?: string[];
     libraryIds?: string[];
+    agenticMode?: boolean;
+    webSearchEnabled?: boolean;
   }) => void,
+  agenticMode: boolean = false,
+  webSearchEnabled: boolean = false,
 ) {
   const [value, setValue] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -58,7 +62,33 @@ export function useChatInput(
 
     // Mentions are library IDs (from @ mentions)
     const libraryIds = mentions.map((m) => m.id);
-    onSend({ content: plainText, libraryIds });
+
+    let xmlContent = plainText;
+
+    mentions.forEach((mention) => {
+      // The mention.display may have spaces, so we need to trim it
+      const displayName = mention.display.trim();
+      // Create pattern that matches the mention in the plain text
+      const mentionPattern = new RegExp(
+        `${displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        'g',
+      );
+      xmlContent = xmlContent.replace(
+        mentionPattern,
+        `<library id="${mention.id}" name="${displayName}">${displayName}</library>`,
+      );
+    });
+
+    console.log('[ChatInput] Sending message:', {
+      plainText,
+      xmlContent,
+      mentions,
+      libraryIds,
+      agenticMode,
+      webSearchEnabled,
+    });
+
+    onSend({ content: xmlContent, libraryIds, agenticMode, webSearchEnabled });
     setValue('');
     setPlainText('');
     setMentions([]);

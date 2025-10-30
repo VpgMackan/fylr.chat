@@ -25,31 +25,36 @@ model User {
 }
 
 model Library {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  icon        String
-  description String   @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
-  tags        String[] @db.Text
-  title       String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sources     Source[]
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  icon                  String
+  description           String   @db.Text
+  createdAt             DateTime @default(now()) @map("created_at")
+  tags                  String[] @db.Text
+  title                 String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources               Source[]
+  defaultEmbeddingModel String   @map("default_embedding_model")
 
   @@map("Libraries")
 }
 
 model Source {
-  id            String         @id @default(uuid())
-  libraryId     String         @map("library_id")
-  name          String
-  type          String
-  url           String
-  size          Int
-  uploadTime    DateTime       @default(now()) @map("upload_time")
-  jobKey        String         @map("job_key")
-  status        String         @db.Text
-  library       Library        @relation(fields: [libraryId], references: [id], onDelete: Cascade)
-  vectors       Vector[]
+  id         String   @id @default(uuid())
+  libraryId  String   @map("library_id")
+  name       String
+  mimeType   String   @map("type")
+  url        String
+  size       Int
+  uploadTime DateTime @default(now()) @map("upload_time")
+  jobKey     String   @map("job_key")
+  status     String   @db.Text
+  library    Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  vectors    Vector[]
+
+  ingestorType    String?
+  ingestorVersion String?
+
   conversations Conversation[] @relation("ConversationSources")
   summaries     Summary[]      @relation("SummarySources")
   podcasts      Podcast[]      @relation("PodcastSources")
@@ -148,6 +153,11 @@ model Message {
   toolCallId String? @map("tool_call_id")
 
   metadata Json?
+
+  // Parent message ID - for grouping thoughts and responses to a user message
+  parentMessageId String?   @map("parent_message_id")
+  parentMessage   Message?  @relation("MessageThread", fields: [parentMessageId], references: [id], onDelete: Cascade)
+  childMessages   Message[] @relation("MessageThread")
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 

@@ -16,6 +16,8 @@ export default function HomeView() {
   const handleSend = async (payload: {
     content: string;
     sourceIds?: string[];
+    libraryIds?: string[];
+    agenticMode?: boolean;
   }) => {
     if (isSending) return;
     setIsSending(true);
@@ -38,7 +40,7 @@ export default function HomeView() {
             Welcome to Fylr Chat
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Please leave, I don't want to answer your questions.
+            Ask anything and I will try to help you out!
           </p>
         </div>
         <div className="w-full">

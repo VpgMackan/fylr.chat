@@ -101,33 +101,34 @@ export default function ConversationOptionsMenu({
     <div className="relative" ref={menuRef}>
       <button
         onClick={toggleMenu}
-        className="flex-shrink-0 p-1 hover:bg-blue-300 rounded transition-all"
+        className="flex-shrink-0 p-1.5 hover:bg-white/30 rounded-lg transition-all duration-200"
+        aria-label="Options menu"
       >
         <Icon
           icon="heroicons-solid:dots-horizontal"
           width="16"
           height="16"
-          className="text-gray-600"
+          className="text-current"
         />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden animate-fadeIn">
           {isRenaming ? (
-            <form onSubmit={handleRenameSubmit} className="p-2">
+            <form onSubmit={handleRenameSubmit} className="p-3">
               <input
                 ref={inputRef}
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onClick={(e) => e.stopPropagation()}
               />
-              <div className="flex gap-1 mt-2">
+              <div className="flex gap-2 mt-3">
                 <button
                   type="submit"
-                  className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Save
@@ -139,7 +140,7 @@ export default function ConversationOptionsMenu({
                     setIsRenaming(false);
                     setNewName(conversationName);
                   }}
-                  className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                  className="flex-1 px-3 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -149,17 +150,23 @@ export default function ConversationOptionsMenu({
             <>
               <button
                 onClick={handleRenameClick}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 flex items-center gap-2 transition-colors"
               >
-                <Icon icon="heroicons-solid:pencil" width="16" height="16" />
-                Rename
+                <Icon
+                  icon="heroicons-solid:pencil"
+                  width="16"
+                  height="16"
+                  className="text-blue-500"
+                />
+                <span className="font-medium">Rename</span>
               </button>
+              <div className="h-px bg-gray-100 mx-2"></div>
               <button
                 onClick={handleDeleteClick}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 transition-colors"
               >
                 <Icon icon="heroicons-solid:trash" width="16" height="16" />
-                Delete
+                <span className="font-medium">Delete</span>
               </button>
             </>
           )}

@@ -7,12 +7,14 @@ export interface SourceApiResponse {
   id: string;
   libraryId: string;
   name: string;
-  type: string;
+  mimeType: string;
   url: string;
   size: string;
   uploadTime: string;
   status: string;
   jobKey?: string;
+  ingestorType?: string | null;
+  ingestorVersion?: string | null;
 }
 
 export interface ConversationApiResponse {
@@ -32,6 +34,7 @@ export interface LibraryApiResponse {
   tags: string[];
   title: string;
   sources: SourceApiResponse[];
+  defaultEmbeddingModel: string;
 }
 
 export interface MessageApiResponse {
@@ -54,6 +57,7 @@ export interface MessageAndSourceApiResponse {
   messages: MessageApiResponse[];
   sources: SourceApiResponseWithIsActive[];
   name: string;
+  metadata?: any;
 }
 
 export interface SummaryEpisodeApiResponse {

@@ -23,6 +23,7 @@ This document provides a comprehensive reference for all environment variables u
 | `PORT`                | The port on which the backend server will run.                                                          | `3001`                                                                          |
 | `AI_GATEWAY_URL`      | **Required.** The full URL of the AI Gateway service.                                                   | `http://localhost:8000`                                                         |
 | `RABBITMQ_URL`        | **Required.** The connection URL for the RabbitMQ server.                                               | `amqp://guest:guest@localhost:5672`                                             |
+| `TAVILY_API_KEY`      | **Required.** The API key for Tavily web search service. Get from https://tavily.com/                   | `tvly-xxxxxxxxxxxxxxxxxxxxxxxx`                                                 |
 
 ---
 

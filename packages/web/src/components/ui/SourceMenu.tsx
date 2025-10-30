@@ -26,7 +26,7 @@ export default function SourceMenu({
     <>
       <button
         onClick={toggleSourceMenu}
-        className="absolute bottom-full left-0 mb-2 bg-blue-200 rounded-t-2xl border border-blue-300 shadow-md p-3 min-w-[200px] flex items-center hover:bg-blue-300 transition-colors cursor-pointer"
+        className="absolute bottom-full right-0 mb-2 bg-blue-200 rounded-t-2xl border border-blue-300 shadow-md p-3 min-w-[200px] flex items-center hover:bg-blue-300 transition-colors cursor-pointer"
       >
         <div className="text-sm text-gray-700 font-medium">
           Selected Sources
@@ -40,7 +40,7 @@ export default function SourceMenu({
       </button>
 
       {isSourceMenuOpen && (
-        <div className="absolute bottom-full left-0 mb-[60px] bg-blue-100 rounded-t-2xl border border-blue-300 shadow-lg p-3 min-w-[350px] max-w-[500px] max-h-[400px] overflow-y-auto">
+        <div className="absolute bottom-full right-0 mb-[60px] bg-blue-100 rounded-t-2xl border border-blue-300 shadow-lg p-3 min-w-[350px] max-w-[500px] max-h-[400px] overflow-y-auto">
           <div className="text-xs font-semibold text-gray-800 mb-2">
             Libraries & Sources
           </div>

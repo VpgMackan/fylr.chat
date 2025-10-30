@@ -4,6 +4,7 @@ export interface WsSendMessagePayload {
   action: 'sendMessage';
   conversationId: string;
   content: string;
+  agenticMode?: boolean;
 }
 
 export interface WsDeleteMessagePayload {
@@ -53,7 +54,11 @@ export interface WsNewMessageEvent {
 export interface WsMessageChunkEvent {
   action: 'messageChunk';
   conversationId: string;
-  data: { content: string };
+  data: {
+    content: string;
+    chunkIndex: number;
+    streamId: string;
+  };
 }
 
 export interface WsMessageEndEvent {
@@ -92,6 +97,12 @@ export interface WsAgentThoughtEvent {
   data: MessageApiResponse;
 }
 
+export interface WsToolProgressEvent {
+  action: 'toolProgress';
+  conversationId: string;
+  data: { toolName: string; message: string };
+}
+
 export type WsServerEventPayload =
   | WsNewMessageEvent
   | WsMessageChunkEvent
@@ -100,4 +111,5 @@ export type WsServerEventPayload =
   | WsMessageDeletedEvent
   | WsMessageUpdatedEvent
   | WsStatusUpdateEvent
-  | WsAgentThoughtEvent;
+  | WsAgentThoughtEvent
+  | WsToolProgressEvent;

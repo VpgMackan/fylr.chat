@@ -102,6 +102,10 @@ export class CreateMessageDto {
   @IsOptional()
   toolCallId?: string;
 
+  @IsString()
+  @IsOptional()
+  parentMessageId?: string;
+
   @IsObject()
   @IsOptional()
   @Transform(({ value }) => {

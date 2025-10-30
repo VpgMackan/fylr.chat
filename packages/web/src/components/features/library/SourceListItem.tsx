@@ -80,11 +80,7 @@ export default function SourceListItem({
   });
 
   const handleClick = () => {
-    if (currentStatus === 'COMPLETED') {
-      router.push(`/library/${libraryId}/source/${id}`);
-    } else {
-      toast('Please wait until the file has been processed.');
-    }
+    router.push(`/library/${libraryId}/source/${id}`);
   };
 
   const isProcessing = !['COMPLETED', 'FAILED'].includes(currentStatus);
@@ -92,9 +88,8 @@ export default function SourceListItem({
 
   return (
     <button
-      className="w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between disabled:opacity-70 disabled:cursor-not-allowed"
+      className="w-full bg-transparent text-left border border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
       onClick={handleClick}
-      disabled={isProcessing}
     >
       <div>
         <div className="flex justify-between items-start">

@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any, AsyncGenerator, Optional
 import structlog
 from ..schemas import ChatCompletionRequest
 
@@ -26,3 +26,13 @@ class BaseProvider(ABC):
         log.warn("provider_unsupported_method", method="generate_text_stream")
         if False:
             yield
+
+    def rerank(
+        self,
+        query: str,
+        documents: List[str],
+        model: str,
+        top_n: Optional[int] = None,
+    ):
+        log.warn("provider_unsupported_method", method="rerank")
+        raise NotImplementedError("Reranking is not supported by this provider")

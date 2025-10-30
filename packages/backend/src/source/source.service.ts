@@ -62,7 +62,7 @@ export class SourceService {
     const data: Prisma.SourceCreateInput = {
       library: { connect: { id: libraryId } },
       name: file.originalname,
-      type: file.mimetype,
+      mimeType: file.mimetype,
       url: s3Key,
       size: file.size,
       jobKey,
@@ -71,11 +71,11 @@ export class SourceService {
 
     const entry = await this.prisma.source.create({ data });
 
-    await this.rabbitMQService.sendToQueue('file-processing', {
+    await this.rabbitMQService.publishFileProcessingJob({
       sourceId: entry.id,
       s3Key,
-      mimeType: file.mimetype,
       jobKey,
+      embeddingModel: library.defaultEmbeddingModel,
     });
 
     return {
@@ -137,7 +137,7 @@ export class SourceService {
     }));
   }
 
-  async findByVector(vector: number[], sourceIds: string[]) {
+  async findByVector(vector: number[], sourceIds: string[], limit: number = 5) {
     if (sourceIds.length === 0) {
       return [];
     }
@@ -156,7 +156,7 @@ export class SourceService {
       INNER JOIN "Sources" s ON s.id = v.file_id
       WHERE s.id IN (${Prisma.join(sourceIds)})
       ORDER BY v.embedding <-> ${vectorSql}::vector
-      LIMIT 5
+      LIMIT ${limit}
     `;
 
     return result.map((item) => ({
@@ -192,7 +192,7 @@ export class SourceService {
     const stream = await this.s3Service.getObject(this.s3Bucket, source.url);
     return {
       stream,
-      contentType: source.type,
+      contentType: source.mimeType,
       filename: source.name,
     };
   }
@@ -208,5 +208,41 @@ export class SourceService {
       where: { fileId: sourceId },
       orderBy: { chunkIndex: 'asc' },
     });
+  }
+
+  async requeueSource(sourceId: string, userId: string) {
+    const source = await this.prisma.source.findFirst({
+      where: { id: sourceId, library: { userId } },
+      include: { library: true },
+    });
+
+    if (!source) {
+      throw new NotFoundException('Source not found or not accessible');
+    }
+
+    const newJobKey = uuidv4();
+
+    // Update the source with new job key and reset status
+    const updatedSource = await this.prisma.source.update({
+      where: { id: sourceId },
+      data: {
+        jobKey: newJobKey,
+        status: 'QUEUED',
+      },
+    });
+
+    // Publish new processing job
+    await this.rabbitMQService.publishFileProcessingJob({
+      sourceId: source.id,
+      s3Key: source.url,
+      jobKey: newJobKey,
+      embeddingModel: source.library.defaultEmbeddingModel,
+    });
+
+    return {
+      message: 'Source re-queued for processing successfully.',
+      jobKey: newJobKey,
+      source: updatedSource,
+    };
   }
 }

@@ -56,6 +56,15 @@ class OpenaiCompatibleProvider(BaseProvider):
         if request.tool_choice:
             params["tool_choice"] = request.tool_choice
 
+        if request.reasoning is not None:
+            if isinstance(request.reasoning, bool):
+                if not request.reasoning:
+                    params["reasoning"] = {"exclude": True}
+            else:
+                reasoning_dict = request.reasoning.model_dump(exclude_none=True)
+                if reasoning_dict:
+                    params["reasoning"] = reasoning_dict
+
         response = self.client.chat.completions.create(**params)
         return response.model_dump()
 
@@ -84,6 +93,15 @@ class OpenaiCompatibleProvider(BaseProvider):
             params["tools"] = [tool.model_dump() for tool in request.tools]
         if request.tool_choice:
             params["tool_choice"] = request.tool_choice
+
+        if request.reasoning is not None:
+            if isinstance(request.reasoning, bool):
+                if not request.reasoning:
+                    params["reasoning"] = {"exclude": True}
+            else:
+                reasoning_dict = request.reasoning.model_dump(exclude_none=True)
+                if reasoning_dict:
+                    params["reasoning"] = reasoning_dict
 
         stream = await self.async_client.chat.completions.create(**params)
         async for chunk in stream:

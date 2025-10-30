@@ -25,18 +25,19 @@ export default function ConversationList({
   const handleDelete = onDelete || (async () => {});
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="flex flex-col gap-1">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <div className="flex flex-col gap-1.5 p-1">
         {items.map((item) => (
-          <Conversation
-            key={item.id}
-            id={item.id}
-            name={item.name}
-            selected={item.id === selectedId}
-            onClick={() => onSelect?.(item.id)}
-            onRename={handleRename}
-            onDelete={handleDelete}
-          />
+          <div key={item.id}>
+            <Conversation
+              id={item.id}
+              name={item.name}
+              selected={item.id === selectedId}
+              onClick={() => onSelect?.(item.id)}
+              onRename={handleRename}
+              onDelete={handleDelete}
+            />
+          </div>
         ))}
       </div>
     </div>

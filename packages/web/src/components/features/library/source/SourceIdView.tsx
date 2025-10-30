@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { Icon } from '@iconify/react';
 import { SourceApiResponse } from '@fylr/types';
 import {
   getSourceById,
   getVectorsBySourceId,
+  requeueSource,
   VectorChunk,
 } from '@/services/api/source.api';
 
@@ -20,6 +22,7 @@ export default function SourceIdPageView() {
   const [loadingVectors, setLoadingVectors] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedChunk, setSelectedChunk] = useState<number | null>(null);
+  const [requeuing, setRequeuing] = useState(false);
 
   useEffect(() => {
     const fetchSource = async () => {
@@ -54,6 +57,25 @@ export default function SourceIdPageView() {
       fetchSource();
     }
   }, [sourceId]);
+
+  const handleRequeue = async () => {
+    if (!source) return;
+
+    try {
+      setRequeuing(true);
+      await requeueSource(sourceId);
+      toast.success('Source re-queued for processing successfully!');
+
+      // Refresh the source data to update the status
+      const updatedSource = await getSourceById(sourceId);
+      setSource(updatedSource);
+    } catch (err: unknown) {
+      console.error('Error re-queuing source:', err);
+      toast.error('Failed to re-queue source for processing');
+    } finally {
+      setRequeuing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -187,7 +209,7 @@ export default function SourceIdPageView() {
                   className="text-xl text-purple-400"
                 />
               </div>
-              <p className="text-lg font-medium text-gray-200">{source.type}</p>
+              <p className="text-lg font-medium text-gray-200">{source.mimeType}</p>
             </div>
           </div>
 
@@ -223,33 +245,72 @@ export default function SourceIdPageView() {
         </div>
 
         {/* Actions */}
-        {source.status === 'COMPLETED' && (
-          <div className="pt-6 border-t border-gray-700/50">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-              Actions
-            </h2>
-            <div className="flex gap-3">
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${source.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg transition-all text-white font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:scale-105"
+        <div className="pt-6 border-t border-gray-700/50">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+            Actions
+          </h2>
+          <div className="flex gap-3 flex-wrap">
+            {source.status === 'COMPLETED' && (
+              <>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${source.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg transition-all text-white font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:scale-105"
+                >
+                  <Icon icon="mdi:eye-outline" className="mr-2 text-lg" />
+                  View Document
+                </a>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${source.id}`}
+                  download
+                  className="flex items-center px-5 py-2.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition-all text-white font-medium hover:scale-105"
+                >
+                  <Icon icon="mdi:download" className="mr-2 text-lg" />
+                  Download
+                </a>
+              </>
+            )}
+            {(source.status === 'COMPLETED' || source.status === 'FAILED') && (
+              <button
+                onClick={handleRequeue}
+                disabled={requeuing}
+                className="flex items-center px-5 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:bg-orange-800 disabled:cursor-not-allowed rounded-lg transition-all text-white font-medium shadow-lg shadow-orange-600/20 hover:shadow-orange-500/30 hover:scale-105 disabled:hover:scale-100"
               >
-                <Icon icon="mdi:eye-outline" className="mr-2 text-lg" />
-                View Document
-              </a>
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL}/source/file/${source.id}`}
-                download
-                className="flex items-center px-5 py-2.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition-all text-white font-medium hover:scale-105"
-              >
-                <Icon icon="mdi:download" className="mr-2 text-lg" />
-                Download
-              </a>
+                <Icon
+                  icon={requeuing ? "mdi:loading" : "mdi:refresh"}
+                  className={`mr-2 text-lg ${requeuing ? 'animate-spin' : ''}`}
+                />
+                {requeuing ? 'Re-queuing...' : 'Re-queue for Processing'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Processing Status Message */}
+      {!['COMPLETED', 'FAILED'].includes(source.status) && (
+        <div className="mt-6 bg-gradient-to-br from-blue-900/20 to-blue-800/20 border border-blue-700/50 rounded-xl p-6 shadow-xl">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <Icon
+                icon="mdi:sync"
+                className="text-6xl text-blue-400 mx-auto mb-4 animate-spin"
+              />
+              <h3 className="text-xl font-bold text-blue-300 mb-2">
+                Processing in Progress
+              </h3>
+              <p className="text-gray-400 mb-4">
+                This document is currently being processed. The content will be available once processing is complete.
+              </p>
+              <div className="inline-flex items-center px-4 py-2 bg-blue-500/20 rounded-lg border border-blue-400/30">
+                <Icon icon="mdi:information-outline" className="mr-2 text-blue-400" />
+                <span className="text-sm text-blue-300">Status: {source.status}</span>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Document Content with Vector Chunks */}
       {source.status === 'COMPLETED' && (

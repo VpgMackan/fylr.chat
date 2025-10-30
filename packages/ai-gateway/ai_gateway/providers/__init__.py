@@ -28,3 +28,23 @@ providers = {
     **_base_providers,
     "auto": AutoProvider(_base_providers),
 }
+
+
+def get_provider(provider_name: str):
+    """
+    Get a provider instance by name.
+
+    Args:
+        provider_name: The name of the provider (e.g., "jina", "openai", "auto")
+
+    Returns:
+        The provider instance
+
+    Raises:
+        ValueError: If the provider name is not found
+    """
+    if provider_name not in providers:
+        raise ValueError(
+            f"Provider '{provider_name}' not found. Available providers: {', '.join(providers.keys())}"
+        )
+    return providers[provider_name]
