@@ -11,6 +11,13 @@ datasource db {
   extensions = [vector]
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  INACTIVE
+}
+
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
@@ -21,8 +28,27 @@ model User {
   summary       Summary[]
   podcast       Podcast[]
   refreshTokens RefreshToken[]
+  Subscription  Subscription?
 
   @@map("Users")
+}
+
+model Subscription {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status                   SubscriptionStatus @default(INACTIVE)
+  expiresAt                DateTime?          @map("expires_at")
+  remainingDurationOnPause Int?               @map("remaining_duration_on_pause")
+
+  pausedAt      DateTime? @map("paused_at")
+  lastResumedAt DateTime? @map("last_resumed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("Subscriptions")
 }
 
 model RefreshToken {
