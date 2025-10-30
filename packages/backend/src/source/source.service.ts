@@ -71,7 +71,7 @@ export class SourceService {
 
     const entry = await this.prisma.source.create({ data });
 
-    await this.rabbitMQService.sendToQueue('file-processing', {
+    await this.rabbitMQService.publishFileProcessingJob({
       sourceId: entry.id,
       s3Key,
       mimeType: file.mimetype,
@@ -138,11 +138,7 @@ export class SourceService {
     }));
   }
 
-  async findByVector(
-    vector: number[],
-    sourceIds: string[],
-    limit: number = 5,
-  ) {
+  async findByVector(vector: number[], sourceIds: string[], limit: number = 5) {
     if (sourceIds.length === 0) {
       return [];
     }

@@ -8,10 +8,11 @@ from botocore.config import Config
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
 
-from handlers import HandlerManager
-from database import get_db_session, Source, DocumentVector
-
+# Load environment variables BEFORE importing database module
 load_dotenv()
+
+from .handlers import HandlerManager
+from .database import get_db_session, Source, DocumentVector
 
 ROUTING_KEYS_STR = os.getenv("INGESTOR_ROUTING_KEYS")
 QUEUE_NAME = os.getenv("INGESTOR_QUEUE_NAME")
