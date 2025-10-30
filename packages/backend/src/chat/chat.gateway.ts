@@ -417,8 +417,7 @@ export class ChatGateway
       case 'regenerateMessage': {
         try {
           // Handle both direct messageId and nested payload structure
-          const messageId =
-            (payload as any).messageId || (payload as any).payload?.messageId;
+          const messageId = payload.messageId || payload.payload?.messageId;
 
           if (!messageId) {
             this.logger.error(

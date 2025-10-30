@@ -162,7 +162,9 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async revokeAllOtherSessions(@Request() req: ExpressRequest) {
     const refreshToken = req.cookies['refresh_token'];
-    const user = (req as any).user as UserPayload;
+    type AuthPayload = RequestWithUser & { user: UserPayload };
+
+    const user = (req as AuthPayload).user as UserPayload;
     if (!refreshToken || !user) {
       throw new BadRequestException('Missing user or token information');
     }
