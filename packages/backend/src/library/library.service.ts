@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PermissionsService } from 'src/auth/permissions.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateLibraryDto,
@@ -8,7 +13,10 @@ import {
 
 @Injectable()
 export class LibraryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private permissionsService: PermissionsService,
+  ) {}
 
   async findMultipleByUserId(
     id: string,
@@ -79,6 +87,15 @@ export class LibraryService {
   }
 
   async createLibrary(data: CreateLibraryDto) {
+    const canCreate = await this.permissionsService.canCreateLibrary(
+      data.userId,
+    );
+
+    if (!canCreate) {
+      throw new ForbiddenException(
+        'You have reached the maximum number of libraries for your plan. Please upgrade to create more.',
+      );
+    }
     return await this.prisma.library.create({ data });
   }
 

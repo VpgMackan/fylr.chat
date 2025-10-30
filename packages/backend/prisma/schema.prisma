@@ -18,11 +18,19 @@ enum SubscriptionStatus {
   INACTIVE
 }
 
+enum UserRole {
+  FREE
+  PRO
+}
+
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  name          String
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+
+  role UserRole @default(FREE)
+
   libraries     Library[]
   conversations Conversation[]
   summary       Summary[]
