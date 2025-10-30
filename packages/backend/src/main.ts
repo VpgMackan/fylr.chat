@@ -2,6 +2,7 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 import * as csurf from 'csurf';
+import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 
@@ -22,6 +23,7 @@ async function bootstrap() {
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));
 
+  app.use(helmet());
   app.use(cookieParser());
 
   app.use(

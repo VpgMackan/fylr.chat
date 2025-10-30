@@ -44,6 +44,7 @@
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
     "csurf": "^1.11.0",
+    "helmet": "^8.1.0",
     "multer": "^2.0.2",
     "pg": "^8.15.5",
     "reflect-metadata": "^0.2.2",
