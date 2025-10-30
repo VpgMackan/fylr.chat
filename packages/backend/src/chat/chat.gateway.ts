@@ -12,6 +12,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import {
   ChatTokenPayload,
   UpdateMessageDto,
@@ -37,6 +38,7 @@ export class ChatGateway
 
   constructor(
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     private readonly messageService: MessageService,
     private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
@@ -51,7 +53,9 @@ export class ChatGateway
         const token = socket.handshake.auth?.token;
         if (!token) throw new Error('No token provided');
 
-        const payload: ChatTokenPayload = this.jwtService.verify(token);
+        const payload: ChatTokenPayload = this.jwtService.verify(token, {
+          secret: this.configService.getOrThrow<string>('JWT_SECRET'),
+        });
         if (!payload.conversationId) {
           return next(new Error('Unauthorized: Invalid chat token'));
         }
@@ -413,11 +417,17 @@ export class ChatGateway
       case 'regenerateMessage': {
         try {
           // Handle both direct messageId and nested payload structure
-          const messageId = (payload as any).messageId || (payload as any).payload?.messageId;
+          const messageId =
+            (payload as any).messageId || (payload as any).payload?.messageId;
 
           if (!messageId) {
-            this.logger.error('regenerateMessage: messageId is missing', payload);
-            throw new WsException('messageId is required for regenerateMessage action');
+            this.logger.error(
+              'regenerateMessage: messageId is missing',
+              payload,
+            );
+            throw new WsException(
+              'messageId is required for regenerateMessage action',
+            );
           }
 
           this.server.to(conversationId).emit('conversationAction', {

@@ -13,7 +13,10 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { Response as ExpressResponse } from 'express';
+import {
+  Response as ExpressResponse,
+  Request as ExpressRequest,
+} from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
@@ -25,23 +28,47 @@ import { CreateUserDto, UpdateUserDto, LoginDto } from '@fylr/types';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  private setTokenCookies(
+    res: ExpressResponse,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
+    res.cookie('access_token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000,
+    });
+    res.cookie('refresh_token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
   @HttpCode(HttpStatus.OK)
   @Post('login')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async signIn(@Body() loginDto: LoginDto, @Response() res: ExpressResponse) {
-    const result = await this.authService.signIn(
+    const { user, tokens } = await this.authService.signIn(
       loginDto.email,
       loginDto.password,
     );
 
-    res.cookie('access_token', result.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 1 * 60 * 60 * 100,
-    });
+    this.setTokenCookies(res, tokens);
+    return res.json(user);
+  }
 
-    return res.json(result);
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refreshTokens(
+    @Request() req: ExpressRequest,
+    @Response() res: ExpressResponse,
+  ) {
+    const refreshToken = req.cookies['refresh_token'];
+    const newTokens = await this.authService.refreshTokens(refreshToken);
+    this.setTokenCookies(res, newTokens);
+    return res.json({ message: 'Tokens refreshed successfully' });
   }
 
   @Post('signup')
@@ -50,10 +77,15 @@ export class AuthController {
     return this.authService.signUp(signUpDto);
   }
 
-  @UseGuards(AuthGuard)
   @Post('logout')
-  logout(@Response() res: ExpressResponse) {
+  async logout(
+    @Request() req: ExpressRequest,
+    @Response() res: ExpressResponse,
+  ) {
+    const refreshToken = req.cookies['refresh_token'];
+    await this.authService.logout(refreshToken);
     res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
     return res.json({ message: 'Logged out successfully' });
   }
 
