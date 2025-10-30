@@ -6,6 +6,31 @@ const instance = axios.create({
   withCredentials: true,
 });
 
+let csrfToken: string | null = null;
+
+const getCsrfToken = async () => {
+  if (!csrfToken) {
+    try {
+      const { data } = await instance.get('/auth/csrf-token');
+      csrfToken = data.csrfToken;
+    } catch (error) {
+      console.error('Failed to fetch CSRF token', error);
+    }
+  }
+  return csrfToken;
+};
+
+instance.interceptors.request.use(async (config) => {
+  const methodsRequiringCsrf = ['post', 'put', 'patch', 'delete'];
+  if (config.method && methodsRequiringCsrf.includes(config.method)) {
+    const token = await getCsrfToken();
+    if (token) {
+      config.headers['x-csrf-token'] = token;
+    }
+  }
+  return config;
+});
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: any) => void;

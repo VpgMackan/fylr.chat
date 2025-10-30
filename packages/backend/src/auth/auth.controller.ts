@@ -12,6 +12,7 @@ import {
   BadRequestException,
   UsePipes,
   ValidationPipe,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   Response as ExpressResponse,
@@ -69,6 +70,16 @@ export class AuthController {
     const newTokens = await this.authService.refreshTokens(refreshToken);
     this.setTokenCookies(res, newTokens);
     return res.json({ message: 'Tokens refreshed successfully' });
+  }
+
+  @Get('csrf-token')
+  getCsrfToken(@Request() req: ExpressRequest) {
+    if (typeof req.csrfToken !== 'function') {
+      throw new InternalServerErrorException(
+        'CSRF token generation is not available.',
+      );
+    }
+    return { csrfToken: req.csrfToken() };
   }
 
   @Post('signup')
