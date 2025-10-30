@@ -70,7 +70,9 @@ export class WebSocketGateway
       if (!token) {
         throw new Error('No authentication token provided.');
       }
-      const payload: UserPayload = this.jwtService.verify(token);
+      const payload: UserPayload = this.jwtService.verify(token, {
+        secret: this.configService.getOrThrow<string>('JWT_SECRET'),
+      });
       const userId = payload.id;
 
       this.logger.log(`Client connected: ${client.id}, UserID: ${userId}`);

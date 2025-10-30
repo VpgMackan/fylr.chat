@@ -20,8 +20,22 @@ model User {
   conversations Conversation[]
   summary       Summary[]
   podcast       Podcast[]
+  refreshTokens RefreshToken[]
 
   @@map("Users")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  hashedToken String   @unique @map("hashed_token")
+  userId      String   @map("user_id")
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("RefreshTokens")
 }
 
 model Library {
