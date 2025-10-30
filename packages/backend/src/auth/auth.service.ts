@@ -189,6 +189,59 @@ export class AuthService {
     return user;
   }
 
+  async getActiveSessions(userId: string) {
+    const sessions = await this.prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revoked: false,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return sessions;
+  }
+
+  async revokeSession(sessionId: string, userId: string): Promise<void> {
+    const session = await this.prisma.refreshToken.findFirst({
+      where: { id: sessionId, userId },
+    });
+
+    if (!session) {
+      throw new ForbiddenException('Session not found or access denied.');
+    }
+
+    await this.prisma.refreshToken.update({
+      where: { id: sessionId },
+      data: { revoked: true },
+    });
+  }
+
+  async revokeAllOtherSessions(
+    userId: string,
+    currentRefreshToken: string,
+  ): Promise<void> {
+    const hashedCurrentToken = await this.hashToken(currentRefreshToken);
+
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revoked: false,
+        NOT: {
+          hashedToken: hashedCurrentToken,
+        },
+      },
+      data: {
+        revoked: true,
+      },
+    });
+  }
+
   async updateProfile(
     userId: string,
     updateData: UpdateUserDto,
@@ -196,6 +249,10 @@ export class AuthService {
     const dataToUpdate = { ...updateData };
 
     if (dataToUpdate.password) {
+      await this.prisma.refreshToken.deleteMany({
+        where: { userId },
+      });
+
       dataToUpdate.password = await hash(
         dataToUpdate.password,
         BCRYPT_SALT_ROUNDS,

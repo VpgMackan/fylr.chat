@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import toast from 'react-hot-toast';
 import { getProfile, updateProfile, logout } from '@/services/api/auth.api';
 import { UserApiResponse } from '@fylr/types';
+import SessionsManager from '@/components/features/profile/SessionsManager';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -241,6 +242,17 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+
+        <div className="mt-8 pt-6 border-t">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Active Sessions
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            This is a list of devices that have logged into your account. Revoke
+            any sessions that you do not recognize.
+          </p>
+          <SessionsManager />
+        </div>
 
         {/* User Info */}
         <div className="mt-8 pt-6 border-t">

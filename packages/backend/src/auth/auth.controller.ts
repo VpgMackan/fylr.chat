@@ -13,6 +13,8 @@ import {
   UsePipes,
   ValidationPipe,
   InternalServerErrorException,
+  Delete,
+  Param,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -24,7 +26,12 @@ import { AuthService } from './auth.service';
 
 import { RequestWithUser } from './interfaces/request-with-user.interface';
 
-import { CreateUserDto, UpdateUserDto, LoginDto } from '@fylr/types';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  LoginDto,
+  UserPayload,
+} from '@fylr/types';
 
 @Controller('auth')
 export class AuthController {
@@ -132,5 +139,33 @@ export class AuthController {
   @Get('websocket-token')
   async getWebSocketToken(@Request() req: RequestWithUser) {
     return this.authService.generateWebSocketToken(req.user);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('sessions')
+  async getActiveSessions(@Request() req: RequestWithUser) {
+    return this.authService.getActiveSessions(req.user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('sessions/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async revokeSession(
+    @Param('id') sessionId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    await this.authService.revokeSession(sessionId, req.user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('sessions/revoke-all-others')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async revokeAllOtherSessions(@Request() req: ExpressRequest) {
+    const refreshToken = req.cookies['refresh_token'];
+    const user = (req as any).user as UserPayload;
+    if (!refreshToken || !user) {
+      throw new BadRequestException('Missing user or token information');
+    }
+    await this.authService.revokeAllOtherSessions(user.id, refreshToken);
   }
 }
