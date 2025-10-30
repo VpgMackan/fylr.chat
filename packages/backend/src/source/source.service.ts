@@ -74,7 +74,6 @@ export class SourceService {
     await this.rabbitMQService.publishFileProcessingJob({
       sourceId: entry.id,
       s3Key,
-      mimeType: file.mimetype,
       jobKey,
       embeddingModel: library.defaultEmbeddingModel,
     });

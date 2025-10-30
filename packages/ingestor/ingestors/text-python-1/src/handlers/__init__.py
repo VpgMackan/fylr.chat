@@ -1,6 +1,7 @@
 from typing import Dict, Callable
 from .markdown import handle_markdown
 from .pdf import handle_pdf
+from .docx import handle_docx
 
 
 class HandlerManager:
@@ -8,17 +9,19 @@ class HandlerManager:
 
     def __init__(self):
         self.handlers: Dict[str, Callable] = {
-            "text/markdown": handle_markdown,
-            "text/plain": handle_markdown,
-            "application/pdf": handle_pdf,
+            ".md": handle_markdown,
+            ".markdown": handle_markdown,
+            ".txt": handle_markdown,
+            ".pdf": handle_pdf,
+            ".docx": handle_docx,
         }
 
-    def process_data(self, mime_type: str, file_content: bytes, **kwargs) -> str:
+    def process_data(self, file_extension: str, file_content: bytes, **kwargs) -> str:
         """
-        Process file content based on mime type.
+        Process file content based on file extension.
 
         Args:
-            mime_type: The MIME type of the file
+            file_extension: The file extension (e.g., '.pdf', '.md')
             file_content: The raw file content as bytes
             **kwargs: Additional arguments to pass to the handler
 
@@ -26,14 +29,16 @@ class HandlerManager:
             Extracted text content as string
 
         Raises:
-            ValueError: If mime type is not supported
+            ValueError: If file extension is not supported
         """
-        handler = self.handlers.get(mime_type)
+        # Normalize extension to lowercase
+        ext = file_extension.lower()
+        handler = self.handlers.get(ext)
         if not handler:
-            raise ValueError(f"No handler found for mime type: {mime_type}")
+            raise ValueError(f"No handler found for file extension: {file_extension}")
 
         return handler(file_content, **kwargs)
 
-    def supports(self, mime_type: str) -> bool:
-        """Check if a mime type is supported."""
-        return mime_type in self.handlers
+    def supports(self, file_extension: str) -> bool:
+        """Check if a file extension is supported."""
+        return file_extension.lower() in self.handlers

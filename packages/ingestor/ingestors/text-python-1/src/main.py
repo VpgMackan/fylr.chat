@@ -104,7 +104,6 @@ def main():
         message = json.loads(body)
         source_id = message.get("sourceId")
         s3_key = message.get("s3Key")
-        mime_type = message.get("mimeType")
         job_key = message.get("jobKey")
         embedding_model = message.get("embeddingModel")
 
@@ -116,25 +115,30 @@ def main():
             obj = s3_bucket.Object(s3_key)
             file_content = obj.get()["Body"].read()
 
-            # 2. Extract Text
-            publish_status(ch, job_key, "PARSING", f"Parsing {mime_type} file.")
-            text = handler_manager.process_data(mime_type, file_content)
+            # 2. Extract file extension from S3 key
+            file_extension = os.path.splitext(s3_key)[1]
+            if not file_extension:
+                raise ValueError(f"Could not determine file extension from key: {s3_key}")
+
+            # 3. Extract Text
+            publish_status(ch, job_key, "PARSING", f"Parsing {file_extension} file.")
+            text = handler_manager.process_data(file_extension, file_content)
             if not text or not text.strip():
                 raise ValueError("No text could be extracted from the file.")
 
-            # 3. Chunk Text
+            # 4. Chunk Text
             docs = text_splitter.create_documents([text])
             chunks = [doc.page_content for doc in docs]
             publish_status(
                 ch, job_key, "VECTORIZING", f"Split text into {len(chunks)} chunks."
             )
 
-            # 4. Get Embeddings
+            # 5. Get Embeddings
             embeddings = get_embeddings(chunks, embedding_model)
             if len(embeddings) != len(chunks):
                 raise Exception("Mismatch between number of chunks and embeddings.")
 
-            # 5. Save to Database
+            # 6. Save to Database
             with get_db_session() as db:
                 db.query(DocumentVector).filter(
                     DocumentVector.file_id == source_id

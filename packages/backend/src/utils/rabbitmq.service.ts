@@ -32,21 +32,24 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Maps MIME types to routing keys for the file-processing-exchange.
+   * Maps file extensions to routing keys for the file-processing-exchange.
    * This determines which ingestor will process the file.
    */
-  private getRoutingKeyForMimeType(mimeType: string): string {
-    const mimeToRoutingKey: { [key: string]: string } = {
-      'application/pdf': 'pdf.v1',
-      'text/markdown': 'markdown.v1',
-      'text/plain': 'text.v1',
-      'application/x-markdown': 'markdown.v1',
+  private getRoutingKeyForFileExtension(filename: string): string {
+    const extension = filename.toLowerCase().split('.').pop() || '';
+
+    const extensionToRoutingKey: { [key: string]: string } = {
+      pdf: 'pdf.v1',
+      md: 'text.v1',
+      markdown: 'text.v1',
+      txt: 'text.v1',
+      docx: 'docx.v1',
     };
 
-    const routingKey = mimeToRoutingKey[mimeType];
+    const routingKey = extensionToRoutingKey[extension];
     if (!routingKey) {
       console.warn(
-        `No routing key found for MIME type: ${mimeType}, using text.v1 as fallback`,
+        `No routing key found for file extension: ${extension}, using text.v1 as fallback`,
       );
       return 'text.v1';
     }
@@ -56,17 +59,16 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Publishes a file processing job to the file-processing-exchange.
-   * The routing key is determined based on the file's MIME type.
+   * The routing key is determined based on the file's extension extracted from s3Key.
    */
   async publishFileProcessingJob(data: {
     sourceId: string;
     s3Key: string;
-    mimeType: string;
     jobKey: string;
     embeddingModel: string;
   }) {
     try {
-      const routingKey = this.getRoutingKeyForMimeType(data.mimeType);
+      const routingKey = this.getRoutingKeyForFileExtension(data.s3Key);
 
       await this.channel.publish(
         'file-processing-exchange',
@@ -78,7 +80,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       );
 
       console.log(
-        `[RabbitMQ] Published file processing job to exchange 'file-processing-exchange' with routing key '${routingKey}'`,
+        `[RabbitMQ] Published file processing job to exchange 'file-processing-exchange' with routing key '${routingKey}' for file '${data.s3Key}'`,
       );
     } catch (error) {
       console.error(
