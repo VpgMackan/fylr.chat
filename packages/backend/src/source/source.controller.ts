@@ -21,7 +21,14 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { CreateSourceDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
-const allowedExtensions = ['.pdf', '.txt', '.md', '.markdown', '.docx'];
+const allowedExtensions = [
+  '.pdf',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.docx',
+  '.pptx',
+];
 
 export const fileFilter = (_req, file, cb) => {
   const extension = file.originalname.toLowerCase().split('.').pop();

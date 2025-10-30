@@ -2,6 +2,7 @@ from typing import Dict, Callable
 from .markdown import handle_markdown
 from .pdf import handle_pdf
 from .docx import handle_docx
+from .pptx import handle_pptx
 
 
 class HandlerManager:
@@ -14,6 +15,7 @@ class HandlerManager:
             ".txt": handle_markdown,
             ".pdf": handle_pdf,
             ".docx": handle_docx,
+            ".pptx": handle_pptx,
         }
 
     def process_data(self, file_extension: str, file_content: bytes, **kwargs) -> str:

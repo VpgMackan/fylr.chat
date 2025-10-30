@@ -44,6 +44,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       markdown: 'text.v1',
       txt: 'text.v1',
       docx: 'docx.v1',
+      pptx: 'pptx.v1',
     };
 
     const routingKey = extensionToRoutingKey[extension];

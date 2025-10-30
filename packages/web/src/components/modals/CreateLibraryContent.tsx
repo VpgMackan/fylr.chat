@@ -183,7 +183,7 @@ const CreateLibraryContent = forwardRef<
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.txt,.md"
+            accept=".pdf,.txt,.md,.markdown,.docx,.pptx"
             onChange={handleFileSelection}
             className="hidden"
           />
