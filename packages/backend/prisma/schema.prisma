@@ -23,6 +23,14 @@ enum UserRole {
   PRO
 }
 
+enum UsageRecordFeatrue {
+  SUMMARY_GENERATION_MONTHLY
+  PODCATS_GENERATION_MONTHLY
+  CHAT_MESSAGES_DAILY
+  CHAT_AGENTIC_MESSAGES_DAILY
+  SOURCE_UPLOAD_DAILY
+}
+
 model User {
   id       String @id @default(uuid())
   email    String @unique
@@ -37,6 +45,7 @@ model User {
   podcast       Podcast[]
   refreshTokens RefreshToken[]
   Subscription  Subscription?
+  usageRecords  UsageRecord[]
 
   @@map("Users")
 }
@@ -57,6 +66,19 @@ model Subscription {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("Subscriptions")
+}
+
+model UsageRecord {
+  id          String             @id @default(uuid())
+  userId      String             @map("user_id")
+  feature     UsageRecordFeatrue
+  usageCount  Int                @default(1) @map("usage_count")
+  periodStart DateTime           @map("period_start")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+  @@map("UsageRecords")
 }
 
 model RefreshToken {

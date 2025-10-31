@@ -1,15 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { UserRole } from '@prisma/client';
+import { UserRole, UsageRecordFeatrue } from '@prisma/client';
+
+const PERIOD_START = {
+  SUMMARY_GENERATION_MONTHLY: 'month',
+  PODCATS_GENERATION_MONTHLY: 'month',
+  CHAT_MESSAGES_DAILY: 'daily',
+  CHAT_AGENTIC_MESSAGES_DAILY: 'daily',
+  SOURCE_UPLOAD_DAILY: 'dailty',
+};
 
 const LIMITS = {
   FREE: {
     libraries: 3,
     sourcesPerLibrary: 5,
+    SUMMARY_GENERATION_MONTHLY: 20,
+    PODCAST_GENERATION_MONTHLY: 5,
+    CHAT_MESSAGES_DAILY: 50,
+    CHAT_AGENTIC_MESSAGES_DAILY: 20,
+    SOURCE_UPLOAD_DAILY: 10,
   },
   PRO: {
     libraries: Infinity,
     sourcesPerLibrary: Infinity,
+    SUMMARY_GENERATION_MONTHLY: Infinity,
+    PODCAST_GENERATION_MONTHLY: Infinity,
+    CHAT_MESSAGES_DAILY: Infinity,
+    CHAT_AGENTIC_MESSAGES_DAILY: Infinity,
+    SOURCE_UPLOAD_DAILY: Infinity,
   },
 };
 
@@ -44,5 +66,73 @@ export class PermissionsService {
 
   canUseAdvancedTool(userRole: UserRole): boolean {
     return userRole === 'PRO';
+  }
+
+  async authorizeFeatureUsage(
+    userId: string,
+    feature: UsageRecordFeatrue,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+
+      if (user.role === UserRole.PRO) {
+        return;
+      }
+
+      const limit = LIMITS.FREE[feature];
+      const currentPeriodStart = this._getPeriodStart(feature);
+
+      const usageRecord = await tx.usageRecord.findUnique({
+        where: { userId_feature: { userId, feature } },
+      });
+
+      if (!usageRecord) {
+        await tx.usageRecord.create({
+          data: {
+            userId,
+            feature,
+            usageCount: 1,
+            periodStart: currentPeriodStart,
+          },
+        });
+        return;
+      }
+
+      if (usageRecord.periodStart < currentPeriodStart) {
+        await tx.usageRecord.update({
+          where: { id: usageRecord.id },
+          data: { usageCount: 1, periodStart: currentPeriodStart },
+        });
+        return;
+      }
+
+      if (usageRecord.usageCount >= limit) {
+        throw new ForbiddenException(
+          `You have reached your usage limit for this feature. Please upgrade to Pro.`,
+        );
+      }
+
+      await tx.usageRecord.update({
+        where: { id: usageRecord.id },
+        data: { usageCount: { increment: 1 } },
+      });
+    });
+  }
+
+  /**
+   * Helper to get the start of the current period for a given feature.
+   */
+  private _getPeriodStart(feature: UsageRecordFeatrue): Date {
+    const now = new Date();
+    if (feature.endsWith('_MONTHLY')) {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    if (feature.endsWith('_DAILY')) {
+      return new Date(now.setHours(0, 0, 0, 0));
+    }
+    throw new Error(`Invalid feature period definition for ${feature}`);
   }
 }
