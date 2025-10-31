@@ -7,12 +7,14 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSummaryDto } from '@fylr/types';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 
 @Injectable()
 export class SummaryService {
   constructor(
     private prisma: PrismaService,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async getSummariesByUserId(
@@ -65,6 +67,12 @@ export class SummaryService {
         'Either libraryIds or sourceIds must be provided.',
       );
     }
+
+    // Check summary generation limit
+    await this.permissionsService.authorizeFeatureUsage(
+      userId,
+      'SUMMARY_GENERATION_MONTHLY',
+    );
 
     const allSourceIds = new Set<string>(sourceIds);
 

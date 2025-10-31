@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -9,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { S3Service } from 'src/common/s3/s3.service';
 import { ConfigService } from '@nestjs/config';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 import * as fs from 'fs/promises';
 
 @Injectable()
@@ -20,6 +22,7 @@ export class SourceService {
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly rabbitMQService: RabbitMQService,
+    private readonly permissionsService: PermissionsService,
   ) {
     const bucket = this.configService.get('S3_BUCKET_USER_FILE');
     if (!bucket) {
@@ -43,6 +46,25 @@ export class SourceService {
         `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
       );
     }
+
+    // Check if user can add source to library
+    const canAddSource = await this.permissionsService.canAddSourceToLibrary(
+      userId,
+      libraryId,
+    );
+
+    if (!canAddSource) {
+      await fs.unlink(file.path);
+      throw new ForbiddenException(
+        'You have reached the maximum number of sources for this library. Please upgrade to add more.',
+      );
+    }
+
+    // Check daily upload limit
+    await this.permissionsService.authorizeFeatureUsage(
+      userId,
+      'SOURCE_UPLOAD_DAILY',
+    );
 
     const jobKey = uuidv4();
     const s3Key = file.filename || file.originalname;

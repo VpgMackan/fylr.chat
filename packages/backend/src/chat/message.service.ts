@@ -16,6 +16,7 @@ import { AiVectorService } from 'src/ai/vector.service';
 import { RerankingService } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 import {
   sanitizeMessage,
   sanitizeText,
@@ -39,6 +40,7 @@ export class MessageService {
     private readonly rerankingService: RerankingService,
     private sourceService: SourceService,
     private readonly toolService: ToolService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async getMessages(conversationId: string) {
@@ -205,13 +207,19 @@ export class MessageService {
     emitStatus('history', 'Analyzing conversation history...');
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { sources: true, user: { select: { role: true } } },
+      include: { sources: true, user: { select: { role: true, id: true } } },
     });
     if (!conversation) {
       throw new NotFoundException(
         `Conversation with ID "${conversationId}" not found.`,
       );
     }
+
+    // Check chat message daily limit (non-agentic mode)
+    await this.permissionsService.authorizeFeatureUsage(
+      conversation.user.id,
+      'CHAT_MESSAGES_DAILY',
+    );
 
     const recentMessages = await this.prisma.message.findMany({
       where: { conversationId },
@@ -391,6 +399,7 @@ export class MessageService {
               library: { select: { defaultEmbeddingModel: true } },
             },
           },
+          user: { select: { id: true } },
         },
       });
       if (!conversation) {
@@ -398,6 +407,12 @@ export class MessageService {
           `Conversation with ID "${conversationId}" not found.`,
         );
       }
+
+      // Check agentic chat message daily limit
+      await this.permissionsService.authorizeFeatureUsage(
+        conversation.user.id,
+        'CHAT_AGENTIC_MESSAGES_DAILY',
+      );
 
       const embeddingModel =
         conversation.sources.length > 0

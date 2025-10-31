@@ -15,6 +15,7 @@ import { SourceService } from './source.service';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { EventsModule } from 'src/events/events.module';
+import { PermissionsService } from 'src/auth/permissions.service';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { EventsModule } from 'src/events/events.module';
     EventsModule,
   ],
   controllers: [SourceController],
-  providers: [SourceService, S3Service, RabbitMQService],
+  providers: [SourceService, S3Service, RabbitMQService, PermissionsService],
   exports: [SourceService],
 })
 export class SourceModule {}
