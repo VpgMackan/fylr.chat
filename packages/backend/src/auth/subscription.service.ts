@@ -98,6 +98,9 @@ export class SubscriptionService {
         remainingDurationOnPause: Math.floor(remainingMilliseconds / 1000), // store as seconds
         expiresAt: null,
         pausedAt: new Date(),
+        user: {
+          update: { role: UserRole.FREE },
+        },
       },
     });
   }

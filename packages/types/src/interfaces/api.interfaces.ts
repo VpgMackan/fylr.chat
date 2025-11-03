@@ -2,6 +2,7 @@ export interface UserApiResponse {
   id: string;
   email: string;
   name: string;
+  role?: 'FREE' | 'PRO';
 }
 export interface SourceApiResponse {
   id: string;

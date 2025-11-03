@@ -16,8 +16,8 @@ const PERIOD_START = {
 
 const LIMITS = {
   FREE: {
-    libraries: 3,
-    sourcesPerLibrary: 5,
+    libraries: 10,
+    sourcesPerLibrary: 50,
     SUMMARY_GENERATION_MONTHLY: 20,
     PODCAST_GENERATION_MONTHLY: 5,
     CHAT_MESSAGES_DAILY: 50,

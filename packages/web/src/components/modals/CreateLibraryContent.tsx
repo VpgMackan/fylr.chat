@@ -34,15 +34,31 @@ const CreateLibraryContent = forwardRef<
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'FREE' | 'PRO' | null>(null);
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canCreate = libraryName.trim().length > 0;
+  const maxSources = userRole === 'PRO' ? Infinity : 50;
 
   useEffect(() => {
     onCanCreateChange(canCreate);
   }, [canCreate, onCanCreateChange]);
+
+  useEffect(() => {
+    // Fetch user profile to get role
+    const fetchUserRole = async () => {
+      try {
+        const response = await axios.get('/auth/profile');
+        setUserRole(response.data.role || 'FREE');
+      } catch (err) {
+        console.error('Failed to fetch user role:', err);
+        setUserRole('FREE'); // Default to FREE on error
+      }
+    };
+    fetchUserRole();
+  }, []);
 
   const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -51,7 +67,29 @@ const CreateLibraryContent = forwardRef<
         file,
         id: Math.random().toString(36).substring(7),
       }));
-      setSourceFiles((prev) => [...prev, ...newFiles]);
+
+      // Check limit based on user role
+      const totalFiles = sourceFiles.length + newFiles.length;
+
+      if (maxSources !== Infinity && totalFiles > maxSources) {
+        const allowedCount = Math.max(0, maxSources - sourceFiles.length);
+        if (allowedCount > 0) {
+          setSourceFiles((prev) => [
+            ...prev,
+            ...newFiles.slice(0, allowedCount),
+          ]);
+          setError(
+            `You can only add up to ${maxSources} sources per library on the free plan. Only ${allowedCount} file(s) were added.`,
+          );
+        } else {
+          setError(
+            `You can only add up to ${maxSources} sources per library on the free plan.`,
+          );
+        }
+      } else {
+        setSourceFiles((prev) => [...prev, ...newFiles]);
+        setError(null);
+      }
     }
   };
 
@@ -98,24 +136,37 @@ const CreateLibraryContent = forwardRef<
       const response = await axios.post('/library', libraryData);
       const library = response.data;
 
+      // Upload sources sequentially to avoid race conditions and provide better error handling
       if (sourceFiles.length > 0) {
-        const uploadPromises = sourceFiles.map((source) =>
-          uploadSource(library.id, source.file),
-        );
-
-        await Promise.all(uploadPromises);
+        let uploadedCount = 0;
+        for (const source of sourceFiles) {
+          try {
+            await uploadSource(library.id, source.file);
+            uploadedCount++;
+          } catch (uploadErr: any) {
+            // If we hit the limit, show appropriate message
+            if (uploadErr.response?.status === 403) {
+              setError(
+                `Successfully uploaded ${uploadedCount} source(s). ${uploadErr.response?.data?.message || 'You have reached the limit for your plan.'}`,
+              );
+              break;
+            }
+            throw uploadErr;
+          }
+        }
       }
 
       setLibraryName('');
       setSourceFiles([]);
 
       router.push(`/library/${library.id}`);
-    } catch (err) {
-      setError(
-        err instanceof Error
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        (err instanceof Error
           ? err.message
-          : 'An error occurred while creating the library',
-      );
+          : 'An error occurred while creating the library');
+      setError(errorMessage);
       throw err;
     } finally {
       setIsCreating(false);
@@ -169,15 +220,29 @@ const CreateLibraryContent = forwardRef<
             className="block text-sm font-medium mb-2"
           >
             Sources
+            {userRole === 'PRO' ? (
+              <span className="text-xs text-gray-500 ml-2">
+                ({sourceFiles.length} - unlimited)
+              </span>
+            ) : (
+              <span className="text-xs text-gray-500 ml-2">
+                ({sourceFiles.length}/{maxSources})
+              </span>
+            )}
           </label>
           <button
             id="source-button"
             type="button"
             onClick={handleSourceButtonClick}
-            disabled={isCreating}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            disabled={
+              isCreating ||
+              (maxSources !== Infinity && sourceFiles.length >= maxSources)
+            }
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Add Sources
+            {maxSources !== Infinity && sourceFiles.length >= maxSources
+              ? 'Maximum Sources Reached'
+              : 'Add Sources'}
           </button>
           <input
             ref={fileInputRef}

@@ -36,75 +36,83 @@ export class SourceService {
     libraryId: string,
     userId: string,
   ) {
-    const library = await this.prisma.library.findFirst({
-      where: { id: libraryId, userId },
-    });
-
-    if (!library) {
-      await fs.unlink(file.path);
-      throw new NotFoundException(
-        `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
-      );
-    }
-
-    // Check if user can add source to library
-    const canAddSource = await this.permissionsService.canAddSourceToLibrary(
-      userId,
-      libraryId,
-    );
-
-    if (!canAddSource) {
-      await fs.unlink(file.path);
-      throw new ForbiddenException(
-        'You have reached the maximum number of sources for this library. Please upgrade to add more.',
-      );
-    }
-
-    // Check daily upload limit
-    await this.permissionsService.authorizeFeatureUsage(
-      userId,
-      'SOURCE_UPLOAD_DAILY',
-    );
-
-    const jobKey = uuidv4();
-    const s3Key = file.filename || file.originalname;
-
-    try {
-      const buffer = await fs.readFile(file.path);
-      await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
-        'Content-Type': file.mimetype,
+    // Use transaction to prevent race conditions when checking source limits
+    return await this.prisma.$transaction(async (tx) => {
+      const library = await tx.library.findFirst({
+        where: { id: libraryId, userId },
       });
-    } catch (error) {
+
+      if (!library) {
+        await fs.unlink(file.path);
+        throw new NotFoundException(
+          `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
+        );
+      }
+
+      // Get user to check role
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        await fs.unlink(file.path);
+        throw new NotFoundException('User not found.');
+      }
+
+      // Check source count limit within transaction to prevent race conditions
+      const currentCount = await tx.source.count({ where: { libraryId } });
+      const limit = user.role === 'PRO' ? Infinity : 50; // FREE users: 50 sources per library
+
+      if (currentCount >= limit) {
+        await fs.unlink(file.path);
+        throw new ForbiddenException(
+          'You have reached the maximum number of sources for this library. Please upgrade to add more.',
+        );
+      }
+
+      // Check daily upload limit (already uses transaction internally)
+      await this.permissionsService.authorizeFeatureUsage(
+        userId,
+        'SOURCE_UPLOAD_DAILY',
+      );
+
+      const jobKey = uuidv4();
+      const s3Key = file.filename || file.originalname;
+
+      try {
+        const buffer = await fs.readFile(file.path);
+        await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
+          'Content-Type': file.mimetype,
+        });
+      } catch (error) {
+        await fs.unlink(file.path);
+        throw error;
+      }
+
       await fs.unlink(file.path);
-      throw error;
-    }
 
-    await fs.unlink(file.path);
+      const data: Prisma.SourceCreateInput = {
+        library: { connect: { id: libraryId } },
+        name: file.originalname,
+        mimeType: file.mimetype,
+        url: s3Key,
+        size: file.size,
+        jobKey,
+        status: 'QUEUED',
+      };
 
-    const data: Prisma.SourceCreateInput = {
-      library: { connect: { id: libraryId } },
-      name: file.originalname,
-      mimeType: file.mimetype,
-      url: s3Key,
-      size: file.size,
-      jobKey,
-      status: 'QUEUED',
-    };
+      const entry = await tx.source.create({ data });
 
-    const entry = await this.prisma.source.create({ data });
+      await this.rabbitMQService.publishFileProcessingJob({
+        sourceId: entry.id,
+        s3Key,
+        jobKey,
+        embeddingModel: library.defaultEmbeddingModel,
+      });
 
-    await this.rabbitMQService.publishFileProcessingJob({
-      sourceId: entry.id,
-      s3Key,
-      jobKey,
-      embeddingModel: library.defaultEmbeddingModel,
+      return {
+        message: 'File uploaded successfully and queued for processing.',
+        jobKey,
+        database: entry,
+      };
     });
-
-    return {
-      message: 'File uploaded successfully and queued for processing.',
-      jobKey,
-      database: entry,
-    };
   }
 
   async getSourcesByLibraryId(libraryId: string, userId: string) {

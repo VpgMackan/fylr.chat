@@ -131,8 +131,9 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Get('profile')
-  getProfile(@Request() req: RequestWithUser) {
-    return req.user;
+  async getProfile(@Request() req: RequestWithUser) {
+    // Fetch full user data including role from database
+    return this.authService.getProfile(req.user.id);
   }
 
   @UseGuards(AuthGuard)
