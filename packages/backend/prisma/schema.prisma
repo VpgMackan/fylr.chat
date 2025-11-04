@@ -110,17 +110,18 @@ model Library {
 }
 
 model Source {
-  id         String   @id @default(uuid())
-  libraryId  String   @map("library_id")
-  name       String
-  mimeType   String   @map("type")
-  url        String
-  size       Int
-  uploadTime DateTime @default(now()) @map("upload_time")
-  jobKey     String   @map("job_key")
-  status     String   @db.Text
-  library    Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
-  vectors    Vector[]
+  id               String   @id @default(uuid())
+  libraryId        String   @map("library_id")
+  name             String
+  mimeType         String   @map("type")
+  url              String
+  size             Int
+  uploadTime       DateTime @default(now()) @map("upload_time")
+  jobKey           String   @map("job_key")
+  status           String   @db.Text
+  pendingIngestion Boolean  @default(false) @map("pending_ingestion")
+  library          Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  vectors          Vector[]
 
   ingestorType    String?
   ingestorVersion String?

@@ -1,6 +1,8 @@
 import { Icon } from '@iconify/react';
 import { SimpleLibrary } from '@/services/api/library.api';
 import { SourceApiResponse } from '@fylr/types';
+import { useUsageStats } from '@/hooks/useUsageStats';
+import Link from 'next/link';
 
 interface LibrarySourceSelectorProps {
   libraries: SimpleLibrary[];
@@ -33,22 +35,51 @@ export default function LibrarySourceSelector({
   isLibraryPartiallySelected,
   onClearAll,
 }: LibrarySourceSelectorProps) {
+  const { stats } = useUsageStats();
+
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
         <label className="block text-sm font-medium text-gray-700">
           Select Libraries & Sources
         </label>
-        {(selectedLibraries.size > 0 || selectedSources.size > 0) && (
-          <button
-            type="button"
-            onClick={onClearAll}
-            disabled={isCreating}
-            className="text-xs font-medium text-red-600 hover:text-red-700 disabled:text-gray-400 transition-colors"
-          >
-            Clear All
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {stats && (
+            <div className="text-xs">
+              <span
+                className={`font-medium ${
+                  stats.usage.dailySourceUploads >=
+                  stats.limits.dailySourceUploads
+                    ? 'text-red-600'
+                    : 'text-gray-600'
+                }`}
+              >
+                Daily: {stats.usage.dailySourceUploads}/
+                {stats.limits.dailySourceUploads === Infinity
+                  ? '∞'
+                  : stats.limits.dailySourceUploads}
+              </span>
+              {stats.role === 'FREE' && (
+                <Link
+                  href="/settings?tab=subscription"
+                  className="ml-2 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Upgrade
+                </Link>
+              )}
+            </div>
+          )}
+          {(selectedLibraries.size > 0 || selectedSources.size > 0) && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={isCreating}
+              className="text-xs font-medium text-red-600 hover:text-red-700 disabled:text-gray-400 transition-colors"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Selection Summary */}

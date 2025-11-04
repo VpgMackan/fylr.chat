@@ -67,11 +67,21 @@ export class SourceService {
         );
       }
 
-      // Check daily upload limit (already uses transaction internally)
-      await this.permissionsService.authorizeFeatureUsage(
-        userId,
-        'SOURCE_UPLOAD_DAILY',
-      );
+      // Check daily upload limit - if exceeded, allow deferred ingestion
+      let shouldDeferIngestion = false;
+      try {
+        await this.permissionsService.authorizeFeatureUsage(
+          userId,
+          'SOURCE_UPLOAD_DAILY',
+        );
+      } catch (error) {
+        if (error instanceof ForbiddenException) {
+          // Allow upload but defer ingestion
+          shouldDeferIngestion = true;
+        } else {
+          throw error;
+        }
+      }
 
       const jobKey = uuidv4();
       const s3Key = file.filename || file.originalname;
@@ -95,22 +105,29 @@ export class SourceService {
         url: s3Key,
         size: file.size,
         jobKey,
-        status: 'QUEUED',
+        status: shouldDeferIngestion ? 'PENDING' : 'QUEUED',
+        pendingIngestion: shouldDeferIngestion,
       };
 
       const entry = await tx.source.create({ data });
 
-      await this.rabbitMQService.publishFileProcessingJob({
-        sourceId: entry.id,
-        s3Key,
-        jobKey,
-        embeddingModel: library.defaultEmbeddingModel,
-      });
+      // Only queue for processing if not deferred
+      if (!shouldDeferIngestion) {
+        await this.rabbitMQService.publishFileProcessingJob({
+          sourceId: entry.id,
+          s3Key,
+          jobKey,
+          embeddingModel: library.defaultEmbeddingModel,
+        });
+      }
 
       return {
-        message: 'File uploaded successfully and queued for processing.',
+        message: shouldDeferIngestion
+          ? 'File uploaded successfully. Processing will start when your daily limit resets or you can manually trigger ingestion.'
+          : 'File uploaded successfully and queued for processing.',
         jobKey,
         database: entry,
+        deferred: shouldDeferIngestion,
       };
     });
   }
@@ -274,5 +291,71 @@ export class SourceService {
       jobKey: newJobKey,
       source: updatedSource,
     };
+  }
+
+  async getPendingIngestionSources(userId: string) {
+    return await this.prisma.source.findMany({
+      where: {
+        library: { userId },
+        pendingIngestion: true,
+        status: 'PENDING',
+      },
+      include: {
+        library: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: { uploadTime: 'desc' },
+    });
+  }
+
+  async triggerIngestion(sourceId: string, userId: string) {
+    return await this.prisma.$transaction(async (tx) => {
+      const source = await tx.source.findFirst({
+        where: { id: sourceId, library: { userId }, pendingIngestion: true },
+        include: { library: true },
+      });
+
+      if (!source) {
+        throw new NotFoundException(
+          'Pending source not found or not accessible',
+        );
+      }
+
+      // Check daily upload limit
+      await this.permissionsService.authorizeFeatureUsage(
+        userId,
+        'SOURCE_UPLOAD_DAILY',
+      );
+
+      const newJobKey = uuidv4();
+
+      // Update the source to mark it as no longer pending
+      const updatedSource = await tx.source.update({
+        where: { id: sourceId },
+        data: {
+          jobKey: newJobKey,
+          status: 'QUEUED',
+          pendingIngestion: false,
+        },
+      });
+
+      // Publish processing job
+      await this.rabbitMQService.publishFileProcessingJob({
+        sourceId: source.id,
+        s3Key: source.url,
+        jobKey: newJobKey,
+        embeddingModel: source.library.defaultEmbeddingModel,
+      });
+
+      return {
+        message: 'Source ingestion triggered successfully.',
+        jobKey: newJobKey,
+        source: updatedSource,
+      };
+    });
   }
 }

@@ -123,6 +123,47 @@ export class PermissionsService {
   }
 
   /**
+   * Get usage statistics for a user
+   */
+  async getUsageStats(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const limits = LIMITS[user.role];
+    const currentPeriodStart = this._getPeriodStart(
+      UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
+    );
+
+    const usageRecord = await this.prisma.usageRecord.findUnique({
+      where: {
+        userId_feature: {
+          userId,
+          feature: UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
+        },
+      },
+    });
+
+    let dailyUploadsUsed = 0;
+    if (usageRecord && usageRecord.periodStart >= currentPeriodStart) {
+      dailyUploadsUsed = usageRecord.usageCount;
+    }
+
+    return {
+      role: user.role,
+      limits: {
+        libraries: limits.libraries,
+        sourcesPerLibrary: limits.sourcesPerLibrary,
+        dailySourceUploads: limits.SOURCE_UPLOAD_DAILY,
+      },
+      usage: {
+        dailySourceUploads: dailyUploadsUsed,
+      },
+    };
+  }
+
+  /**
    * Helper to get the start of the current period for a given feature.
    */
   private _getPeriodStart(feature: UsageRecordFeatrue): Date {

@@ -128,6 +128,9 @@ export class SubscriptionService {
         remainingDurationOnPause: null,
         pausedAt: null,
         lastResumedAt: new Date(),
+        user: {
+          update: { role: UserRole.PRO },
+        },
       },
     });
   }

@@ -10,6 +10,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import axios from '@/utils/axios';
+import { useUsageStats } from '@/hooks/useUsageStats';
+import Link from 'next/link';
 
 interface SourceFile {
   file: File;
@@ -34,31 +36,22 @@ const CreateLibraryContent = forwardRef<
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<'FREE' | 'PRO' | null>(null);
+  const [deferredCount, setDeferredCount] = useState(0);
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    stats,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useUsageStats();
 
   const canCreate = libraryName.trim().length > 0;
-  const maxSources = userRole === 'PRO' ? Infinity : 50;
+  const maxSources = stats?.role === 'PRO' ? Infinity : 50;
 
   useEffect(() => {
     onCanCreateChange(canCreate);
   }, [canCreate, onCanCreateChange]);
-
-  useEffect(() => {
-    // Fetch user profile to get role
-    const fetchUserRole = async () => {
-      try {
-        const response = await axios.get('/auth/profile');
-        setUserRole(response.data.role || 'FREE');
-      } catch (err) {
-        console.error('Failed to fetch user role:', err);
-        setUserRole('FREE'); // Default to FREE on error
-      }
-    };
-    fetchUserRole();
-  }, []);
 
   const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -123,6 +116,7 @@ const CreateLibraryContent = forwardRef<
 
     setIsCreating(true);
     setError(null);
+    setDeferredCount(0);
 
     try {
       const libraryData = {
@@ -136,24 +130,34 @@ const CreateLibraryContent = forwardRef<
       const response = await axios.post('/library', libraryData);
       const library = response.data;
 
-      // Upload sources sequentially to avoid race conditions and provide better error handling
+      // Upload sources sequentially to provide better tracking
       if (sourceFiles.length > 0) {
         let uploadedCount = 0;
+        let deferredSourceCount = 0;
+
         for (const source of sourceFiles) {
           try {
-            await uploadSource(library.id, source.file);
+            const result = await uploadSource(library.id, source.file);
             uploadedCount++;
-          } catch (uploadErr: any) {
-            // If we hit the limit, show appropriate message
-            if (uploadErr.response?.status === 403) {
-              setError(
-                `Successfully uploaded ${uploadedCount} source(s). ${uploadErr.response?.data?.message || 'You have reached the limit for your plan.'}`,
-              );
-              break;
+            if (result.deferred) {
+              deferredSourceCount++;
             }
-            throw uploadErr;
+          } catch (uploadErr: any) {
+            console.error('Error uploading source:', uploadErr);
+            // Continue uploading other files even if one fails
           }
         }
+
+        setDeferredCount(deferredSourceCount);
+
+        if (deferredSourceCount > 0) {
+          setError(
+            `Successfully uploaded ${uploadedCount} source(s). ${deferredSourceCount} file(s) will be processed when your daily limit resets or you can manually trigger ingestion.`,
+          );
+        }
+
+        // Refetch stats after uploads
+        refetchStats();
       }
 
       setLibraryName('');
@@ -215,21 +219,69 @@ const CreateLibraryContent = forwardRef<
         </div>
 
         <div>
-          <label
-            htmlFor="source-button"
-            className="block text-sm font-medium mb-2"
-          >
-            Sources
-            {userRole === 'PRO' ? (
-              <span className="text-xs text-gray-500 ml-2">
-                ({sourceFiles.length} - unlimited)
-              </span>
-            ) : (
-              <span className="text-xs text-gray-500 ml-2">
-                ({sourceFiles.length}/{maxSources})
-              </span>
+          <div className="flex items-center justify-between mb-2">
+            <label
+              htmlFor="source-button"
+              className="block text-sm font-medium"
+            >
+              Sources
+              {stats && (
+                <span className="text-xs text-gray-500 ml-2">
+                  ({sourceFiles.length}/
+                  {maxSources === Infinity ? '∞' : maxSources} per library)
+                </span>
+              )}
+            </label>
+            {stats && (
+              <div className="flex items-center gap-2 text-xs">
+                <span
+                  className={`font-medium ${
+                    stats.usage.dailySourceUploads >=
+                    stats.limits.dailySourceUploads
+                      ? 'text-red-600'
+                      : 'text-gray-600'
+                  }`}
+                >
+                  Daily uploads: {stats.usage.dailySourceUploads}/
+                  {stats.limits.dailySourceUploads === Infinity
+                    ? '∞'
+                    : stats.limits.dailySourceUploads}
+                </span>
+                {stats.role === 'FREE' && (
+                  <Link
+                    href="/settings?tab=subscription"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Upgrade to Pro
+                  </Link>
+                )}
+              </div>
             )}
-          </label>
+          </div>
+
+          {stats &&
+            stats.usage.dailySourceUploads >= stats.limits.dailySourceUploads &&
+            stats.role === 'FREE' && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                <div className="flex items-start gap-2">
+                  <Icon
+                    icon="mdi:information"
+                    className="text-yellow-600 mt-0.5 flex-shrink-0"
+                  />
+                  <div>
+                    <p className="font-medium text-yellow-800">
+                      Daily upload limit reached
+                    </p>
+                    <p className="text-yellow-700 mt-1">
+                      You can still upload files, but they will be saved and
+                      processed when your limit resets or you can manually
+                      trigger ingestion later.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
           <button
             id="source-button"
             type="button"
@@ -241,7 +293,7 @@ const CreateLibraryContent = forwardRef<
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {maxSources !== Infinity && sourceFiles.length >= maxSources
-              ? 'Maximum Sources Reached'
+              ? 'Maximum Sources Per Library Reached'
               : 'Add Sources'}
           </button>
           <input
