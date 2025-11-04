@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Icon } from '@iconify/react';
 
 import Button from '@/components/ui/Button';
-import Dropdown from '@/components/ui/Dropdown';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
 import CreateContentModal from '../modals/CreateContentModal';
@@ -38,14 +37,37 @@ interface SidebarProps {
   selectedId?: string;
 }
 
+const CONTENT_TYPES = [
+  {
+    type: 'Conversations' as ContentType,
+    icon: 'heroicons-solid:chat-alt-2',
+    label: 'Chats',
+  },
+  {
+    type: 'Summaries' as ContentType,
+    icon: 'heroicons-solid:book-open',
+    label: 'Summaries',
+  },
+  {
+    type: 'Podcasts' as ContentType,
+    icon: 'heroicons-solid:microphone',
+    label: 'Podcasts',
+  },
+  {
+    type: 'Libraries' as ContentType,
+    icon: 'heroicons-solid:library',
+    label: 'Libraries',
+  },
+] as const;
+
 export default function Sidebar({ selectedId }: SidebarProps) {
-  const [firstLoad, setFirstLoad] = useState(true);
   const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const pathname = usePathname();
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -54,21 +76,38 @@ export default function Sidebar({ selectedId }: SidebarProps) {
     return items.filter((item) => item.title?.toLowerCase().includes(query));
   }, [items, searchQuery]);
 
+  // Automatically detect content type from current route
   useEffect(() => {
-    const savedType = localStorage.getItem('sidebarContentType') as ContentType;
-    if (
-      savedType &&
-      ['Conversations', 'Summaries', 'Podcasts', 'Libraries'].includes(
-        savedType,
-      )
-    ) {
-      setContentType(savedType);
-    } else {
+    if (pathname.startsWith('/podcast/')) {
+      setContentType('Podcasts');
+    } else if (pathname.startsWith('/summary/')) {
+      setContentType('Summaries');
+    } else if (pathname.startsWith('/library/')) {
+      setContentType('Libraries');
+    } else if (pathname.startsWith('/c/') || pathname === '/') {
       setContentType('Conversations');
+    } else {
+      // Fallback to saved preference or default
+      const savedType = localStorage.getItem(
+        'sidebarContentType',
+      ) as ContentType;
+      if (
+        savedType &&
+        ['Conversations', 'Summaries', 'Podcasts', 'Libraries'].includes(
+          savedType,
+        )
+      ) {
+        setContentType(savedType);
+      } else {
+        setContentType('Conversations');
+      }
     }
-  }, []);
+  }, [pathname]);
 
+  // Fetch items when content type changes
   useEffect(() => {
+    if (!contentType) return;
+
     setIsLoading(true);
 
     let fetchPromise;
@@ -97,11 +136,8 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         setIsLoading(false);
       });
 
-    if (!firstLoad) {
-      localStorage.setItem('sidebarContentType', contentType);
-    } else {
-      setFirstLoad(false);
-    }
+    // Save preference to localStorage
+    localStorage.setItem('sidebarContentType', contentType);
   }, [contentType]);
 
   const handleSelect = (id: string) => {
@@ -230,13 +266,25 @@ export default function Sidebar({ selectedId }: SidebarProps) {
 
         <hr className="border-blue-200 my-3" />
 
-        <div className="space-y-3">
-          <Dropdown
-            options={['Conversations', 'Summaries', 'Podcasts', 'Libraries']}
-            selectedOption={contentType}
-            onSelect={(option) => setContentType(option as ContentType)}
-          />
+        {/* Navigation Tabs */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {CONTENT_TYPES.map(({ type, icon, label }) => (
+            <button
+              key={type}
+              onClick={() => setContentType(type)}
+              className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg transition-all ${
+                contentType === type
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-blue-100 hover:text-blue-600'
+              }`}
+            >
+              <Icon icon={icon} width="20" height="20" className="mb-1" />
+              <span className="text-xs font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
 
+        <div className="space-y-3">
           {/* Search Bar */}
           <div className="relative">
             <input

@@ -41,11 +41,6 @@ export class LibraryService {
       skip: offset,
     });
 
-    if (!libraries || libraries.length === 0)
-      throw new NotFoundException(
-        `Libraries owned by user ID "${id}" could not be located in database`,
-      );
-
     return libraries.map((p) => {
       const { createdAt, sources, ...rest } = p;
       return {
