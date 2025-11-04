@@ -19,11 +19,10 @@ export default function Button({
 }: ButtonProps) {
   const variants = {
     primary:
-      'bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-lg hover:shadow-xl',
+      'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-xl',
     secondary:
-      'bg-white hover:bg-gray-50 text-gray-800 border border-blue-200 shadow-md hover:shadow-lg',
-    ghost:
-      'bg-white/50 hover:bg-white/80 text-gray-700 hover:text-gray-900 border border-blue-100',
+      'bg-white hover:bg-gray-100 text-gray-800 shadow-md hover:shadow-lg border border-gray-300',
+    ghost: 'bg-white hover:bg-gray-100 text-gray-700 hover:text-gray-900',
   };
 
   return (

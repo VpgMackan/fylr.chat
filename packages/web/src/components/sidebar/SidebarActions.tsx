@@ -14,13 +14,13 @@ export default function SidebarActions({
   return (
     <div className="space-y-2">
       <Button
-        name="New Chat"
+        name=""
         icon="heroicons-solid:plus"
         onClick={onCreateChat}
         variant="primary"
       />
       <Button
-        name="Create Content"
+        name=""
         icon="heroicons-solid:sparkles"
         onClick={onCreateContent}
         variant="secondary"

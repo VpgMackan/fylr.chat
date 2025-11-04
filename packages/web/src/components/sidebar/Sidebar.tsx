@@ -258,131 +258,153 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         isOpen={createContentModalOpen}
         onClose={() => setCreateContentModalOpen(false)}
       />
-      <div className="bg-gradient-to-b from-blue-50 to-blue-100 p-3 flex flex-col h-full w-64 shadow-lg">
-        <SidebarActions
-          onCreateChat={onCreateChat}
-          onCreateContent={() => setCreateContentModalOpen(true)}
-        />
+      <div className="flex flex-row w-96">
+        {/* Narrow Navigation Sidebar */}
+        <div className="bg-gradient-to-b from-gray-50 to-gray-100 p-2 flex flex-col h-full shadow-lg w-20">
+          <SidebarActions
+            onCreateChat={onCreateChat}
+            onCreateContent={() => setCreateContentModalOpen(true)}
+          />
 
-        <hr className="border-blue-200 my-3" />
+          <hr className="border-gray-300 my-3" />
 
-        {/* Navigation Tabs */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {CONTENT_TYPES.map(({ type, icon, label }) => (
-            <button
-              key={type}
-              onClick={() => setContentType(type)}
-              className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg transition-all ${
-                contentType === type
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-white text-gray-600 hover:bg-blue-100 hover:text-blue-600'
-              }`}
-            >
-              <Icon icon={icon} width="20" height="20" className="mb-1" />
-              <span className="text-xs font-medium">{label}</span>
-            </button>
-          ))}
+          {/* Navigation Tabs */}
+          <div className="flex flex-col gap-3 mb-3">
+            {CONTENT_TYPES.map(({ type, icon, label }) => (
+              <div key={type} className="relative group">
+                <button
+                  onClick={() => setContentType(type)}
+                  className={`relative w-full flex flex-col items-center justify-center py-3 px-2 rounded-xl transition-all ${
+                    contentType === type
+                      ? 'bg-blue-600 text-white shadow-lg scale-105'
+                      : 'bg-white text-gray-700 hover:bg-gray-200 hover:text-gray-900 hover:scale-105 shadow-sm'
+                  }`}
+                  title={label}
+                  aria-label={label}
+                >
+                  {/* Active indicator bar */}
+                  {contentType === type && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full" />
+                  )}
+                  <Icon icon={icon} width="24" height="24" />
+                </button>
+                {/* Tooltip */}
+                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">
+                  {label}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Account Button */}
+          <div className="pt-3 border-t border-gray-300 mt-auto flex justify-center">
+            <div className="relative group">
+              <Button
+                name=""
+                icon="heroicons:user-16-solid"
+                onClick={() => router.push('/profile')}
+                variant="ghost"
+              />
+              {/* Tooltip for Account */}
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">
+                Account
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-3">
+        {/* Main Content Area */}
+        <div className="bg-gray-50 flex-1 overflow-hidden flex flex-col min-h-0 p-3 border-l border-gray-200">
           {/* Search Bar */}
-          <div className="relative">
+          <div className="relative mb-3">
             <input
               type="text"
               placeholder={`Search ${contentType.toLowerCase()}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2.5 pl-10 pr-10 text-sm bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all placeholder-gray-400"
+              className="w-full px-4 py-2.5 pl-10 pr-10 text-sm text-gray-900 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500 shadow-sm hover:bg-gray-50"
               aria-label={`Search ${contentType.toLowerCase()}`}
             />
             <Icon
               icon="heroicons-solid:search"
               width="18"
               height="18"
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-900 transition-colors"
                 aria-label="Clear search"
               >
                 <Icon icon="heroicons-solid:x" width="18" height="18" />
               </button>
             )}
           </div>
-        </div>
 
-        {/* List Container */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {isLoading ? (
-            <div className="space-y-2 p-2 animate-pulse">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-10 bg-blue-200/50 rounded-lg"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                />
-              ))}
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="bg-white/60 rounded-full p-4 mb-4">
-                <Icon
-                  icon={
-                    contentType === 'Conversations'
-                      ? 'heroicons-solid:chat-alt-2'
-                      : contentType === 'Summaries'
-                        ? 'heroicons-solid:book-open'
-                        : contentType === 'Libraries'
-                          ? 'heroicons-solid:library'
-                          : 'heroicons-solid:microphone'
-                  }
-                  width="32"
-                  height="32"
-                  className="text-blue-400"
-                />
+          {/* List Container */}
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {isLoading ? (
+              <div className="space-y-2 p-2 animate-pulse">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-10 bg-gray-200 rounded-lg"
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  />
+                ))}
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {searchQuery
-                  ? `No results found for "${searchQuery}"`
-                  : getEmptyMessage()}
-              </p>
-            </div>
-          ) : (
-            <ConversationList
-              items={filteredItems.map((item) => ({
-                id: item.id,
-                name: item.title,
-              }))}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              onRename={
-                contentType === 'Conversations' ||
-                contentType === 'Summaries' ||
-                contentType === 'Podcasts'
-                  ? handleRename
-                  : undefined
-              }
-              onDelete={
-                contentType === 'Conversations' ||
-                contentType === 'Summaries' ||
-                contentType === 'Podcasts'
-                  ? handleDelete
-                  : undefined
-              }
-            />
-          )}
-        </div>
-
-        {/* Account Button */}
-        <div className="pt-3 border-t border-blue-200">
-          <Button
-            name="Account"
-            icon="heroicons:user-16-solid"
-            onClick={() => router.push('/profile')}
-            variant="ghost"
-          />
+            ) : filteredItems.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-white rounded-full p-4 mb-4 shadow-lg border border-gray-200">
+                  <Icon
+                    icon={
+                      contentType === 'Conversations'
+                        ? 'heroicons-solid:chat-alt-2'
+                        : contentType === 'Summaries'
+                          ? 'heroicons-solid:book-open'
+                          : contentType === 'Libraries'
+                            ? 'heroicons-solid:library'
+                            : 'heroicons-solid:microphone'
+                    }
+                    width="32"
+                    height="32"
+                    className="text-gray-500"
+                  />
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                  {searchQuery
+                    ? `No results found for "${searchQuery}"`
+                    : getEmptyMessage()}
+                </p>
+              </div>
+            ) : (
+              <ConversationList
+                items={filteredItems.map((item) => ({
+                  id: item.id,
+                  name: item.title,
+                }))}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+                onRename={
+                  contentType === 'Conversations' ||
+                  contentType === 'Summaries' ||
+                  contentType === 'Podcasts'
+                    ? handleRename
+                    : undefined
+                }
+                onDelete={
+                  contentType === 'Conversations' ||
+                  contentType === 'Summaries' ||
+                  contentType === 'Podcasts'
+                    ? handleDelete
+                    : undefined
+                }
+              />
+            )}
+          </div>
         </div>
       </div>
     </>
