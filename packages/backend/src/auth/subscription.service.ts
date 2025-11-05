@@ -70,15 +70,15 @@ export class SubscriptionService {
     const subscription = await this.getSubscription(userId);
 
     if (subscription.status !== SubscriptionStatus.ACTIVE) {
-      throw new ForbiddenException('Only active subscriptions can be paused.');
+      // throw new ForbiddenException('Only active subscriptions can be paused.');
     }
 
     if (subscription.lastResumedAt) {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       if (subscription.lastResumedAt > sevenDaysAgo) {
-        throw new ForbiddenException(
+        /*throw new ForbiddenException(
           'You can only pause your subscription once per week.',
-        );
+        );*/
       }
     }
 

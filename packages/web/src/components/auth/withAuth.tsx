@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 export function withAuth<P extends object>(Component: React.ComponentType<P>) {
   return function AuthenticatedComponent(props: P) {
     const t = useTranslations('pages.auth.withAuth');
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, userRole } = useAuth();
 
     if (isLoading) {
       return <div>{t('checking')}</div>;
@@ -16,6 +16,6 @@ export function withAuth<P extends object>(Component: React.ComponentType<P>) {
       return <div>{t('redirecting')}</div>;
     }
 
-    return <Component {...props} />;
+    return <Component {...props} userRole={userRole} />;
   };
 }

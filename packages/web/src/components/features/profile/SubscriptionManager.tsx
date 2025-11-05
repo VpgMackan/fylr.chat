@@ -24,9 +24,12 @@ const SubscriptionStatusBadge = ({
   };
   const { text, color } = config[status] || config.INACTIVE;
   return (
-    <span className={`px-3 py-1 text-sm font-medium rounded-full ${color}`}>
-      {text}
-    </span>
+    <div className={`px-3 py-1 flex items-center rounded-full ${color}`}>
+      {status === 'ACTIVE' && (
+        <Icon icon="mdi:check-circle" className="w-5 h-5 mr-2" />
+      )}
+      <span className=" text-sm font-medium">{text}</span>
+    </div>
   );
 };
 
@@ -63,7 +66,7 @@ export default function SubscriptionManager() {
   };
 
   if (isLoading) {
-    return <div className="h-24 bg-gray-200 rounded-lg animate-pulse"></div>;
+    return <div className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>;
   }
 
   if (!subscription) {
@@ -74,43 +77,56 @@ export default function SubscriptionManager() {
     );
   }
 
-  const { status, expiresAt } = subscription;
+  const { status, expiresAt, remainingDurationOnPause } = subscription;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Your Plan</h3>
-        <SubscriptionStatusBadge status={status} />
+    <>
+      <div className="space-y-4 bg-gradient-to-br from-purple-400 to-pink-400 p-3 text-white rounded-t-2xl h-64 flex flex-col">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-xl font-semibold">Your Plan</h3>
+          </div>
+          <SubscriptionStatusBadge status={status} />
+        </div>
+
+        <div className="flex-1 flex flex-col justify-end">
+          {status === 'ACTIVE' && expiresAt && (
+            <>
+              <p className="text-sm font-semibold">Expiration date:</p>
+              <p className="text-xl font-bold">
+                {new Date(expiresAt).toLocaleDateString()}
+              </p>
+            </>
+          )}
+          {status === 'PAUSED' && remainingDurationOnPause && (
+            <>
+              <p className="text-xl font-bold">
+                {Math.ceil(remainingDurationOnPause / 86400)} days of Pro left
+                when you resume
+              </p>
+            </>
+          )}
+          {status === 'EXPIRED' && (
+            <p className="text-xl font-bold">
+              Your subscription has expired. Renew to regain premium features
+            </p>
+          )}
+          {status === 'INACTIVE' && (
+            <p className="text-xl font-bold">
+              Upgrade to Pro for unlimited access and advanced features
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg border">
-        {status === 'ACTIVE' && expiresAt && (
-          <p className="text-sm text-gray-700">
-            Your Pro access expires on:{' '}
-            <strong>{new Date(expiresAt).toLocaleDateString()}</strong>
-          </p>
-        )}
-        {status === 'PAUSED' && (
-          <p className="text-sm text-gray-700">
-            Your subscription is currently paused. Resume to continue enjoying
-            Pro benefits.
-          </p>
-        )}
-        {(status === 'INACTIVE' || status === 'EXPIRED') && (
-          <p className="text-sm text-gray-700">
-            You are on the Free plan. Upgrade to Pro for unlimited access and
-            advanced features.
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 mt-2">
         {status === 'ACTIVE' && (
           <button
             onClick={() => handleAction(pauseSubscription)}
             disabled={isActionLoading}
-            className="flex-1 bg-yellow-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+            className="flex-1 bg-yellow-500 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            <Icon icon="mdi:pause" className="w-5 h-5" />
             Pause Subscription
           </button>
         )}
@@ -118,8 +134,9 @@ export default function SubscriptionManager() {
           <button
             onClick={() => handleAction(resumeSubscription)}
             disabled={isActionLoading}
-            className="flex-1 bg-green-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+            className="flex-1 bg-green-500 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            <Icon icon="mdi:play" className="w-5 h-5" />
             Resume Subscription
           </button>
         )}
@@ -127,12 +144,13 @@ export default function SubscriptionManager() {
           <button
             onClick={() => handleAction(() => activateSubscription(30))}
             disabled={isActionLoading}
-            className="flex-1 bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="flex-1 bg-blue-600 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            <Icon icon="mdi:arrow-up-circle" className="w-5 h-5" />
             Upgrade to Pro (30 Days)
           </button>
         )}
       </div>
-    </div>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
 import CreateContentModal from '../modals/CreateContentModal';
+import { useUser } from '@/contexts/UserContext';
 import {
   getConversations,
   updateConversation,
@@ -61,6 +62,7 @@ const CONTENT_TYPES = [
 ] as const;
 
 export default function Sidebar({ selectedId }: SidebarProps) {
+  const { userRole } = useUser();
   const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
@@ -297,24 +299,51 @@ export default function Sidebar({ selectedId }: SidebarProps) {
             ))}
           </div>
 
-          {/* Account Button */}
-          <div className="pt-3 border-t border-gray-300 mt-auto flex justify-center">
-            <div className="relative group">
-              <Button
-                name=""
-                icon="heroicons:user-16-solid"
-                onClick={() => router.push('/profile')}
-                variant="ghost"
-              />
-              {/* Tooltip for Account */}
-              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">
-                Account
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+          <div className="flex-1 flex flex-col justify-end">
+            <div className="px-2 mb-3 pt-3 border-t border-gray-300">
+              <div
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-[11px] font-bold tracking-wide uppercase shadow-sm transition-all ${
+                  userRole === 'PRO'
+                    ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                }`}
+              >
+                {userRole === 'PRO' ? <span>Pro</span> : <span>Free</span>}
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <div className="relative group">
+                <Button
+                  name=""
+                  icon="heroicons:user-16-solid"
+                  onClick={() => router.push('/profile')}
+                  variant="ghost"
+                />
+                {/* Subscription Badge */}
+                {userRole === 'PRO' && (
+                  <div
+                    className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full border-2 border-white shadow-sm"
+                    title="Pro Member"
+                  />
+                )}
+
+                {/* Enhanced Tooltip */}
+                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">
+                  <div className="font-semibold">
+                    {userRole === 'PRO' ? '✨ Pro Account' : 'Free Account'}
+                  </div>
+                  {userRole === 'FREE' && (
+                    <div className="text-gray-300 text-[10px] mt-0.5">
+                      Click to upgrade
+                    </div>
+                  )}
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                </div>
               </div>
             </div>
           </div>
         </div>
-
         {/* Main Content Area */}
         <div className="bg-gray-50 flex-1 overflow-hidden flex flex-col min-h-0 p-3 border-l border-gray-200">
           {/* Search Bar */}

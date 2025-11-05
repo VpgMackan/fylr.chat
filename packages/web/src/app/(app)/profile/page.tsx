@@ -129,7 +129,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile Form */}
-        <form onSubmit={handleUpdateProfile} className="space-y-6">
+        <form
+          onSubmit={handleUpdateProfile}
+          className="mt-8 pt-6 border-t space-y-6"
+        >
           {/* Name Field */}
           <div>
             <label
