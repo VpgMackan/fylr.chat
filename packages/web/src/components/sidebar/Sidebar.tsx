@@ -24,7 +24,11 @@ import {
   updatePodcast,
   deletePodcast,
 } from '@/services/api/podcast.api';
-import { getLibraries } from '@/services/api/library.api';
+import {
+  getLibraries,
+  updateLibrary,
+  deleteLibrary,
+} from '@/services/api/library.api';
 import toast from 'react-hot-toast';
 
 type ContentType =
@@ -181,6 +185,10 @@ export default function Sidebar({ selectedId }: SidebarProps) {
           await updatePodcast(id, { title: newName });
           successMessage = 'Podcast renamed successfully';
           break;
+        case 'Libraries':
+          await updateLibrary(id, { title: newName });
+          successMessage = 'Library renamed successfully';
+          break;
         default:
           return;
       }
@@ -218,6 +226,11 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         case 'Podcasts':
           await deletePodcast(id);
           successMessage = 'Podcast deleted successfully';
+          redirectPath = '/';
+          break;
+        case 'Libraries':
+          await deleteLibrary(id);
+          successMessage = 'Library deleted successfully';
           redirectPath = '/';
           break;
         default:
@@ -293,7 +306,7 @@ export default function Sidebar({ selectedId }: SidebarProps) {
                 {/* Tooltip */}
                 <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">
                   {label}
-                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transp1nt border-r-gray-900" />
                 </div>
               </div>
             ))}
@@ -420,14 +433,16 @@ export default function Sidebar({ selectedId }: SidebarProps) {
                 onRename={
                   contentType === 'Conversations' ||
                   contentType === 'Summaries' ||
-                  contentType === 'Podcasts'
+                  contentType === 'Podcasts' ||
+                  contentType === 'Libraries'
                     ? handleRename
                     : undefined
                 }
                 onDelete={
                   contentType === 'Conversations' ||
                   contentType === 'Summaries' ||
-                  contentType === 'Podcasts'
+                  contentType === 'Podcasts' ||
+                  contentType === 'Libraries'
                     ? handleDelete
                     : undefined
                 }
