@@ -6,14 +6,6 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRole, UsageRecordFeatrue } from '@prisma/client';
 
-const PERIOD_START = {
-  SUMMARY_GENERATION_MONTHLY: 'month',
-  PODCATS_GENERATION_MONTHLY: 'month',
-  CHAT_MESSAGES_DAILY: 'daily',
-  CHAT_AGENTIC_MESSAGES_DAILY: 'daily',
-  SOURCE_UPLOAD_DAILY: 'dailty',
-};
-
 const LIMITS = {
   FREE: {
     libraries: 10,
