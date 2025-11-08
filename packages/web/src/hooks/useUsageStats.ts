@@ -9,9 +9,13 @@ export interface UsageStats {
     libraries: number;
     sourcesPerLibrary: number;
     dailySourceUploads: number;
+    dailyMessages: number;
+    dailyAgenticMessages: number;
   };
   usage: {
     dailySourceUploads: number;
+    dailyMessages: number;
+    dailyAgenticMessages: number;
   };
 }
 
@@ -36,9 +40,13 @@ export function useUsageStats() {
           libraries: 10,
           sourcesPerLibrary: 50,
           dailySourceUploads: 10,
+          dailyMessages: 50,
+          dailyAgenticMessages: 20,
         },
         usage: {
           dailySourceUploads: 0,
+          dailyMessages: 0,
+          dailyAgenticMessages: 0,
         },
       });
     } finally {
@@ -56,6 +64,11 @@ export function useUsageStats() {
 
   const hasReachedDailyLimit = stats
     ? stats.usage.dailySourceUploads >= stats.limits.dailySourceUploads
+    : false;
+
+  const hasReachedAgenticLimit = stats
+    ? stats.role === 'FREE' &&
+      stats.usage.dailyAgenticMessages >= stats.limits.dailyAgenticMessages
     : false;
 
   const canUploadMore = stats
@@ -77,5 +90,6 @@ export function useUsageStats() {
     hasReachedDailyLimit,
     canUploadMore,
     remainingUploads,
+    hasReachedAgenticLimit,
   };
 }

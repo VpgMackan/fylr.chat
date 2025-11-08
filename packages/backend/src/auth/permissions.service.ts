@@ -124,23 +124,54 @@ export class PermissionsService {
     }
 
     const limits = LIMITS[user.role];
-    const currentPeriodStart = this._getPeriodStart(
+    const sourceUploadPeriodStart = this._getPeriodStart(
       UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
     );
+    const dailyChatPeriodStart = this._getPeriodStart(
+      UsageRecordFeatrue.CHAT_MESSAGES_DAILY,
+    );
+    const dailyAgenticPeriodStart = this._getPeriodStart(
+      UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY,
+    );
 
-    const usageRecord = await this.prisma.usageRecord.findUnique({
+    const usageRecord = await this.prisma.usageRecord.findMany({
       where: {
-        userId_feature: {
-          userId,
-          feature: UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
-        },
+        userId,
+        OR: [
+          { feature: UsageRecordFeatrue.SOURCE_UPLOAD_DAILY },
+          { feature: UsageRecordFeatrue.CHAT_MESSAGES_DAILY },
+          { feature: UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY },
+        ],
       },
     });
 
-    let dailyUploadsUsed = 0;
-    if (usageRecord && usageRecord.periodStart >= currentPeriodStart) {
-      dailyUploadsUsed = usageRecord.usageCount;
-    }
+    const dailyMessagesRecord = usageRecord.find(
+      (r) => r.feature === UsageRecordFeatrue.CHAT_MESSAGES_DAILY,
+    );
+    const dailyAgenticMessagesRecord = usageRecord.find(
+      (r) => r.feature === UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY,
+    );
+    const sourceUploadsRecord = usageRecord.find(
+      (r) => r.feature === UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
+    );
+
+    const dailyMessagesUsed =
+      dailyMessagesRecord &&
+      dailyMessagesRecord.periodStart >= dailyChatPeriodStart
+        ? dailyMessagesRecord.usageCount
+        : 0;
+
+    const dailyAgenticMessagesUsed =
+      dailyAgenticMessagesRecord &&
+      dailyAgenticMessagesRecord.periodStart >= dailyAgenticPeriodStart
+        ? dailyAgenticMessagesRecord.usageCount
+        : 0;
+
+    const dailyUploadsUsed =
+      sourceUploadsRecord &&
+      sourceUploadsRecord.periodStart >= sourceUploadPeriodStart
+        ? sourceUploadsRecord.usageCount
+        : 0;
 
     return {
       role: user.role,
@@ -148,9 +179,13 @@ export class PermissionsService {
         libraries: limits.libraries,
         sourcesPerLibrary: limits.sourcesPerLibrary,
         dailySourceUploads: limits.SOURCE_UPLOAD_DAILY,
+        dailyMessages: limits.CHAT_MESSAGES_DAILY,
+        dailyAgenticMessages: limits.CHAT_AGENTIC_MESSAGES_DAILY,
       },
       usage: {
         dailySourceUploads: dailyUploadsUsed,
+        dailyMessages: dailyMessagesUsed,
+        dailyAgenticMessages: dailyAgenticMessagesUsed,
       },
     };
   }

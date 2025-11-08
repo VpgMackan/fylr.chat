@@ -10,6 +10,7 @@ import {
   MessageAndSourceApiResponse,
   SourceApiResponseWithIsActive,
 } from '@fylr/types';
+import { toast } from 'react-hot-toast';
 
 const STREAMING_ASSISTANT_ID = 'streaming-assistant-msg';
 
@@ -42,7 +43,10 @@ type ChatAction =
   | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'SET_HISTORY'; payload: MessageApiResponse[] }
   | { type: 'SET_STATUS'; payload: { stage: string; message: string } | null }
-  | { type: 'SET_TOOL_PROGRESS'; payload: { toolName: string; message: string } | null }
+  | {
+      type: 'SET_TOOL_PROGRESS';
+      payload: { toolName: string; message: string } | null;
+    }
   | { type: 'ADD_AGENT_THOUGHT'; payload: MessageApiResponse }
   | { type: 'ADD_MESSAGE'; payload: MessageApiResponse }
   | {
@@ -312,6 +316,18 @@ export function useChat(chatId: string | null) {
             dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
           },
         );
+
+        socket.on('forceRAGMode', ({ reason }: { reason: string }) => {
+          console.log('Backend forced RAG mode:', reason);
+          toast(reason, {
+            icon: '🔒',
+            style: {
+              borderRadius: '10px',
+              background: '#333',
+              color: '#fff',
+            },
+          });
+        });
 
         socket.on(
           'sourcesUpdated',
