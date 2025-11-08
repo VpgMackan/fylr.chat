@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useState, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { toast } from 'react-hot-toast';
 import { useParams, useRouter } from 'next/navigation';
@@ -15,7 +14,7 @@ import {
   updatePodcast,
   deletePodcast,
 } from '@/services/api/podcast.api';
-import { PodcastApiResponse, PodcastEpisodeApiResponse } from '@fylr/types';
+import { PodcastEpisodeApiResponse } from '@fylr/types';
 
 export default function PodcastIdViewRefactored() {
   const params = useParams();

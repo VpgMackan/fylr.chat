@@ -242,10 +242,12 @@ const CreateLibraryContent = forwardRef<
                       : 'text-gray-600'
                   }`}
                 >
-                  Daily uploads: {stats.usage.dailySourceUploads}/
-                  {stats.limits.dailySourceUploads === Infinity
-                    ? '∞'
-                    : stats.limits.dailySourceUploads}
+                  {stats.limits.dailySourceUploads === null
+                    ? ''
+                    : 'Daily uploads: ' +
+                      stats.usage.dailySourceUploads +
+                      '/' +
+                      stats.limits.dailySourceUploads}
                 </span>
                 {stats.role === 'FREE' && (
                   <Link

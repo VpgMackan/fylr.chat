@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Icon } from '@iconify/react';
 
 import SourceListItem from './SourceListItem';

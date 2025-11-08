@@ -260,7 +260,10 @@ export class MessageService {
       // Apply reranking if we have results
       if (vectorResults.length > 0 && conversation.user.role === UserRole.PRO) {
         try {
-          emitStatus('reranking', 'Re-ranking results for relevance...');
+          emitStatus(
+            'reranking',
+            'Re-ranking results with AI for optimal relevance... ✨',
+          );
           relevantChunks = await this.rerankingService.rerankVectorResults(
             userQuery,
             vectorResults,
@@ -271,6 +274,7 @@ export class MessageService {
           relevantChunks = vectorResults.slice(0, 5);
         }
       } else {
+        emitStatus('retrieval', 'Retrieving relevant documents...');
         relevantChunks = vectorResults.slice(0, 5);
         if (conversation.user.role === UserRole.PRO) {
           console.log(
@@ -341,22 +345,23 @@ export class MessageService {
     }
 
     if (fullResponse) {
+      const metadata = {
+        relatedSources: relevantChunks.map((c) => ({
+          id: c.id,
+          sourceId: c.source.id,
+          libraryId: c.source.libraryId,
+          name: c.source.name,
+          chunkIndex: c.chunkIndex,
+        })),
+        rerankingUsed: conversation.user.role === UserRole.PRO,
+        userRole: conversation.user.role,
+      };
+
       const assistantMessage = await this.createMessage(
         {
           role: 'assistant',
           content: fullResponse,
-          metadata:
-            relevantChunks.length > 0
-              ? {
-                  relatedSources: relevantChunks.map((c) => ({
-                    id: c.id,
-                    sourceId: c.source.id,
-                    libraryId: c.source.libraryId,
-                    name: c.source.name,
-                    chunkIndex: c.chunkIndex,
-                  })),
-                }
-              : {},
+          metadata,
         },
         conversationId,
       );
@@ -399,7 +404,7 @@ export class MessageService {
               library: { select: { defaultEmbeddingModel: true } },
             },
           },
-          user: { select: { id: true } },
+          user: { select: { id: true, role: true } },
         },
       });
       if (!conversation) {
@@ -525,6 +530,8 @@ export class MessageService {
               server,
               userMessage.id,
               usedSourceChunks,
+              undefined,
+              conversation.user.role,
             );
             return;
           }
@@ -720,6 +727,7 @@ export class MessageService {
         currentIteration >= MAX_ITERATIONS
           ? "I've completed my research but reached the maximum number of steps. Here's what I found:"
           : "Here's a summary of my findings:",
+        conversation.user.role,
       );
     } catch (error) {
       console.error('Error in generateAndStreamAiResponseWithTools:', error);
@@ -933,6 +941,7 @@ export class MessageService {
     userMessageId: string,
     sourceChunks: any[] = [],
     overrideQuery?: string,
+    userRole?: UserRole,
   ) {
     try {
       const plainTextMessages = this.convertToolMessagesToPlainText(messages);
@@ -1016,8 +1025,13 @@ export class MessageService {
                     name: c.source.name,
                     chunkIndex: c.chunkIndex,
                   })),
+                  rerankingUsed: userRole === UserRole.PRO,
+                  userRole: userRole,
                 }
-              : {},
+              : {
+                  rerankingUsed: userRole === UserRole.PRO,
+                  userRole: userRole,
+                },
         },
         conversationId,
       );
