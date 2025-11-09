@@ -11,18 +11,94 @@ datasource db {
   extensions = [vector]
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+  INACTIVE
+}
+
+enum UserRole {
+  FREE
+  PRO
+}
+
+enum UsageRecordFeatrue {
+  SUMMARY_GENERATION_MONTHLY
+  PODCAST_GENERATION_MONTHLY
+  CHAT_MESSAGES_DAILY
+  CHAT_AGENTIC_MESSAGES_DAILY
+  SOURCE_UPLOAD_DAILY
+}
+
+enum GiftCardStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  name          String
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+
+  role UserRole @default(FREE)
+
   libraries     Library[]
   conversations Conversation[]
   summary       Summary[]
   podcast       Podcast[]
   refreshTokens RefreshToken[]
+  Subscription  Subscription?
+  usageRecords  UsageRecord[]
+  giftCards     GiftCard[]
 
   @@map("Users")
+}
+
+model GiftCard {
+  id     String         @id @default(uuid())
+  code   String         @unique
+  days   Int
+  status GiftCardStatus @default(AVAILABLE)
+
+  redeemedByUserId String? @map("redeemed_by_user_id")
+  user             User?   @relation(fields: [redeemedByUserId], references: [id], onDelete: Cascade)
+
+  redeemedAt DateTime? @map("redeemed_at")
+  expiresAt  DateTime @map("expires_at")
+}
+
+model Subscription {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status                   SubscriptionStatus @default(INACTIVE)
+  expiresAt                DateTime?          @map("expires_at")
+  remainingDurationOnPause Int?               @map("remaining_duration_on_pause")
+
+  pausedAt      DateTime? @map("paused_at")
+  lastResumedAt DateTime? @map("last_resumed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("Subscriptions")
+}
+
+model UsageRecord {
+  id          String             @id @default(uuid())
+  userId      String             @map("user_id")
+  feature     UsageRecordFeatrue
+  usageCount  Int                @default(1) @map("usage_count")
+  periodStart DateTime           @map("period_start")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+  @@map("UsageRecords")
 }
 
 model RefreshToken {
@@ -54,17 +130,18 @@ model Library {
 }
 
 model Source {
-  id         String   @id @default(uuid())
-  libraryId  String   @map("library_id")
-  name       String
-  mimeType   String   @map("type")
-  url        String
-  size       Int
-  uploadTime DateTime @default(now()) @map("upload_time")
-  jobKey     String   @map("job_key")
-  status     String   @db.Text
-  library    Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
-  vectors    Vector[]
+  id               String   @id @default(uuid())
+  libraryId        String   @map("library_id")
+  name             String
+  mimeType         String   @map("type")
+  url              String
+  size             Int
+  uploadTime       DateTime @default(now()) @map("upload_time")
+  jobKey           String   @map("job_key")
+  status           String   @db.Text
+  pendingIngestion Boolean  @default(false) @map("pending_ingestion")
+  library          Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  vectors          Vector[]
 
   ingestorType    String?
   ingestorVersion String?

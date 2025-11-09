@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "fyrl-tools"
+version = "1.0.0"
+description = "A simple python utlility to manage different aspects of fylr-chat"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+python-dotenv = "^1.0.0"
+pydantic-settings = "^2.2.1"
+sqlalchemy = "^2.0.25"
+psycopg2-binary = "^2.9.9"
+inquirerpy = "^0.3.4"
+
+[tool.poetry.scripts]
+start = "src.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

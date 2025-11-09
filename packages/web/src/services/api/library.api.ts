@@ -32,3 +32,7 @@ export const updateLibrary = async (
   const { data } = await axios.patch<LibraryApiResponse>(`library/${id}`, dto);
   return data;
 };
+
+export const deleteLibrary = async (id: string): Promise<void> => {
+  await axios.delete(`library/${id}`);
+};

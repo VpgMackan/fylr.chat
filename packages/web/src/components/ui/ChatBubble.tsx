@@ -12,6 +12,12 @@ interface RelatedSource {
   chunkIndex: number;
 }
 
+interface MessageMetadata {
+  relatedSources?: RelatedSource[];
+  rerankingUsed?: boolean;
+  userRole?: 'FREE' | 'PRO';
+}
+
 interface RelatedSourceButtonProps {
   chunk: RelatedSource;
   index: number;
@@ -52,7 +58,7 @@ export default function ChatBubble({
 }: {
   user: boolean;
   text: string;
-  metadata?: { relatedSources?: RelatedSource[] };
+  metadata?: MessageMetadata;
   onRegenerate: () => void;
   onDelete: () => void;
   // onSourceClick?: (src: RelatedSource) => void;
@@ -68,6 +74,11 @@ export default function ChatBubble({
     : 'bg-gray-100 border-gray-300';
 
   const relatedSources = metadata?.relatedSources || [];
+  const showRerankingUpsell =
+    !user &&
+    relatedSources.length > 0 &&
+    metadata?.userRole === 'FREE' &&
+    metadata?.rerankingUsed === false;
 
   const handleDelete = useCallback(() => onDelete(), []);
   const handleRegenerate = useCallback(() => onRegenerate(), []);
@@ -101,8 +112,29 @@ export default function ChatBubble({
         <MarkdownComponent text={text} />
       </div>
 
+      {showRerankingUpsell && (
+        <div className="mt-2 flex items-start gap-2 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-3 py-2 w-full max-w-[70%]">
+          <Icon
+            icon="mdi:star-circle"
+            className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-700 leading-relaxed">
+              <span className="font-semibold text-purple-700">Pro users</span>{' '}
+              get higher-quality answers with AI-powered re-ranking.{' '}
+              <button
+                onClick={() => router.push('/profile')}
+                className="text-purple-600 hover:text-purple-700 font-medium underline decoration-purple-300 hover:decoration-purple-500 transition-colors"
+              >
+                Learn more
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className={`flex mt-2 justify-between w-full ${maxWidthClass}`}>
-        <div>
+        <div className="flex-1">
           {!user && relatedSources.length > 0 && (
             <>
               <p className="text-xs font-semibold text-gray-600 mb-1">

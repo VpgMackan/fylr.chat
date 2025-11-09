@@ -4,7 +4,9 @@ import { MentionsInput, Mention } from 'react-mentions';
 import type { SuggestionDataItem } from 'react-mentions';
 import SourceMenu from './SourceMenu';
 import { useChatInput } from '@/hooks/useChatInput';
+import { useUsageStats } from '@/hooks/useUsageStats';
 import type { SourceApiResponseWithIsActive } from '@fylr/types';
+import Link from 'next/link';
 
 interface ChatInputProps {
   onSend: (payload: {
@@ -86,11 +88,18 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [agenticMode, setAgenticMode] = useState(initialAgenticMode);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const { stats, hasReachedAgenticLimit } = useUsageStats();
 
   // Update local state when initialAgenticMode changes
   useEffect(() => {
     setAgenticMode(initialAgenticMode);
   }, [initialAgenticMode]);
+
+  useEffect(() => {
+    if (hasReachedAgenticLimit) {
+      setAgenticMode(false);
+    }
+  }, [hasReachedAgenticLimit]);
 
   // Disable web search when agentic mode is turned off
   useEffect(() => {
@@ -195,30 +204,53 @@ export default function ChatInput({
               />
             </MentionsInput>
           </div>
+          {hasReachedAgenticLimit && (
+            <div className="text-center text-xs text-purple-700 bg-purple-100 p-2 rounded-md mb-2 flex items-center justify-center gap-2">
+              <Icon icon="mdi:lock-outline" />
+              <span>
+                Agentic Mode is disabled for today.{' '}
+                <Link href="/profile" className="font-bold underline">
+                  Upgrade to Pro
+                </Link>{' '}
+                for unlimited use.
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
             <div className="flex gap-1.5">
               <button
                 className={agenticButtonStyle}
                 onClick={() => setAgenticMode(!agenticMode)}
-                aria-label={
-                  agenticMode ? 'Disable agentic mode' : 'Enable agentic mode'
-                }
+                disabled={hasReachedAgenticLimit}
                 title={
-                  agenticMode
-                    ? 'Using Agentic Mode (Tools & Reasoning)'
-                    : 'Using RAG Mode (Vector Search)'
+                  hasReachedAgenticLimit
+                    ? 'You have used all your Agentic Mode messages for today.'
+                    : agenticMode
+                      ? 'Using Agentic Mode (Tools & Reasoning)'
+                      : 'Using RAG Mode (Vector Search)'
                 }
               >
                 <Icon icon="mdi:robot" width="16" height="16" />
                 <span>Agentic Mode</span>
               </button>
+
+              {stats && stats.role === 'FREE' && (
+                <div className="flex items-center text-xs text-gray-500 bg-white/60 px-2 rounded-full">
+                  <span>
+                    {stats.usage.dailyAgenticMessages}/
+                    {stats.limits.dailyAgenticMessages} used
+                  </span>
+                </div>
+              )}
               <button className={buttonStyle} aria-label="Add attachment">
                 <Icon icon="mdi:plus" width="18" height="18" />
               </button>
               <button
                 className={webSearchButtonStyle}
-                onClick={() => agenticMode && setWebSearchEnabled(!webSearchEnabled)}
+                onClick={() =>
+                  agenticMode && setWebSearchEnabled(!webSearchEnabled)
+                }
                 disabled={!agenticMode}
                 aria-label={
                   !agenticMode

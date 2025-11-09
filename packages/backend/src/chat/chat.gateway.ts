@@ -21,6 +21,7 @@ import {
 import { MessageService } from './message.service';
 import { SourceService } from 'src/source/source.service';
 import { ConversationService } from './conversation.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -42,6 +43,7 @@ export class ChatGateway
     private readonly messageService: MessageService,
     private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   afterInit(server: Server) {
@@ -227,8 +229,32 @@ export class ChatGateway
             throw new WsException('content is required for sendMessage action');
           }
 
+          // Check usage limits and enforce agentic mode restrictions
+          const usageStats = await this.permissionsService.getUsageStats(
+            client.user.id,
+          );
+          const hasReachedAgenticLimit =
+            usageStats.role === 'FREE' &&
+            usageStats.usage.dailyAgenticMessages >=
+              usageStats.limits.dailyAgenticMessages;
+
+          let useAgenticMode = agenticMode !== false; // User's preference
+
+          // Backend enforcement
+          if (useAgenticMode && hasReachedAgenticLimit) {
+            this.logger.warn(
+              `User ${client.user.id} hit agentic message limit. Forcing RAG mode for conversation ${conversationId}.`,
+            );
+            useAgenticMode = false; // Override user preference
+
+            // Emit a special event to the client to notify them of the change
+            client.emit('forceRAGMode', {
+              reason:
+                'You have used all your Agentic Mode messages for today. Switching to standard mode.',
+            });
+          }
+
           // Update conversation metadata with the current agenticMode and webSearchEnabled settings
-          const useAgenticMode = agenticMode !== false; // Default to true
           // Web search is only available in agentic mode
           const useWebSearch = useAgenticMode && webSearchEnabled === true;
           await this.conversationService.updateConversation(

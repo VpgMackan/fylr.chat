@@ -14,6 +14,7 @@ import { validate } from './config/config';
 import { ChatModule } from './chat/chat.module';
 import { SummaryModule } from './summary/summary.module';
 import { PodcastModule } from './podcast/podcast.module';
+import { GiftCardModule } from './gift-card/gift-card.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PodcastModule } from './podcast/podcast.module';
     ChatModule,
     SummaryModule,
     PodcastModule,
+    GiftCardModule,
   ],
   providers: [
     {

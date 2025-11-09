@@ -242,6 +242,24 @@ export class AuthService {
     });
   }
 
+  async getProfile(userId: string): Promise<UserApiResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
   async updateProfile(
     userId: string,
     updateData: UpdateUserDto,

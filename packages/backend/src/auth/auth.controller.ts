@@ -23,6 +23,7 @@ import {
 } from 'express';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { PermissionsService } from './permissions.service';
 
 import { RequestWithUser } from './interfaces/request-with-user.interface';
 
@@ -35,7 +36,10 @@ import {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private permissionsService: PermissionsService,
+  ) {}
 
   private setTokenCookies(
     res: ExpressResponse,
@@ -131,8 +135,9 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Get('profile')
-  getProfile(@Request() req: RequestWithUser) {
-    return req.user;
+  async getProfile(@Request() req: RequestWithUser) {
+    // Fetch full user data including role from database
+    return this.authService.getProfile(req.user.id);
   }
 
   @UseGuards(AuthGuard)
@@ -169,5 +174,11 @@ export class AuthController {
       throw new BadRequestException('Missing user or token information');
     }
     await this.authService.revokeAllOtherSessions(user.id, refreshToken);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('usage-stats')
+  async getUsageStats(@Request() req: RequestWithUser) {
+    return this.permissionsService.getUsageStats(req.user.id);
   }
 }

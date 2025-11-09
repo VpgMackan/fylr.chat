@@ -9,11 +9,17 @@ import { AuthModule } from 'src/auth/auth.module';
 import { AiModule } from 'src/ai/ai.module';
 import { SourceModule } from 'src/source/source.module';
 import { ToolsModule } from './tools/tools.module';
+import { PermissionsService } from 'src/auth/permissions.service';
 
 @Module({
   imports: [AuthModule, AiModule, SourceModule, ToolsModule],
   controllers: [ChatController],
-  providers: [ConversationService, MessageService, ChatGateway],
+  providers: [
+    ConversationService,
+    MessageService,
+    ChatGateway,
+    PermissionsService,
+  ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ChatModule {}

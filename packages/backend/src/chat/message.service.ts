@@ -9,11 +9,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
 
+import { UserRole } from '@prisma/client';
+
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { RerankingService } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 import {
   sanitizeMessage,
   sanitizeText,
@@ -37,6 +40,7 @@ export class MessageService {
     private readonly rerankingService: RerankingService,
     private sourceService: SourceService,
     private readonly toolService: ToolService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async getMessages(conversationId: string) {
@@ -203,13 +207,19 @@ export class MessageService {
     emitStatus('history', 'Analyzing conversation history...');
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { sources: true },
+      include: { sources: true, user: { select: { role: true, id: true } } },
     });
     if (!conversation) {
       throw new NotFoundException(
         `Conversation with ID "${conversationId}" not found.`,
       );
     }
+
+    // Check chat message daily limit (non-agentic mode)
+    await this.permissionsService.authorizeFeatureUsage(
+      conversation.user.id,
+      'CHAT_MESSAGES_DAILY',
+    );
 
     const recentMessages = await this.prisma.message.findMany({
       where: { conversationId },
@@ -248,11 +258,14 @@ export class MessageService {
       );
 
       // Apply reranking if we have results
-      if (vectorResults.length > 0) {
+      if (vectorResults.length > 0 && conversation.user.role === UserRole.PRO) {
         try {
-          emitStatus('reranking', 'Re-ranking results for relevance...');
+          emitStatus(
+            'reranking',
+            'Re-ranking results with AI for optimal relevance... ✨',
+          );
           relevantChunks = await this.rerankingService.rerankVectorResults(
-            userQuery, // Use the actual user query for reranking
+            userQuery,
             vectorResults,
             5,
           );
@@ -261,9 +274,13 @@ export class MessageService {
           relevantChunks = vectorResults.slice(0, 5);
         }
       } else {
-        console.log(
-          '[RAG Pipeline] No results found with multi-query retrieval',
-        );
+        emitStatus('retrieval', 'Retrieving relevant documents...');
+        relevantChunks = vectorResults.slice(0, 5);
+        if (conversation.user.role === UserRole.PRO) {
+          console.log(
+            '[RAG Pipeline] No results found with multi-query retrieval',
+          );
+        }
       }
     }
 
@@ -328,22 +345,23 @@ export class MessageService {
     }
 
     if (fullResponse) {
+      const metadata = {
+        relatedSources: relevantChunks.map((c) => ({
+          id: c.id,
+          sourceId: c.source.id,
+          libraryId: c.source.libraryId,
+          name: c.source.name,
+          chunkIndex: c.chunkIndex,
+        })),
+        rerankingUsed: conversation.user.role === UserRole.PRO,
+        userRole: conversation.user.role,
+      };
+
       const assistantMessage = await this.createMessage(
         {
           role: 'assistant',
           content: fullResponse,
-          metadata:
-            relevantChunks.length > 0
-              ? {
-                  relatedSources: relevantChunks.map((c) => ({
-                    id: c.id,
-                    sourceId: c.source.id,
-                    libraryId: c.source.libraryId,
-                    name: c.source.name,
-                    chunkIndex: c.chunkIndex,
-                  })),
-                }
-              : {},
+          metadata,
         },
         conversationId,
       );
@@ -386,6 +404,7 @@ export class MessageService {
               library: { select: { defaultEmbeddingModel: true } },
             },
           },
+          user: { select: { id: true, role: true } },
         },
       });
       if (!conversation) {
@@ -393,6 +412,12 @@ export class MessageService {
           `Conversation with ID "${conversationId}" not found.`,
         );
       }
+
+      // Check agentic chat message daily limit
+      await this.permissionsService.authorizeFeatureUsage(
+        conversation.user.id,
+        'CHAT_AGENTIC_MESSAGES_DAILY',
+      );
 
       const embeddingModel =
         conversation.sources.length > 0
@@ -505,6 +530,8 @@ export class MessageService {
               server,
               userMessage.id,
               usedSourceChunks,
+              undefined,
+              conversation.user.role,
             );
             return;
           }
@@ -700,6 +727,7 @@ export class MessageService {
         currentIteration >= MAX_ITERATIONS
           ? "I've completed my research but reached the maximum number of steps. Here's what I found:"
           : "Here's a summary of my findings:",
+        conversation.user.role,
       );
     } catch (error) {
       console.error('Error in generateAndStreamAiResponseWithTools:', error);
@@ -913,6 +941,7 @@ export class MessageService {
     userMessageId: string,
     sourceChunks: any[] = [],
     overrideQuery?: string,
+    userRole?: UserRole,
   ) {
     try {
       const plainTextMessages = this.convertToolMessagesToPlainText(messages);
@@ -996,8 +1025,13 @@ export class MessageService {
                     name: c.source.name,
                     chunkIndex: c.chunkIndex,
                   })),
+                  rerankingUsed: userRole === UserRole.PRO,
+                  userRole: userRole,
                 }
-              : {},
+              : {
+                  rerankingUsed: userRole === UserRole.PRO,
+                  userRole: userRole,
+                },
         },
         conversationId,
       );

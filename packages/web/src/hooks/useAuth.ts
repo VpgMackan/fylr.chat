@@ -9,14 +9,16 @@ import toast from 'react-hot-toast';
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userRole, setUserRole] = useState<string>('FREE');
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await axios.get('auth/profile');
+        const { data } = await axios.get('auth/profile');
         setIsAuthenticated(true);
+        setUserRole(data.role);
       } catch (error: unknown) {
         if (isAxiosError(error) && error.response?.status === 401) {
           setIsAuthenticated(false);
@@ -42,5 +44,5 @@ export function useAuth() {
     }
   };
 
-  return { isAuthenticated, isLoading, logout };
+  return { isAuthenticated, isLoading, userRole, logout };
 }

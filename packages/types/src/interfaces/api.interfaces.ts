@@ -2,6 +2,7 @@ export interface UserApiResponse {
   id: string;
   email: string;
   name: string;
+  role?: 'FREE' | 'PRO';
 }
 export interface SourceApiResponse {
   id: string;
@@ -41,12 +42,22 @@ export interface MessageApiResponse {
   id: string;
   conversationId: string;
   role: 'user' | 'assistant' | 'tool';
-  content: string | null; // Can be null for thoughts that only contain reasoning/tool_calls
+  content: string | null;
   reasoning: string | null;
-  toolCalls: any | null; // Can be more specific if you define a ToolCall type
+  toolCalls: any | null;
   toolCallId: string | null;
   createdAt: string;
-  metadata: object;
+  metadata: {
+    relatedSources?: Array<{
+      id: string;
+      sourceId: string;
+      libraryId: string;
+      name: string;
+      chunkIndex: number;
+    }>;
+    rerankingUsed?: boolean;
+    userRole?: 'FREE' | 'PRO';
+  };
 }
 
 export interface SourceApiResponseWithIsActive extends SourceApiResponse {

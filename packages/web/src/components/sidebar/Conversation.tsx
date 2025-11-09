@@ -24,10 +24,10 @@ export default function Conversation({
 
   return (
     <div
-      className={`px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative group ${
+      className={`px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 relative group ${
         selected
-          ? 'bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md scale-[1.02]'
-          : 'hover:bg-white/70 hover:shadow-sm text-gray-800'
+          ? 'bg-blue-600 text-white shadow-md'
+          : 'hover:bg-gray-200 text-gray-800 hover:text-gray-900'
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -44,8 +44,8 @@ export default function Conversation({
     >
       <div className="flex items-center justify-between gap-2">
         <p
-          className={`text-sm font-medium truncate pr-2 transition-colors ${
-            selected ? 'text-white' : 'text-gray-800'
+          className={`text-sm font-semibold truncate pr-2 transition-colors ${
+            selected ? 'text-white' : ''
           }`}
           title={name}
         >

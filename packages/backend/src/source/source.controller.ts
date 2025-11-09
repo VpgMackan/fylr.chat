@@ -135,4 +135,18 @@ export class SourceController {
   ) {
     return this.sourceService.requeueSource(sourceId, req.user.id);
   }
+
+  @Get('pending-ingestion')
+  async getPendingIngestionSources(@Request() req: RequestWithUser) {
+    return this.sourceService.getPendingIngestionSources(req.user.id);
+  }
+
+  @Post(':sourceId/trigger-ingestion')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async triggerIngestion(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.triggerIngestion(sourceId, req.user.id);
+  }
 }

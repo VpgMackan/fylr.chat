@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePodcastDto } from '@fylr/types';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { S3Service } from 'src/common/s3/s3.service';
+import { PermissionsService } from 'src/auth/permissions.service';
 
 @Injectable()
 export class PodcastService {
@@ -17,6 +18,7 @@ export class PodcastService {
     private readonly rabbitMQService: RabbitMQService,
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async getPodcastsByUserId(
@@ -64,6 +66,12 @@ export class PodcastService {
         'Either libraryIds or sourceIds must be provided.',
       );
     }
+
+    // Check podcast generation limit (note: using the enum as-is from schema, which has a typo)
+    await this.permissionsService.authorizeFeatureUsage(
+      userId,
+      'PODCAST_GENERATION_MONTHLY',
+    );
 
     const allSourceIds = new Set<string>(sourceIds);
 

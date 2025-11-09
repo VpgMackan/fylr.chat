@@ -1,49 +1,4 @@
 {
-  "common": {
-    "buttons": {
-      "save": "Save",
-      "cancel": "Cancel",
-      "create": "Create new",
-      "viewAll": "View all"
-    },
-    "metadata": {
-      "sources": "Sources: {amount}",
-      "created": "Created: {date}",
-      "imported": "Imported: {date}",
-      "size": "Size: {size}"
-    }
-  },
-
-  "pockets": {
-    "labels": {
-      "yourPockets": "Your pockets",
-      "pocketName": "Pocket: {pocketName}",
-      "nameField": "Pocket Name",
-      "descriptionField": "Pocket Description (Optional)",
-      "tagsField": "Pocket Tags (Optional)"
-    },
-    "placeholders": {
-      "nameField": "Enter a name for your pocket",
-      "descriptionField": "Enter a description for your pocket",
-      "tagsField": "Add tags (e.g., technology, health)",
-      "search": "Search pockets..."
-    },
-    "hints": {
-      "tags": "Separate tags with commas. Example: technology, health"
-    }
-  },
-
-  "sources": {
-    "labels": {
-      "yourSources": "Your sources",
-      "sourcesField": "Sources (Optional, can be added later)",
-      "modifySources": "Modify sources"
-    },
-    "placeholders": {
-      "sourcesField": "Add sources (e.g., URLs, text)"
-    }
-  },
-
   "pages": {
     "auth": {
       "withAuth": {
@@ -74,76 +29,8 @@
         "buttonSigningIn": "Signing in...",
         "noAccount": "Don't have an account? <signup>Sign up</signup>"
       }
-    },
-    "home": {
-      "welcome": "What's up, {name}!",
-      "mostRecentChat": "Most recent chats",
-      "pinnedPodcasts": "Pinned podcasts"
-    },
-    "pocketList": {
-      "yourPockets": "Your pockets",
-      "searchLabel": "Search Pockets",
-      "clearSearchLabel": "Clear search",
-      "mostRecent": "Most recent",
-      "title": "Title",
-      "created": "Created"
-    },
-    "newPocket": {
-      "title": "Create New Pocket",
-      "createButton": "Create Pocket"
-    },
-    "pocketDetail": {
-      "mostRecent": "Most recent activity",
-      "shortcuts": "Shortcuts",
-      "viewChats": "View all chats",
-      "viewSummaries": "View all summaries",
-      "viewPodcasts": "View all podcasts",
-      "editPocket": "Edit pocket"
-    },
-    "podcastList": {
-      "yourPodcasts": "Your podcasts in {pocketName}",
-      "searchLabel": "Search through podcasts",
-      "clearSearchLabel": "Clear search",
-      "mostRecent": "Most recent",
-      "title": "Title",
-      "created": "Created"
-    },
-    "podcast": {
-      "editButton": "Edit",
-      "podcastEpisodes": "Podcast Episodes",
-      "share": "Share",
-      "download": "Download"
-    },
-    "summariesList": {
-      "yourSummaries": "Your summaries in {pocketName}",
-      "searchLabel": "Search through summaries",
-      "clearSearchLabel": "Clear search",
-      "mostRecent": "Most recent",
-      "title": "Title",
-      "created": "Created"
-    },
-    "summaries": {
-      "editButton": "Edit",
-      "summaryEpisodes": "Summary Episodes"
-    },
-    "chatsList": {
-      "yourChats": "Your chats in {pocketName}",
-      "searchLabel": "Search through chats",
-      "clearSearchLabel": "Clear search",
-      "mostRecent": "Most recent",
-      "title": "Title",
-      "created": "Created"
-    },
-    "chatDetail": {
-      "editButton": "Edit",
-      "yourSources": "Your sources"
     }
   },
-
-  "podcasts": {
-    "goToPodcast": "Go to podcast"
-  },
-
   "features": {
     "chat": {
       "userMessage": "User message",
@@ -156,45 +43,6 @@
       "send": "Send",
       "sourcesUsed": "Sources Used",
       "messageActions": "Actions"
-    }
-  },
-
-  "modals": {
-    "createConversation": {
-      "title": "Create New Conversation",
-      "nameLabel": "Conversation Name",
-      "namePlaceholder": "Enter a name for your conversation",
-      "sourcesLabel": "Select Sources (Optional)",
-      "selectAll": "Select All",
-      "deselectAll": "Deselect All",
-      "loadingSources": "Loading sources...",
-      "noSources": "No sources available in this pocket",
-      "selectedCount": "{count} source{count, plural, one {} other {s}} selected",
-      "creating": "Creating...",
-      "error": "Failed to create conversation. Please try again."
-    },
-    "createSummary": {
-      "title": "Create New Summary",
-      "summaryTitleLabel": "Summary Title",
-      "summaryTitlePlaceholder": "e.g., Q2 2024 AI Research Review",
-      "episodesLabel": "Summary Episodes",
-      "episodeCount": "Episode {count}",
-      "episodeTitleLabel": "Episode Title",
-      "episodeTitlePlaceholder": "e.g., Advancements in LLMs",
-      "episodeFocusLabel": "Episode Focus (Optional)",
-      "episodeFocusPlaceholder": "e.g., Focus on multi-modal capabilities",
-      "addEpisode": "Add Another Episode",
-      "validationError": "Please fill in all required fields.",
-      "creating": "Creating...",
-      "error": "Failed to create summary. Please try again."
-    },
-    "createPodcast": {
-      "title": "Create New Podcast",
-      "podcastTitleLabel": "Podcast Title",
-      "podcastTitlePlaceholder": "e.g., Q2 2024 AI Research Review",
-      "validationError": "Please fill in all required fields.",
-      "creating": "Creating...",
-      "error": "Failed to create Podcast. Please try again."
     }
   }
 }
