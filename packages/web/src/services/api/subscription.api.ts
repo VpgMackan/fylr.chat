@@ -10,17 +10,15 @@ export interface Subscription {
   lastResumedAt: string | null;
 }
 
-export const getSubscription = async (): Promise<Subscription> => {
-  const { data } = await axios.get<Subscription>('/subscription');
+export const redeemGiftCard = async (code: string): Promise<Subscription> => {
+  const { data } = await axios.post<Subscription>('/gift-card/redeem', {
+    code,
+  });
   return data;
 };
 
-export const activateSubscription = async (
-  days: number,
-): Promise<Subscription> => {
-  const { data } = await axios.post<Subscription>('/subscription/activate', {
-    days,
-  });
+export const getSubscription = async (): Promise<Subscription> => {
+  const { data } = await axios.get<Subscription>('/subscription');
   return data;
 };
 

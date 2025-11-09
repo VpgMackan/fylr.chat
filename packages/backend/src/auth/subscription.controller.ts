@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-  Request,
-  Body,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from './auth.guard';
 import { SubscriptionService } from './subscription.service';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
@@ -20,15 +12,6 @@ export class SubscriptionController {
   @Get()
   getSubscription(@Request() req: RequestWithUser) {
     return this.subscriptionService.getSubscription(req.user.id);
-  }
-
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Post('activate')
-  activateSubscription(
-    @Request() req: RequestWithUser,
-    @Body('days', ParseIntPipe) days: number,
-  ) {
-    return this.subscriptionService.activateSubscription(req.user.id, days);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })

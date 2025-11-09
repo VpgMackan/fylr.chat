@@ -6,10 +6,11 @@ import toast from 'react-hot-toast';
 import {
   Subscription,
   getSubscription,
-  activateSubscription,
+  redeemGiftCard,
   pauseSubscription,
   resumeSubscription,
 } from '@/services/api/subscription.api';
+import { validateGiftCardCode } from '@/utils/giftCardValidator';
 
 const SubscriptionStatusBadge = ({
   status,
@@ -35,8 +36,13 @@ const SubscriptionStatusBadge = ({
 
 export default function SubscriptionManager() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [giftCardCode, setGiftCardCode] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // Check if the current input is valid (for UI feedback)
+  const isCodeValid =
+    giftCardCode.trim() === '' || validateGiftCardCode(giftCardCode.trim());
 
   useEffect(() => {
     fetchSubscription();
@@ -59,7 +65,40 @@ export default function SubscriptionManager() {
     try {
       const updatedSub = await action();
       setSubscription(updatedSub);
-    } catch (error) {
+      toast.success('Subscription updated successfully!');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'Action failed. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleRedeemGiftCard = async () => {
+    const trimmedCode = giftCardCode.trim();
+
+    if (!trimmedCode) {
+      toast.error('Please enter a gift card code');
+      return;
+    }
+
+    // Validate format before making API call
+    if (!validateGiftCardCode(trimmedCode)) {
+      toast.error('Invalid gift card code format');
+      return;
+    }
+
+    setIsActionLoading(true);
+    try {
+      const updatedSub = await redeemGiftCard(trimmedCode);
+      setSubscription(updatedSub);
+      setGiftCardCode('');
+      toast.success('Gift card redeemed successfully!');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'Failed to redeem gift card';
+      toast.error(errorMessage);
     } finally {
       setIsActionLoading(false);
     }
@@ -141,14 +180,37 @@ export default function SubscriptionManager() {
           </button>
         )}
         {(status === 'INACTIVE' || status === 'EXPIRED') && (
-          <button
-            onClick={() => handleAction(() => activateSubscription(30))}
-            disabled={isActionLoading}
-            className="flex-1 bg-blue-600 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <Icon icon="mdi:arrow-up-circle" className="w-5 h-5" />
-            Upgrade to Pro (30 Days)
-          </button>
+          <>
+            <input
+              type="text"
+              placeholder="Enter Gift Card Code (FYLR-XXXX-XXXX-XXXX-XX)"
+              className={`flex-1 border rounded-bl-lg px-4 py-2 focus:outline-none focus:ring-2 transition-colors ${
+                isCodeValid
+                  ? 'border-gray-300 focus:ring-blue-500'
+                  : 'border-red-500 focus:ring-red-500'
+              }`}
+              value={giftCardCode}
+              onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (
+                  e.key === 'Enter' &&
+                  !isActionLoading &&
+                  giftCardCode.trim() &&
+                  isCodeValid
+                ) {
+                  handleRedeemGiftCard();
+                }
+              }}
+            />
+            <button
+              onClick={handleRedeemGiftCard}
+              disabled={isActionLoading || !giftCardCode.trim() || !isCodeValid}
+              className="flex-1 bg-blue-600 text-white font-medium py-2 px-4 rounded-br-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Icon icon="mdi:gift" className="w-5 h-5" />
+              {isActionLoading ? 'Redeeming...' : 'Redeem Gift Card'}
+            </button>
+          </>
         )}
       </div>
     </>

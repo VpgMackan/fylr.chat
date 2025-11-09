@@ -31,6 +31,12 @@ enum UsageRecordFeatrue {
   SOURCE_UPLOAD_DAILY
 }
 
+enum GiftCardStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
 model User {
   id       String @id @default(uuid())
   email    String @unique
@@ -46,8 +52,22 @@ model User {
   refreshTokens RefreshToken[]
   Subscription  Subscription?
   usageRecords  UsageRecord[]
+  giftCards     GiftCard[]
 
   @@map("Users")
+}
+
+model GiftCard {
+  id     String         @id @default(uuid())
+  code   String         @unique
+  days   Int
+  status GiftCardStatus @default(AVAILABLE)
+
+  redeemedByUserId String? @map("redeemed_by_user_id")
+  user             User?   @relation(fields: [redeemedByUserId], references: [id], onDelete: Cascade)
+
+  redeemedAt DateTime? @map("redeemed_at")
+  expiresAt  DateTime @map("expires_at")
 }
 
 model Subscription {
