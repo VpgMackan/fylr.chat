@@ -103,7 +103,7 @@ export class PermissionsService {
 
       if (usageRecord.usageCount >= limit) {
         throw new ForbiddenException(
-          `You have reached your usage limit for this feature. Please upgrade to Pro.`,
+          "You have reached your usage limit for this feature. Please upgrade to Pro.",
         );
       }
 

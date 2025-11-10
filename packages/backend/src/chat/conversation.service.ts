@@ -244,7 +244,7 @@ export class ConversationService {
       where: { id: conversationId, userId },
     });
     if (!conversation) {
-      throw new NotFoundException(`Conversation not found or access denied.`);
+      throw new NotFoundException("Conversation not found or access denied.");
     }
     return conversation;
   }
@@ -258,7 +258,7 @@ export class ConversationService {
       select: { sources: { select: { id: true } } },
     });
     if (!conversation) {
-      throw new NotFoundException(`Conversation not found or access denied.`);
+      throw new NotFoundException("Conversation not found or access denied.");
     }
     return conversation.sources.map((s) => s.id);
   }
