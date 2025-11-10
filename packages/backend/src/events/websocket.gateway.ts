@@ -91,7 +91,7 @@ export class WebSocketGateway
       await this.amqpChannel.bindQueue(
         queueName,
         this.exchangeName,
-        `broadcast.#`,
+        "broadcast.#",
       );
 
       const { consumerTag } = await this.amqpChannel.consume(queueName, (msg) =>

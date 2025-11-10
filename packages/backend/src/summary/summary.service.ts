@@ -48,7 +48,7 @@ export class SummaryService {
     });
     if (!summary) {
       throw new NotFoundException(
-        `Summary not found or you do not have permission to access it.`,
+        "Summary not found or you do not have permission to access it.",
       );
     }
     return summary;
@@ -131,7 +131,7 @@ export class SummaryService {
 
     if (!summary) {
       throw new NotFoundException(
-        `Summary not found or you do not have permission to access it.`,
+        "Summary not found or you do not have permission to access it.",
       );
     }
 
@@ -153,7 +153,7 @@ export class SummaryService {
 
     if (!summary) {
       throw new NotFoundException(
-        `Summary not found or you do not have permission to access it.`,
+        "Summary not found or you do not have permission to access it.",
       );
     }
 

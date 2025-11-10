@@ -52,7 +52,7 @@ export class PodcastService {
     });
     if (!podcast) {
       throw new NotFoundException(
-        `Podcast not found or you do not have permission to access it.`,
+        "Podcast not found or you do not have permission to access it.",
       );
     }
     return podcast;
@@ -140,12 +140,12 @@ export class PodcastService {
 
     if (!podcast) {
       throw new NotFoundException(
-        `Podcast not found or you do not have permission to access it.`,
+        "Podcast not found or you do not have permission to access it.",
       );
     }
 
     if (podcast.episodes.length === 0) {
-      throw new NotFoundException(`No episode found in this podcast.`);
+      throw new NotFoundException("No episode found in this podcast.");
     }
 
     const episode = podcast.episodes.find((ep) => ep.id === episodeId);
@@ -156,7 +156,7 @@ export class PodcastService {
     }
 
     if (!episode.audioKey) {
-      throw new NotFoundException(`Audio not available for this episode.`);
+      throw new NotFoundException("Audio not available for this episode.");
     }
 
     const bucket = this.configService.get<string>('S3_BUCKET_PODCAST_AUDIO');
@@ -174,7 +174,7 @@ export class PodcastService {
 
     if (!podcast) {
       throw new NotFoundException(
-        `Podcast not found or you do not have permission to access it.`,
+        "Podcast not found or you do not have permission to access it.",
       );
     }
 
@@ -196,7 +196,7 @@ export class PodcastService {
 
     if (!podcast) {
       throw new NotFoundException(
-        `Podcast not found or you do not have permission to access it.`,
+        "Podcast not found or you do not have permission to access it.",
       );
     }
 
