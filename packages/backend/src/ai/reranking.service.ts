@@ -43,7 +43,7 @@ export class RerankingService {
   async rerank(
     query: string,
     documents: RerankDocument[],
-    model: string = 'jina-reranker-v2-base-multilingual',
+    model = 'jina-reranker-v2-base-multilingual',
     topN?: number,
   ): Promise<RerankResponse> {
     if (!documents || documents.length === 0) {
@@ -141,7 +141,7 @@ export class RerankingService {
   async rerankVectorResults(
     query: string,
     vectorResults: any[],
-    topN: number = 5,
+    topN = 5,
   ): Promise<any[]> {
     if (!vectorResults || vectorResults.length === 0) {
       return [];

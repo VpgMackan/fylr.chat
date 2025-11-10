@@ -156,7 +156,7 @@ export class MessageService {
   private async multiQueryRetrieval(
     queries: string[],
     sourceIds: string[],
-    limit: number = 25,
+    limit = 25,
   ): Promise<any[]> {
     console.log(
       `[RAG Pipeline] Performing multi-query retrieval with ${queries.length} queries`,
