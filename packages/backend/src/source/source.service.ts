@@ -195,7 +195,17 @@ export class SourceService {
     }
 
     const vectorSql = `[${vector.join(',')}]`;
-    const result = await this.prisma.$queryRaw<any[]>`
+    const result = await this.prisma.$queryRaw<
+      {
+        id: string;
+        fileId: string;
+        content: string;
+        chunkIndex: number;
+        'source.id': string;
+        'source.libraryId': string;
+        'source.name': string;
+      }[]
+    >`
       SELECT
         v.id,
         v.file_id AS "fileId",

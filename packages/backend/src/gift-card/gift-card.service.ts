@@ -24,7 +24,7 @@ export class GiftCardService {
 
     const updatedSubscription = await this.prisma.$transaction(async (tx) => {
       const giftCard = await tx.giftCard.findFirst({ where: { code } });
-      if (!giftCard || giftCard.status != 'AVAILABLE')
+      if (!giftCard || giftCard.status !== 'AVAILABLE')
         throw new NotFoundException('Gift card not available');
 
       await tx.giftCard.update({

@@ -11,7 +11,7 @@ export function sanitizeText(text: string | null | undefined): string | null {
       // Replace invalid surrogate pairs (U+D800 to U+DFFF)
       .replace(/[\uD800-\uDFFF]/g, '')
       // Remove control characters except newline, tab, and carriage return
-      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
       // Normalize various Unicode spaces to regular space
       .replace(/[\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
       // Remove zero-width characters
@@ -32,7 +32,7 @@ export function sanitizeText(text: string | null | undefined): string | null {
   } catch (error) {
     // If all else fails, remove all non-ASCII characters
     console.error('Error sanitizing text, falling back to ASCII:', error);
-    return text.replace(/[^\x00-\x7F]/g, '');
+    return text.replace(/[^\u0000-\u007F]/g, '');
   }
 }
 

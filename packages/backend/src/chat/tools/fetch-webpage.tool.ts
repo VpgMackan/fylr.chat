@@ -303,7 +303,7 @@ export class FetchWebpageTool extends BaseTool {
       // Remove null bytes
       .replace(/\0/g, '')
       // Remove other control characters except newline, tab, and carriage return
-      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
       // Normalize various Unicode spaces to regular space
       .replace(/[\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
       // Remove zero-width characters

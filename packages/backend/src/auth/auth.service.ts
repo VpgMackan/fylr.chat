@@ -113,7 +113,9 @@ export class AuthService {
         where: { hashedToken },
         data: { revoked: true },
       });
-    } catch (error) {}
+    } catch (error) {
+      return { message: 'Logged out successfully' };
+    }
     return { message: 'Logged out successfully' };
   }
 
