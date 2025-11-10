@@ -1,21 +1,24 @@
 # Text Python Ingestor v1
 
-A Python-based ingestor for processing text-based files (PDF, Markdown, Plain Text) in the fylr ingestors system.
+A Python-based ingestor for processing text-based files (Markdown, Plain Text, DOCX, PPTX) in the fylr ingestors system.
 
 ## Features
 
-- **Multiple Format Support**: Handles PDF, Markdown, and plain text files
+- **Multiple Format Support**: Handles Markdown, plain text, DOCX, and PPTX files
 - **Text Extraction**: Extracts text content from supported file formats
-- **Embedding Generation**: Creates vector embeddings using Sentence Transformers
+- **Embedding Generation**: Creates vector embeddings using AI Gateway
 - **RabbitMQ Integration**: Listens for jobs and publishes status updates
 - **S3 Integration**: Downloads files from S3 for processing
 - **Chunking**: Splits large texts into manageable chunks for embedding
 
 ## Supported MIME Types
 
-- `application/pdf` - PDF documents
 - `text/markdown` - Markdown files
 - `text/plain` - Plain text files
+- `application/vnd.openxmlformats-officedocument.wordprocessingml.document` - DOCX files
+- `application/vnd.openxmlformats-officedocument.presentationml.presentation` - PPTX files
+
+**Note**: PDF files are now handled by the separate `pdf-python-1` ingestor.
 
 ## Architecture
 
@@ -99,14 +102,20 @@ The ingestor publishes status updates to the exchange with routing key `status.u
 
 ## Handlers
 
-### PDF Handler (`handlers/pdf.py`)
-- Uses `pypdf` library to extract text from PDF files
-- Extracts text from all pages and concatenates them
-
 ### Markdown/Text Handler (`handlers/markdown.py`)
 - Handles both markdown and plain text files
 - Supports UTF-8 and Latin-1 encodings
 - Removes null bytes and normalizes whitespace
+
+### DOCX Handler (`handlers/docx.py`)
+- Extracts text from Microsoft Word documents
+- Handles paragraphs, tables, headers, and footers
+- Uses `python-docx` library
+
+### PPTX Handler (`handlers/pptx.py`)
+- Extracts text from Microsoft PowerPoint presentations
+- Handles all text shapes in slides
+- Uses `python-pptx` library
 
 ## Extending
 
@@ -138,10 +147,12 @@ text-python-1/
 ├── README.md
 └── src/
     ├── main.py              # Main application logic
+    ├── database.py          # Database models and connection
     └── handlers/
         ├── __init__.py      # HandlerManager
         ├── markdown.py      # Markdown/text handler
-        └── pdf.py           # PDF handler
+        ├── docx.py          # DOCX handler
+        └── pptx.py          # PPTX handler
 ```
 
 ## License

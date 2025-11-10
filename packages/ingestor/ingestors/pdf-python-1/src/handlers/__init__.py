@@ -1,19 +1,13 @@
 from typing import Dict, Callable
-from .markdown import handle_markdown
-from .docx import handle_docx
-from .pptx import handle_pptx
+from .pdf import handle_pdf
 
 
 class HandlerManager:
-    """Manages different file type handlers."""
+    """Manages PDF file handler."""
 
     def __init__(self):
         self.handlers: Dict[str, Callable] = {
-            ".md": handle_markdown,
-            ".markdown": handle_markdown,
-            ".txt": handle_markdown,
-            ".docx": handle_docx,
-            ".pptx": handle_pptx,
+            ".pdf": handle_pdf,
         }
 
     def process_data(self, file_extension: str, file_content: bytes, **kwargs) -> str:
@@ -21,7 +15,7 @@ class HandlerManager:
         Process file content based on file extension.
 
         Args:
-            file_extension: The file extension (e.g., '.pdf', '.md')
+            file_extension: The file extension (e.g., '.pdf')
             file_content: The raw file content as bytes
             **kwargs: Additional arguments to pass to the handler
 
