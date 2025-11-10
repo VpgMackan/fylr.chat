@@ -34,13 +34,7 @@ export class ReadDocumentTool extends BaseTool {
     };
   }
 
-  async execute(
-    args: {
-      source_id: string;
-      chunk_index: number;
-    },
-    context: ToolExecutionContext,
-  ): Promise<{
+  async execute(args: { source_id: string; chunk_index: number }): Promise<{
     id: string;
     source_id: string;
     source_name?: string;

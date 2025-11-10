@@ -34,91 +34,69 @@ export function classifyError(error: {
   code?: string;
   response?: { status: number };
 }): ToolErrorType {
-  const errorMessage =
-    error instanceof Error
-      ? error.message.toLowerCase()
-      : String(error).toLowerCase();
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const errorMessage = rawMessage?.toLowerCase() ?? '';
   const errorCode = error.code?.toLowerCase();
 
-  // Network-related errors
-  if (
+  const hasStatus = (s?: number) => typeof s === 'number';
+
+  const isNetworkError = () =>
     errorCode === 'enotfound' ||
     errorCode === 'econnrefused' ||
     errorMessage.includes('network') ||
     errorMessage.includes('dns') ||
-    errorMessage.includes('domain not found')
-  ) {
-    return ToolErrorType.NETWORK;
-  }
+    errorMessage.includes('domain not found');
 
-  // Timeout errors
-  if (
+  const isTimeoutError = () =>
     errorCode === 'etimedout' ||
     errorCode === 'econnaborted' ||
     errorMessage.includes('timeout') ||
-    errorMessage.includes('timed out')
-  ) {
-    return ToolErrorType.TIMEOUT;
-  }
+    errorMessage.includes('timed out');
 
-  // Authentication/authorization errors
-  if (
+  const isAuthError = () =>
     error.response?.status === 401 ||
     error.response?.status === 403 ||
     errorMessage.includes('authentication') ||
     errorMessage.includes('unauthorized') ||
     errorMessage.includes('forbidden') ||
-    errorMessage.includes('api key')
-  ) {
-    return ToolErrorType.AUTHENTICATION;
-  }
+    errorMessage.includes('api key');
 
-  // Rate limiting
-  if (
+  const isRateLimitError = () =>
     error.response?.status === 429 ||
     errorMessage.includes('rate limit') ||
-    errorMessage.includes('too many requests')
-  ) {
-    return ToolErrorType.RATE_LIMIT;
-  }
+    errorMessage.includes('too many requests');
 
-  // Not found errors
-  if (
+  const isNotFoundError = () =>
     error.response?.status === 404 ||
     errorMessage.includes('not found') ||
     errorMessage.includes('does not exist') ||
-    errorMessage.includes('no such')
-  ) {
-    return ToolErrorType.NOT_FOUND;
-  }
+    errorMessage.includes('no such');
 
-  // Validation errors
-  if (
+  const isValidationError = () =>
     error.response?.status === 400 ||
     errorMessage.includes('invalid') ||
     errorMessage.includes('validation') ||
-    errorMessage.includes('must be')
-  ) {
-    return ToolErrorType.VALIDATION;
-  }
+    errorMessage.includes('must be');
 
-  // Server errors
-  if (
-    (error.response?.status !== undefined && error.response.status >= 500) ||
+  const isServerError = () =>
+    (hasStatus(error.response?.status) &&
+      (error.response!.status as number) >= 500) ||
     errorMessage.includes('server error') ||
-    errorMessage.includes('service unavailable')
-  ) {
-    return ToolErrorType.SERVER_ERROR;
-  }
+    errorMessage.includes('service unavailable');
 
-  // Empty result (not technically an error, but no useful data)
-  if (
+  const isEmptyResult = () =>
     errorMessage.includes('no results') ||
     errorMessage.includes('empty') ||
-    errorMessage.includes('no information found')
-  ) {
-    return ToolErrorType.EMPTY_RESULT;
-  }
+    errorMessage.includes('no information found');
+
+  if (isNetworkError()) return ToolErrorType.NETWORK;
+  if (isTimeoutError()) return ToolErrorType.TIMEOUT;
+  if (isAuthError()) return ToolErrorType.AUTHENTICATION;
+  if (isRateLimitError()) return ToolErrorType.RATE_LIMIT;
+  if (isNotFoundError()) return ToolErrorType.NOT_FOUND;
+  if (isValidationError()) return ToolErrorType.VALIDATION;
+  if (isServerError()) return ToolErrorType.SERVER_ERROR;
+  if (isEmptyResult()) return ToolErrorType.EMPTY_RESULT;
 
   return ToolErrorType.UNKNOWN;
 }
