@@ -17,7 +17,7 @@ import { UserRole, Message as PrismaMessage } from '@prisma/client';
 
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
-import { RerankingService } from 'src/ai/reranking.service';
+import { RerankingService, VectorSearchResult } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
 import { ToolService } from './tools/tool.service';
 import { PermissionsService } from 'src/auth/permissions.service';
@@ -33,19 +33,6 @@ import {
 
 import { tools as specialTools } from './tool';
 import { ToolDefinition } from './tools/base.tool';
-
-interface VectorSearchResult {
-  id: string;
-  fileId: string;
-  content: string;
-  chunkIndex: number;
-  source: {
-    id: string;
-    libraryId: string;
-    name: string;
-  };
-  relevanceScore?: number;
-}
 
 interface MessageWithThoughts extends MessageApiResponse {
   agentThoughts?: MessageApiResponse[];
@@ -152,7 +139,7 @@ export class MessageService {
   async createMessage(
     body: CreateMessageDto,
     conversationId: string,
-  ): Promise<MessageApiResponse> {
+  ): Promise<PrismaMessage> {
     try {
       if (typeof body.metadata === 'string') {
         body.metadata = JSON.parse(body.metadata);
@@ -168,7 +155,7 @@ export class MessageService {
       },
     });
 
-    return sanitizeMessage(message) as MessageApiResponse;
+    return sanitizeMessage(message) as PrismaMessage;
   }
 
   private async generateQueryVariations(

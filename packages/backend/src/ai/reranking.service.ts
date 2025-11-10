@@ -6,7 +6,18 @@ import { AxiosError } from 'axios';
 
 export interface RerankDocument {
   text: string;
-  metadata?: any;
+  metadata?: RerankDocumentMetadata;
+}
+
+export interface RerankDocumentMetadata {
+  id: string;
+  fileId: string;
+  chunkIndex: number;
+  source: {
+    id: string;
+    libraryId: string;
+    name: string;
+  };
 }
 
 export interface RerankResult {
@@ -18,6 +29,26 @@ export interface RerankResult {
 export interface RerankResponse {
   model: string;
   results: RerankResult[];
+}
+
+interface RequestPayload {
+  query: string;
+  documents: RerankDocument[];
+  model: string;
+  top_n?: number;
+}
+
+export interface VectorSearchResult {
+  id: string;
+  fileId: string;
+  content: string;
+  chunkIndex: number;
+  source: {
+    id: string;
+    libraryId: string;
+    name: string;
+  };
+  relevanceScore?: number;
 }
 
 @Injectable()
@@ -54,7 +85,7 @@ export class RerankingService {
     const aiGatewayUrl =
       this.configService.getOrThrow<string>('AI_GATEWAY_URL');
 
-    const requestPayload: any = {
+    const requestPayload: RequestPayload = {
       query,
       documents,
       model,
@@ -140,9 +171,9 @@ export class RerankingService {
    */
   async rerankVectorResults(
     query: string,
-    vectorResults: any[],
+    vectorResults: VectorSearchResult[],
     topN = 5,
-  ): Promise<any[]> {
+  ): Promise<VectorSearchResult[]> {
     if (!vectorResults || vectorResults.length === 0) {
       return [];
     }
@@ -163,7 +194,7 @@ export class RerankingService {
 
     // Map reranked results back to original format
     return rerankResponse.results.map((result) => {
-      const metadata = result.document.metadata;
+      const metadata = result.document.metadata!;
       return {
         id: metadata.id,
         fileId: metadata.fileId,
