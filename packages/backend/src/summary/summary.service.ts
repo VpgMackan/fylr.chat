@@ -48,7 +48,7 @@ export class SummaryService {
     });
     if (!summary) {
       throw new NotFoundException(
-        "Summary not found or you do not have permission to access it.",
+        'Summary not found or you do not have permission to access it.',
       );
     }
     return summary;
@@ -131,11 +131,13 @@ export class SummaryService {
 
     if (!summary) {
       throw new NotFoundException(
-        "Summary not found or you do not have permission to access it.",
+        'Summary not found or you do not have permission to access it.',
       );
     }
 
-    const updateData: any = {};
+    const updateData: {
+      title?: string;
+    } = {};
     if (title !== undefined) {
       updateData.title = title;
     }
@@ -153,7 +155,7 @@ export class SummaryService {
 
     if (!summary) {
       throw new NotFoundException(
-        "Summary not found or you do not have permission to access it.",
+        'Summary not found or you do not have permission to access it.',
       );
     }
 

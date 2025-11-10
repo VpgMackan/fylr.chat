@@ -194,7 +194,10 @@ export class RerankingService {
 
     // Map reranked results back to original format
     return rerankResponse.results.map((result) => {
-      const metadata = result.document.metadata!;
+      const metadata = result.document.metadata;
+      if (!metadata) {
+        throw new Error('Unexpected: metadata missing in rerank result');
+      }
       return {
         id: metadata.id,
         fileId: metadata.fileId,
