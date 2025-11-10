@@ -133,6 +133,54 @@ export class SourceService {
     });
   }
 
+  async deleteSource(sourceId: string, userId: string) {
+    return await this.prisma.$transaction(async (tx) => {
+      const source = await tx.source.findFirst({
+        where: { id: sourceId, library: { userId } },
+      });
+
+      if (!source) {
+        throw new NotFoundException('Source not found or not accessible');
+      }
+
+      await tx.vector.deleteMany({
+        where: { fileId: sourceId },
+      });
+
+      // Delete the source record
+      await tx.source.delete({
+        where: { id: sourceId },
+      });
+
+      try {
+        await this.s3Service.deleteObject(this.s3Bucket, source.url);
+      } catch (error) {
+        console.error('Failed to delete file from S3:', error);
+      }
+
+      return { message: 'Source deleted successfully' };
+    });
+  }
+
+  async updateSource(
+    sourceId: string,
+    updateData: { name?: string },
+    userId: string,
+  ) {
+    const source = await this.prisma.source.findFirst({
+      where: { id: sourceId, library: { userId } },
+    });
+
+    if (!source) {
+      throw new NotFoundException('Source not found or not accessible');
+    }
+
+    return await this.prisma.source.update({
+      where: { id: sourceId },
+      data: updateData,
+    });
+  }
+
   async getSourcesByLibraryId(libraryId: string, userId: string) {
     return await this.prisma.source.findMany({
       where: { libraryId, library: { userId } },

@@ -19,6 +19,38 @@ export const getSourceById = async (
   return data;
 };
 
+export const deleteSource = async (sourceId: string): Promise<void> => {
+  await axios.delete(`source/${sourceId}`);
+};
+
+export const updateSource = async (
+  sourceId: string,
+  data: { name?: string },
+): Promise<SourceApiResponse> => {
+  const { data: response } = await axios.patch<SourceApiResponse>(
+    `source/${sourceId}`,
+    data,
+  );
+  return response;
+};
+
+export const uploadSourceToLibrary = async (
+  libraryId: string,
+  file: File,
+): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('libraryId', libraryId);
+
+  const { data } = await axios.post('/source', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return data;
+};
+
 export interface VectorChunk {
   id: string;
   fileId: string;

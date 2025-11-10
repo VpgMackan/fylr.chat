@@ -12,13 +12,17 @@ import {
   Param,
   Res,
   Request,
+  Delete,
+  Patch,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { SourceService } from './source.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 
-import { CreateSourceDto } from '@fylr/types';
+import { CreateSourceDto, UpdateSourceDto } from '@fylr/types';
 import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
 
 const allowedExtensions = [
@@ -80,6 +84,31 @@ export class SourceController {
     }
 
     return this.sourceService.createSource(file, body.libraryId, req.user.id);
+  }
+
+  @Delete(':sourceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSource(
+    @Param('sourceId') sourceId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    await this.sourceService.deleteSource(sourceId, req.user.id);
+  }
+
+  @Patch(':sourceId')
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      skipMissingProperties: true,
+    }),
+  )
+  async updateSource(
+    @Param('sourceId') sourceId: string,
+    @Body() updateDto: UpdateSourceDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.sourceService.updateSource(sourceId, updateDto, req.user.id);
   }
 
   @Get('library/:libraryId')
