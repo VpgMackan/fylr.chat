@@ -108,7 +108,7 @@ export class WebSearchTool extends BaseTool {
 
   private async performWebSearch(
     query: string,
-    numResults: number = 5,
+    numResults = 5,
   ): Promise<SearchResponse> {
     const startTime = Date.now();
 

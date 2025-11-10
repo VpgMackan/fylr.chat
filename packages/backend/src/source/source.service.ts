@@ -184,7 +184,7 @@ export class SourceService {
     }));
   }
 
-  async findByVector(vector: number[], sourceIds: string[], limit: number = 5) {
+  async findByVector(vector: number[], sourceIds: string[], limit = 5) {
     if (sourceIds.length === 0) {
       return [];
     }
