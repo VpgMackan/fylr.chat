@@ -7,9 +7,13 @@ import {
 import { Server } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-import { CreateMessageDto, UpdateMessageDto } from '@fylr/types';
+import {
+  CreateMessageDto,
+  UpdateMessageDto,
+  MessageApiResponse,
+} from '@fylr/types';
 
-import { UserRole } from '@prisma/client';
+import { UserRole, Message as PrismaMessage } from '@prisma/client';
 
 import { LLMService } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
@@ -28,6 +32,55 @@ import {
 } from './tools/error-handler';
 
 import { tools as specialTools } from './tool';
+import { ToolDefinition } from './tools/base.tool';
+
+interface VectorSearchResult {
+  id: string;
+  fileId: string;
+  content: string;
+  chunkIndex: number;
+  source: {
+    id: string;
+    libraryId: string;
+    name: string;
+  };
+  relevanceScore?: number;
+}
+
+interface MessageWithThoughts extends MessageApiResponse {
+  agentThoughts?: MessageApiResponse[];
+}
+
+interface LLMToolCallFunction {
+  name: string;
+  arguments: string;
+}
+
+interface LLMToolCall {
+  id: string;
+  type: 'function';
+  function: LLMToolCallFunction;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'tool' | 'system';
+  content: string | null;
+  tool_calls?: LLMToolCall[];
+  tool_call_id?: string;
+}
+
+interface SynthesisPromptVars {
+  messages: { role: string; content: string }[];
+  userQuestion: string;
+  context?: string;
+  sourceReferenceList?: { number: number; name: string; chunkIndex: number }[];
+  overrideQuery?: string;
+}
+
+interface ConversationMetadata {
+  agenticMode?: boolean;
+  webSearchEnabled?: boolean;
+}
 
 @Injectable()
 export class MessageService {
@@ -43,13 +96,13 @@ export class MessageService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  async getMessages(conversationId: string) {
+  async getMessages(conversationId: string): Promise<MessageApiResponse[]> {
     try {
       const messages = await this.prisma.message.findMany({
         where: { conversationId },
         orderBy: { createdAt: 'asc' },
       });
-      return messages.map((msg) => sanitizeMessage(msg));
+      return messages.map((msg) => sanitizeMessage(msg) as MessageApiResponse);
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve messages for conversation ${conversationId}`,
@@ -57,33 +110,32 @@ export class MessageService {
     }
   }
 
-  async getMessagesWithThoughts(conversationId: string) {
+  async getMessagesWithThoughts(
+    conversationId: string,
+  ): Promise<MessageWithThoughts[]> {
     try {
       const allMessages = await this.prisma.message.findMany({
         where: { conversationId },
         orderBy: { createdAt: 'asc' },
       });
 
-      // Group messages: user messages, assistant messages with content, and attach thoughts
-      const displayMessages: any[] = [];
-      const thoughtBuffer: any[] = [];
+      const displayMessages: MessageWithThoughts[] = [];
+      const thoughtBuffer: MessageApiResponse[] = [];
 
       for (const msg of allMessages) {
-        const sanitizedMsg = sanitizeMessage(msg);
+        const sanitizedMsg = sanitizeMessage(msg) as MessageApiResponse;
 
         if (msg.role === 'user') {
           displayMessages.push(sanitizedMsg);
         } else if (msg.role === 'assistant') {
           if (msg.content) {
-            // This is a final response - attach buffered thoughts
             displayMessages.push({
               ...sanitizedMsg,
               agentThoughts:
                 thoughtBuffer.length > 0 ? [...thoughtBuffer] : undefined,
             });
-            thoughtBuffer.length = 0; // Clear buffer
+            thoughtBuffer.length = 0;
           } else if (msg.reasoning || msg.toolCalls) {
-            // This is an agent thought - buffer it
             thoughtBuffer.push(sanitizedMsg);
           }
         }
@@ -97,7 +149,10 @@ export class MessageService {
     }
   }
 
-  async createMessage(body: CreateMessageDto, conversationId: string) {
+  async createMessage(
+    body: CreateMessageDto,
+    conversationId: string,
+  ): Promise<MessageApiResponse> {
     try {
       if (typeof body.metadata === 'string') {
         body.metadata = JSON.parse(body.metadata);
@@ -113,13 +168,9 @@ export class MessageService {
       },
     });
 
-    return sanitizeMessage(message);
+    return sanitizeMessage(message) as MessageApiResponse;
   }
 
-  /**
-   * Generates multiple query variations for improved retrieval coverage.
-   * Uses the multi_query prompt to create 3-5 different phrasings of the same query.
-   */
   private async generateQueryVariations(
     originalQuery: string,
   ): Promise<string[]> {
@@ -129,12 +180,11 @@ export class MessageService {
         prompt_vars: { query: originalQuery },
       });
 
-      // Parse the response - expect one query per line
       const variations = response
         .split('\n')
         .map((line) => line.trim())
-        .filter((line) => line.length > 0 && !line.match(/^[0-9]+\.|^[-*•]/)) // Remove numbering/bullets
-        .slice(0, 5); // Max 5 variations
+        .filter((line) => line.length > 0 && !line.match(/^[0-9]+\.|^[-*•]/))
+        .slice(0, 5);
 
       console.log(
         `[RAG Pipeline] Generated ${variations.length} query variations for: "${originalQuery}"`,
@@ -145,37 +195,31 @@ export class MessageService {
         '[RAG Pipeline] Failed to generate query variations:',
         error,
       );
-      // Fallback to original query on error
       return [originalQuery];
     }
   }
 
-  /**
-   * Performs multi-query retrieval: searches with multiple query variations and combines results.
-   */
   private async multiQueryRetrieval(
     queries: string[],
     sourceIds: string[],
     limit = 25,
-  ): Promise<any[]> {
+  ): Promise<VectorSearchResult[]> {
     console.log(
       `[RAG Pipeline] Performing multi-query retrieval with ${queries.length} queries`,
     );
 
-    // Search with each query variation
     const allResults = await Promise.all(
       queries.map(async (query) => {
         const embedding = await this.vectorService.search(query);
         return this.sourceService.findByVector(
           embedding,
           sourceIds,
-          Math.ceil(limit / queries.length), // Distribute limit across queries
+          Math.ceil(limit / queries.length),
         );
       }),
     );
 
-    // Combine and deduplicate results by ID
-    const resultsMap = new Map();
+    const resultsMap = new Map<string, VectorSearchResult>();
     allResults.flat().forEach((result) => {
       if (!resultsMap.has(result.id)) {
         resultsMap.set(result.id, result);
@@ -191,7 +235,7 @@ export class MessageService {
   }
 
   async generateAndStreamAiResponse(
-    userMessage,
+    userMessage: PrismaMessage,
     server: Server,
   ): Promise<void> {
     const { conversationId, content: userQuery } = userMessage;
@@ -215,7 +259,6 @@ export class MessageService {
       );
     }
 
-    // Check chat message daily limit (non-agentic mode)
     await this.permissionsService.authorizeFeatureUsage(
       conversation.user.id,
       'CHAT_MESSAGES_DAILY',
@@ -232,24 +275,18 @@ export class MessageService {
       .join('\n');
 
     const sourceIds = conversation.sources.map((s) => s.id);
-    let relevantChunks: any[] = [];
+    let relevantChunks: VectorSearchResult[] = [];
 
-    // Only do vector search if sources are available
     if (sourceIds.length > 0) {
       emitStatus('searchQuery', 'Formulating search queries...');
-
-      // Generate hypothetical answer using HyDE
       const hypotheticalAnswer = await this.llmService.generate({
         prompt_type: 'hyde',
         prompt_vars: { chatHistory, userQuery },
       });
-
-      // Generate query variations for multi-query retrieval
-      const queryVariations = await this.generateQueryVariations(userQuery);
-
+      const queryVariations = await this.generateQueryVariations(
+        userQuery as string,
+      );
       emitStatus('retrieval', 'Searching with multiple query perspectives...');
-
-      // Combine HyDE with query variations for comprehensive retrieval
       const allQueries = [hypotheticalAnswer, ...queryVariations];
       const vectorResults = await this.multiQueryRetrieval(
         allQueries,
@@ -257,7 +294,6 @@ export class MessageService {
         25,
       );
 
-      // Apply reranking if we have results
       if (vectorResults.length > 0 && conversation.user.role === UserRole.PRO) {
         try {
           emitStatus(
@@ -265,7 +301,7 @@ export class MessageService {
             'Re-ranking results with AI for optimal relevance... ✨',
           );
           relevantChunks = await this.rerankingService.rerankVectorResults(
-            userQuery,
+            userQuery as string,
             vectorResults,
             5,
           );
@@ -286,45 +322,34 @@ export class MessageService {
 
     emitStatus('generation', 'Generating response...');
 
-    let stream: AsyncGenerator<string>;
-
-    // Build message history for synthesis
     const messages = recentMessages.map((m) => ({
       role: m.role,
       content: m.content || '',
     }));
 
-    // Prepare prompt variables - synthesis handles both RAG and conversational modes
-    const promptVars: any = {
+    const promptVars: Partial<SynthesisPromptVars> = {
       messages,
-      userQuestion: userQuery,
+      userQuestion: userQuery as string,
     };
 
-    // If we have relevant chunks, add RAG-specific context
     if (relevantChunks.length > 0) {
-      const sourceReferenceList = relevantChunks.map((chunk, index) => ({
+      promptVars.sourceReferenceList = relevantChunks.map((chunk, index) => ({
         number: index + 1,
         name: chunk.source.name,
         chunkIndex: chunk.chunkIndex,
       }));
-
-      const context = relevantChunks
-        .map((chunk, index) => {
-          return `Content from Source Chunk [${index + 1}] (${
-            chunk.source.name
-          }):\n${chunk.content}`;
-        })
+      promptVars.context = relevantChunks
+        .map(
+          (chunk, index) =>
+            `Content from Source Chunk [${index + 1}] (${chunk.source.name}):\n${chunk.content}`,
+        )
         .join('\n\n---\n\n');
-
-      promptVars.context = context;
-      promptVars.sourceReferenceList = sourceReferenceList;
     }
 
-    // Use synthesis for both conversational and RAG modes
-    stream = this.llmService.generateStream({
+    const stream = this.llmService.generateStream({
       prompt_type: 'synthesis',
       prompt_version: 'v1',
-      prompt_vars: promptVars,
+      prompt_vars: promptVars as Record<string, unknown>,
     });
     let fullResponse = '';
     let chunkIndex = 0;
@@ -358,11 +383,7 @@ export class MessageService {
       };
 
       const assistantMessage = await this.createMessage(
-        {
-          role: 'assistant',
-          content: fullResponse,
-          metadata,
-        },
+        { role: 'assistant', content: fullResponse, metadata },
         conversationId,
       );
       server.to(conversationId).emit('conversationAction', {
@@ -370,22 +391,19 @@ export class MessageService {
         conversationId,
         data: assistantMessage,
       });
-    } else {
-      // Handle no response
     }
   }
 
   async generateAndStreamAiResponseWithTools(
-    userMessage: any,
+    userMessage: PrismaMessage,
     server: Server,
   ): Promise<void> {
     const { conversationId } = userMessage;
     const MAX_ITERATIONS = 5;
-    const MAX_CONTEXT_MESSAGES = 50; // Limit context size to prevent overflow
+    const MAX_CONTEXT_MESSAGES = 50;
     let currentIteration = 0;
-    const usedSourceChunks: any[] = []; // Track all source chunks used
+    const usedSourceChunks: VectorSearchResult[] = [];
 
-    // Helper function to emit granular tool progress updates
     const emitToolProgress = (toolName: string, message: string) => {
       server.to(conversationId).emit('conversationAction', {
         action: 'toolProgress',
@@ -413,7 +431,6 @@ export class MessageService {
         );
       }
 
-      // Check agentic chat message daily limit
       await this.permissionsService.authorizeFeatureUsage(
         conversation.user.id,
         'CHAT_AGENTIC_MESSAGES_DAILY',
@@ -424,10 +441,10 @@ export class MessageService {
           ? conversation.sources[0].library.defaultEmbeddingModel
           : undefined;
 
-      // Determine which tools to load based on conversation state
       const hasSources = conversation.sources.length > 0;
-      const userMetadata = userMessage.metadata as any;
-      const conversationMetadata = conversation.metadata as any;
+      const userMetadata = userMessage.metadata as ConversationMetadata;
+      const conversationMetadata =
+        conversation.metadata as ConversationMetadata;
       const webSearchEnabled =
         userMetadata?.webSearchEnabled === true ||
         conversationMetadata?.webSearchEnabled === true;
@@ -437,7 +454,6 @@ export class MessageService {
         webSearchEnabled,
       );
 
-      // If no tools are available and web search is not enabled, fall back to RAG mode
       if (availableTools.length === 0) {
         this.logger.log(
           `No tools available for conversation ${conversationId}, falling back to RAG mode`,
@@ -445,7 +461,6 @@ export class MessageService {
         return this.generateAndStreamAiResponse(userMessage, server);
       }
 
-      // Create and emit initial thought, linking it to the user message
       const initialThought = await this.createMessage(
         {
           role: 'assistant',
@@ -454,8 +469,6 @@ export class MessageService {
         },
         conversationId,
       );
-
-      // Emit the initial thought to all clients in the room
       server.to(conversationId).emit('conversationAction', {
         action: 'agentThought',
         conversationId,
@@ -467,15 +480,13 @@ export class MessageService {
         orderBy: { createdAt: 'asc' },
       });
 
-      // Build initial context with smart pruning
-      const llmMessages = this.buildContextMessages(
+      const llmMessages: ChatMessage[] = this.buildContextMessages(
         messages,
         MAX_CONTEXT_MESSAGES,
       );
 
       while (currentIteration < MAX_ITERATIONS) {
         currentIteration++;
-
         try {
           const llmResponse = await this.llmService.generateWithTools(
             llmMessages,
@@ -498,25 +509,22 @@ export class MessageService {
             },
             conversationId,
           );
-
           server.to(conversationId).emit('conversationAction', {
             action: 'agentThought',
             conversationId,
             data: thoughtMessage,
           });
 
-          // Add assistant response to context
           llmMessages.push({
-            role: responseMessage.role,
+            role: 'assistant',
             content: responseMessage.content,
-            tool_calls: responseMessage.tool_calls,
+            tool_calls: responseMessage.tool_calls as LLMToolCall[],
           });
 
           if (
             !responseMessage.tool_calls ||
             responseMessage.tool_calls.length === 0
           ) {
-            // No more tool calls, synthesize final answer
             break;
           }
 
@@ -536,116 +544,84 @@ export class MessageService {
             return;
           }
 
-          // Execute tools in parallel with individual error handling
           const toolResults = await Promise.all(
             responseMessage.tool_calls.map(async (toolCall) => {
               try {
-                const parsedArgs = JSON.parse(toolCall.function.arguments);
+                const parsedArgs = JSON.parse(
+                  toolCall.function.arguments,
+                ) as Record<string, unknown>;
+                const toolName = toolCall.function.name;
 
-                // Emit tool-specific progress updates
-                if (toolCall.function.name === 'search_documents') {
-                  emitToolProgress(
-                    'search_documents',
-                    'Performing advanced document search...',
-                  );
-                } else if (toolCall.function.name === 'web_search') {
-                  emitToolProgress('web_search', 'Searching the web...');
-                } else if (toolCall.function.name === 'fetch_webpage') {
-                  emitToolProgress(
-                    'fetch_webpage',
-                    `Fetching webpage: ${parsedArgs.url || 'URL'}...`,
-                  );
-                } else if (toolCall.function.name === 'read_document_chunk') {
-                  emitToolProgress(
-                    'read_document_chunk',
-                    'Reading document content...',
-                  );
-                } else if (
-                  toolCall.function.name === 'list_associated_sources'
-                ) {
-                  emitToolProgress(
-                    'list_associated_sources',
-                    'Listing available sources...',
-                  );
-                } else {
-                  emitToolProgress(
-                    toolCall.function.name,
-                    `Executing ${toolCall.function.name}...`,
-                  );
-                }
-
-                const result = await this.toolService.executeTool(
-                  toolCall.function.name,
+                emitToolProgress(toolName, `Executing ${toolName}...`);
+                const result = (await this.toolService.executeTool(
+                  toolName,
                   parsedArgs,
                   {
                     conversationId,
                     userId: conversation.userId,
                     embeddingModel: embeddingModel || '',
                   },
-                );
+                )) as {
+                  results?: unknown[];
+                  success?: boolean;
+                  query?: string;
+                  url?: string;
+                };
 
-                // Track source chunks from search_documents tool
                 if (
-                  toolCall.function.name === 'search_documents' &&
+                  toolName === 'search_documents' &&
                   result.results &&
                   Array.isArray(result.results)
                 ) {
-                  usedSourceChunks.push(...result.results);
-
-                  // Check for empty results and provide guidance
+                  usedSourceChunks.push(
+                    ...(result.results as VectorSearchResult[]),
+                  );
                   if (result.results.length === 0) {
-                    const emptyResultError = createEmptyResultResponse(
-                      toolCall.function.name,
-                      parsedArgs.query || 'query',
-                    );
-
                     return {
                       tool_call_id: toolCall.id,
-                      content: JSON.stringify(emptyResultError),
+                      content: JSON.stringify(
+                        createEmptyResultResponse(
+                          toolName,
+                          (parsedArgs.query as string) || 'query',
+                        ),
+                      ),
                       success: false,
                     };
                   }
                 }
 
-                // Check for empty results from web_search
                 if (
-                  toolCall.function.name === 'web_search' &&
+                  toolName === 'web_search' &&
                   result.results &&
                   Array.isArray(result.results) &&
                   result.results.length === 0
                 ) {
-                  const emptyResultError = createEmptyResultResponse(
-                    toolCall.function.name,
-                    parsedArgs.query || 'query',
-                  );
-
                   return {
                     tool_call_id: toolCall.id,
-                    content: JSON.stringify(emptyResultError),
+                    content: JSON.stringify(
+                      createEmptyResultResponse(
+                        toolName,
+                        (parsedArgs.query as string) || 'query',
+                      ),
+                    ),
                     success: false,
                   };
                 }
 
-                // Check for failed webpage fetches
-                if (
-                  toolCall.function.name === 'fetch_webpage' &&
-                  result.success === false
-                ) {
-                  const emptyResultError = createEmptyResultResponse(
-                    toolCall.function.name,
-                    parsedArgs.url || 'URL',
-                  );
-
+                if (toolName === 'fetch_webpage' && result.success === false) {
                   return {
                     tool_call_id: toolCall.id,
-                    content: JSON.stringify(emptyResultError),
+                    content: JSON.stringify(
+                      createEmptyResultResponse(
+                        toolName,
+                        (parsedArgs.url as string) || 'URL',
+                      ),
+                    ),
                     success: false,
                   };
                 }
 
-                // Sanitize the result to remove problematic Unicode characters
                 const sanitizedResult = sanitizeObject(result);
-
                 return {
                   tool_call_id: toolCall.id,
                   content: JSON.stringify(sanitizedResult),
@@ -656,23 +632,17 @@ export class MessageService {
                   `Tool execution error for ${toolCall.function.name}:`,
                   error,
                 );
-
-                // Create structured error with self-correction guidance
-                const structuredError = createStructuredError(
-                  error,
-                  toolCall.function.name,
-                );
-
                 return {
                   tool_call_id: toolCall.id,
-                  content: JSON.stringify(structuredError),
+                  content: JSON.stringify(
+                    createStructuredError(error, toolCall.function.name),
+                  ),
                   success: false,
                 };
               }
             }),
           );
 
-          // Save tool results and add to context
           for (const result of toolResults) {
             await this.createMessage(
               {
@@ -690,7 +660,6 @@ export class MessageService {
             });
           }
 
-          // Prune context if it's getting too large
           if (llmMessages.length > MAX_CONTEXT_MESSAGES) {
             this.pruneContextMessages(llmMessages, MAX_CONTEXT_MESSAGES);
           }
@@ -699,7 +668,6 @@ export class MessageService {
             `Error in iteration ${currentIteration}:`,
             iterationError,
           );
-          // Emit error status to client
           server.to(conversationId).emit('conversationAction', {
             action: 'streamError',
             conversationId,
@@ -711,7 +679,6 @@ export class MessageService {
         }
       }
 
-      // If we exit the loop without calling provide_final_answer, synthesize anyway
       if (currentIteration >= MAX_ITERATIONS) {
         console.warn(
           `Reached max iterations (${MAX_ITERATIONS}) for conversation ${conversationId}`,
@@ -731,7 +698,6 @@ export class MessageService {
       );
     } catch (error) {
       console.error('Error in generateAndStreamAiResponseWithTools:', error);
-      // Emit error to client
       server.to(conversationId).emit('conversationAction', {
         action: 'streamError',
         conversationId,
@@ -746,12 +712,10 @@ export class MessageService {
     }
   }
 
-  /**
-   * Converts tool-calling conversation history into plain text messages
-   * for models that don't support tool calling (e.g., for synthesis)
-   */
-  private convertToolMessagesToPlainText(messages: any[]): any[] {
-    const plainTextMessages: any[] = [];
+  private convertToolMessagesToPlainText(
+    messages: ChatMessage[],
+  ): { role: string; content: string }[] {
+    const plainTextMessages: { role: string; content: string }[] = [];
 
     for (const msg of messages) {
       if (msg.role === 'user') {
@@ -761,10 +725,9 @@ export class MessageService {
         });
       } else if (msg.role === 'assistant') {
         let content = msg.content || '';
-
         if (msg.tool_calls && msg.tool_calls.length > 0) {
           const toolCallsText = msg.tool_calls
-            .map((tc: any) => {
+            .map((tc: LLMToolCall) => {
               const args =
                 typeof tc.function.arguments === 'string'
                   ? tc.function.arguments
@@ -772,72 +735,41 @@ export class MessageService {
               return `Called tool: ${tc.function.name}(${args})`;
             })
             .join('\n');
-
           content = content ? `${content}\n\n${toolCallsText}` : toolCallsText;
         }
-
         if (content) {
-          plainTextMessages.push({
-            role: 'assistant',
-            content,
-          });
+          plainTextMessages.push({ role: 'assistant', content });
         }
       } else if (msg.role === 'tool') {
         let toolContent = msg.content || '';
-
         try {
           const parsed = JSON.parse(toolContent);
-          if (parsed.error) {
-            toolContent = `Tool error: ${parsed.message || 'Unknown error'}`;
-          } else {
-            toolContent = `Tool result: ${JSON.stringify(parsed, null, 2)}`;
-          }
+          toolContent = `Tool result: ${JSON.stringify(parsed, null, 2)}`;
         } catch {
           toolContent = `Tool result: ${toolContent}`;
         }
-
-        plainTextMessages.push({
-          role: 'assistant',
-          content: toolContent,
-        });
+        plainTextMessages.push({ role: 'assistant', content: toolContent });
       }
     }
-
     return plainTextMessages;
   }
 
-  /**
-   * Extracts the most recent user question from the conversation history
-   */
-  private getMostRecentUserQuestion(messages: any[]): string {
-    // Find the last user message
+  private getMostRecentUserQuestion(messages: ChatMessage[]): string {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user' && messages[i].content) {
-        return messages[i].content;
+        return messages[i].content as string;
       }
     }
     return '';
   }
 
-  /**
-   * Builds context messages from database messages, keeping most recent within limit
-   */
-  /**
-   * Get available tools based on conversation state
-   * @param hasSources Whether the conversation has sources
-   * @param webSearchEnabled Whether web search is enabled
-   * @returns Array of tool definitions to provide to the LLM
-   */
   private getAvailableTools(
     hasSources: boolean,
     webSearchEnabled: boolean,
-  ): any[] {
-    const tools: any[] = [];
-
-    // Get all tool definitions
+  ): ToolDefinition[] {
+    const tools: ToolDefinition[] = [];
     const allToolDefinitions = this.toolService.getAllToolDefinitions();
 
-    // Document-related tools (only if sources exist)
     if (hasSources) {
       const documentTools = [
         'search_documents',
@@ -851,7 +783,6 @@ export class MessageService {
       );
     }
 
-    // Web-related tools (only if web search is enabled)
     if (webSearchEnabled) {
       const webTools = ['web_search', 'fetch_webpage'];
       tools.push(
@@ -861,71 +792,54 @@ export class MessageService {
       );
     }
 
-    // Always add the provide_final_answer tool when tools are available
     if (tools.length > 0) {
-      tools.push(...specialTools);
+      tools.push(...(specialTools as ToolDefinition[]));
     }
-
     return tools;
   }
 
-  private buildContextMessages(messages: any[], maxMessages: number): any[] {
-    // Always include user messages and their immediate assistant responses
-    // Prioritize recent messages
-    const contextMessages = messages
+  private buildContextMessages(
+    messages: PrismaMessage[],
+    maxMessages: number,
+  ): ChatMessage[] {
+    const contextMessages: ChatMessage[] = messages
       .map((m) => {
-        const msg: any = {
-          role: m.role,
+        const msg: ChatMessage = {
+          role: m.role as ChatMessage['role'],
           content: m.content,
         };
-
-        // Add tool_calls for assistant messages
         if (m.toolCalls) {
-          msg.tool_calls = m.toolCalls;
+          msg.tool_calls = m.toolCalls as unknown as LLMToolCall[];
         }
-
-        // Add tool_call_id for tool messages
         if (m.role === 'tool' && m.toolCallId) {
           msg.tool_call_id = m.toolCallId;
         }
-
         return msg;
       })
-      .filter((m) => {
-        // Keep messages that have content, tool_calls, or are tool responses
-        return m.content || m.tool_calls || m.role === 'tool';
-      });
+      .filter((m) => m.content || m.tool_calls || m.role === 'tool');
 
-    // If within limit, return all
     if (contextMessages.length <= maxMessages) {
       return contextMessages;
     }
 
-    // Otherwise, keep first message (usually user's original question) and most recent messages
     const firstMessage = contextMessages[0];
     const recentMessages = contextMessages.slice(-(maxMessages - 1));
-
     return [firstMessage, ...recentMessages];
   }
 
-  /**
-   * Prunes context messages to stay within limits while preserving conversation flow
-   */
-  private pruneContextMessages(messages: any[], maxMessages: number): void {
-    if (messages.length <= maxMessages) {
-      return;
-    }
+  private pruneContextMessages(
+    messages: ChatMessage[],
+    maxMessages: number,
+  ): void {
+    if (messages.length <= maxMessages) return;
 
-    // Keep system messages, first user message, and recent messages
     const systemMessages = messages.filter((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
-
     const firstUserMessage = nonSystemMessages.find((m) => m.role === 'user');
     const recentMessages = nonSystemMessages.slice(
       -(maxMessages - systemMessages.length - 1),
     );
 
-    // Rebuild the array in place
     messages.length = 0;
     messages.push(...systemMessages);
     if (firstUserMessage && !recentMessages.includes(firstUserMessage)) {
@@ -935,39 +849,31 @@ export class MessageService {
   }
 
   private async synthesizeAndStreamFinalAnswer(
-    messages: any[],
+    messages: ChatMessage[],
     conversationId: string,
     server: Server,
     userMessageId: string,
-    sourceChunks: any[] = [],
+    sourceChunks: VectorSearchResult[] = [],
     overrideQuery?: string,
     userRole?: UserRole,
   ) {
     try {
       const plainTextMessages = this.convertToolMessagesToPlainText(messages);
-
-      // Get the most recent user question to ensure synthesis focuses on it
       const recentUserQuestion = this.getMostRecentUserQuestion(messages);
-
-      const promptVars: {
-        messages: any[];
-        overrideQuery?: string;
-        userQuestion?: string;
-      } = {
+      const promptVars: Partial<SynthesisPromptVars> = {
         messages: plainTextMessages,
       };
 
       if (overrideQuery) {
         promptVars.overrideQuery = overrideQuery;
       } else if (recentUserQuestion) {
-        // Include the recent user question to help focus the synthesis
         promptVars.userQuestion = recentUserQuestion;
       }
 
       const stream = this.llmService.generateStream({
         prompt_type: 'synthesis',
         prompt_version: 'v1',
-        prompt_vars: promptVars,
+        prompt_vars: promptVars as Record<string, unknown>,
       });
 
       let fullResponse = '';
@@ -977,12 +883,7 @@ export class MessageService {
       try {
         for await (const chunk of stream) {
           const sanitizedChunk = sanitizeText(chunk) || '';
-
-          // Skip empty chunks to avoid issues with first chunk
-          if (!sanitizedChunk) {
-            continue;
-          }
-
+          if (!sanitizedChunk) continue;
           fullResponse += sanitizedChunk;
           server.to(conversationId).emit('conversationAction', {
             action: 'messageChunk',
@@ -1005,7 +906,6 @@ export class MessageService {
           'I apologize, but I was unable to generate a response. Please try again.';
       }
 
-      // Deduplicate source chunks and prepare metadata
       const uniqueChunks = Array.from(
         new Map(sourceChunks.map((chunk) => [chunk.id, chunk])).values(),
       );
@@ -1070,21 +970,17 @@ export class MessageService {
       throw new NotFoundException('Assistant message to regenerate not found.');
     }
 
-    // Find the user message using parentMessageId if available, otherwise find the most recent user message
     let userMessage;
-
     if (assistantMessage.parentMessageId) {
-      // This assistant message has a parent - use it
       userMessage = await this.prisma.message.findUnique({
         where: { id: assistantMessage.parentMessageId },
       });
     } else {
-      // Fallback: find the most recent user message before this assistant message
       userMessage = await this.prisma.message.findFirst({
         where: {
           conversationId: assistantMessage.conversationId,
           createdAt: { lt: assistantMessage.createdAt },
-          role: 'user', // Ensure we get a user message
+          role: 'user',
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -1096,14 +992,7 @@ export class MessageService {
       );
     }
 
-    // Delete the assistant message
-    await this.prisma.message.delete({
-      where: {
-        id: assistantMessageId,
-      },
-    });
-
-    // Also delete any agent thought messages between the user message and assistant message
+    await this.prisma.message.delete({ where: { id: assistantMessageId } });
     await this.prisma.message.deleteMany({
       where: {
         conversationId: assistantMessage.conversationId,
@@ -1112,13 +1001,12 @@ export class MessageService {
           lt: assistantMessage.createdAt,
         },
         role: 'assistant',
-        content: null, // Agent thoughts have null content
+        content: null,
       },
     });
 
-    // Determine which mode to use based on the user message metadata
-    const userMetadata = userMessage.metadata as any;
-    const agenticMode = userMetadata?.agenticMode !== false; // Default to true
+    const userMetadata = userMessage.metadata as ConversationMetadata;
+    const agenticMode = userMetadata?.agenticMode !== false;
 
     if (agenticMode) {
       await this.generateAndStreamAiResponseWithTools(userMessage, server);
@@ -1127,12 +1015,10 @@ export class MessageService {
     }
   }
 
-  async getMessage(id: string) {
+  async getMessage(id: string): Promise<MessageApiResponse | null> {
     try {
-      const message = await this.prisma.message.findUnique({
-        where: { id },
-      });
-      return message ? sanitizeMessage(message) : message;
+      const message = await this.prisma.message.findUnique({ where: { id } });
+      return message ? (sanitizeMessage(message) as MessageApiResponse) : null;
     } catch (error) {
       throw new InternalServerErrorException(
         `Failed to retrieve message ${id}`,
@@ -1140,36 +1026,35 @@ export class MessageService {
     }
   }
 
-  async updateMessage(body: UpdateMessageDto, id: string) {
+  async updateMessage(
+    body: UpdateMessageDto,
+    id: string,
+  ): Promise<MessageApiResponse> {
     try {
       await this.getMessage(id);
       const message = await this.prisma.message.update({
         where: { id },
         data: body,
       });
-      return sanitizeMessage(message);
+      return sanitizeMessage(message) as MessageApiResponse;
     } catch (error) {
       throw new InternalServerErrorException(`Failed to update message ${id}`);
     }
   }
 
-  async deleteMessage(id: string) {
+  async deleteMessage(id: string): Promise<PrismaMessage> {
     try {
       const message = await this.getMessage(id);
       if (!message) {
         throw new NotFoundException(`Message ${id} not found`);
       }
 
-      // If deleting a user message, also delete all child messages (thoughts, tool calls, and assistant responses)
       if (message.role === 'user') {
         await this.prisma.message.deleteMany({
-          where: {
-            parentMessageId: id,
-          },
+          where: { parentMessageId: id },
         });
       }
 
-      // Delete the message itself
       return await this.prisma.message.delete({ where: { id } });
     } catch (error) {
       throw new InternalServerErrorException(`Failed to delete message ${id}`);
