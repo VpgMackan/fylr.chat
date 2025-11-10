@@ -24,7 +24,11 @@ export class ListSourcesTool extends BaseTool {
     };
   }
 
-  async execute(args: any, context: ToolExecutionContext): Promise<any> {
+  async execute(args: unknown, context: ToolExecutionContext): Promise<{
+    sources: { id: string; name: string; libraryId: string }[];
+    count: number;
+    message?: string;
+  }> {
     try {
       if (!context.conversationId) {
         throw new Error('conversationId is required in execution context');

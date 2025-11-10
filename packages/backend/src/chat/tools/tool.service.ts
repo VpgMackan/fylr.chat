@@ -37,9 +37,9 @@ export class ToolService {
 
   async executeTool(
     name: string,
-    args: any,
+    args: Record<string, unknown>,
     context: ToolExecutionContext,
-  ): Promise<any> {
+  ): Promise<unknown> {
     const tool = this.tools.get(name);
     if (!tool) {
       const availableTools = Array.from(this.tools.keys()).join(', ');

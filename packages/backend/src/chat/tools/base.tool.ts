@@ -5,7 +5,7 @@ export interface ToolDefinition {
     description: string;
     parameters: {
       type: 'object';
-      properties: Record<string, any>;
+      properties: Record<string, unknown>;
       required?: string[];
     };
   };
@@ -20,5 +20,8 @@ export interface ToolExecutionContext {
 export abstract class BaseTool {
   abstract getDefinition(): ToolDefinition;
 
-  abstract execute(args: any, context: ToolExecutionContext): Promise<any>;
+  abstract execute(
+    args: unknown,
+    context: ToolExecutionContext,
+  ): Promise<unknown>;
 }

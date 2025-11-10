@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BaseTool, ToolDefinition, ToolExecutionContext } from './base.tool';
 import { AiVectorService } from 'src/ai/vector.service';
-import { RerankingService } from 'src/ai/reranking.service';
+import { RerankingService, VectorSearchResult } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { LLMService } from 'src/ai/llm.service';
@@ -97,7 +97,7 @@ export class SearchDocumentsTool extends BaseTool {
     sourceIds: string[],
     embeddingModel: string,
     limit: number,
-  ): Promise<any[]> {
+  ): Promise<VectorSearchResult[]> {
     const embedding = await this.vectorService.search(query, embeddingModel);
     if (!embedding || embedding.length === 0) {
       return [];
@@ -105,7 +105,24 @@ export class SearchDocumentsTool extends BaseTool {
     return this.sourceService.findByVector(embedding, sourceIds, limit);
   }
 
-  async execute(args: any, context: ToolExecutionContext): Promise<any> {
+  async execute(
+    args: {
+      query: string;
+      source_ids?: string[];
+      use_reranking?: boolean;
+      use_multi_query?: boolean;
+    },
+    context: ToolExecutionContext,
+  ): Promise<{
+    results: VectorSearchResult[];
+    count?: number;
+    query?: string;
+    reranked?: boolean;
+    multi_query?: boolean;
+    originalCount?: number;
+    message?: string;
+    rerankError?: string;
+  }> {
     try {
       if (!args.query || typeof args.query !== 'string') {
         throw new Error('Invalid query: must be a non-empty string');
@@ -141,7 +158,7 @@ export class SearchDocumentsTool extends BaseTool {
         ? this.VECTOR_SEARCH_LIMIT
         : this.RERANK_TOP_N;
 
-      let vectorResults: any[];
+      let vectorResults: VectorSearchResult[];
 
       // Multi-query retrieval: generate variations and combine results
       if (useMultiQuery) {

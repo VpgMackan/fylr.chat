@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { PermissionsService } from 'src/auth/permissions.service';
 import * as fs from 'fs/promises';
+import { VectorSearchResult } from 'src/ai/reranking.service';
 
 @Injectable()
 export class SourceService {
@@ -184,7 +185,11 @@ export class SourceService {
     }));
   }
 
-  async findByVector(vector: number[], sourceIds: string[], limit = 5) {
+  async findByVector(
+    vector: number[],
+    sourceIds: string[],
+    limit = 5,
+  ): Promise<VectorSearchResult[]> {
     if (sourceIds.length === 0) {
       return [];
     }

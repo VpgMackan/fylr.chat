@@ -29,7 +29,11 @@ export interface StructuredToolError {
 /**
  * Classifies an error into a specific error type based on error message and properties.
  */
-export function classifyError(error: any): ToolErrorType {
+export function classifyError(error: {
+  message?: string;
+  code?: string;
+  response?: { status: number };
+}): ToolErrorType {
   const errorMessage =
     error instanceof Error
       ? error.message.toLowerCase()
@@ -100,7 +104,7 @@ export function classifyError(error: any): ToolErrorType {
 
   // Server errors
   if (
-    error.response?.status >= 500 ||
+    (error.response?.status !== undefined && error.response.status >= 500) ||
     errorMessage.includes('server error') ||
     errorMessage.includes('service unavailable')
   ) {
@@ -261,7 +265,7 @@ function getAlternativeTools(
  * Creates a structured error response that helps the agent self-correct.
  */
 export function createStructuredError(
-  error: any,
+  error: { message?: string; code?: string; response?: { status: number } },
   toolName: string,
 ): StructuredToolError {
   const errorType = classifyError(error);

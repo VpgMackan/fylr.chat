@@ -96,7 +96,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     try {
       const queueOptions: {
         durable: boolean;
-        arguments?: { [key: string]: any };
+        arguments?: { [key: string]: unknown };
       } = { durable: true };
 
       if (queue === 'summary-generator') {

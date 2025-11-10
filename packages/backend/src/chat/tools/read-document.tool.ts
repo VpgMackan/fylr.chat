@@ -34,7 +34,19 @@ export class ReadDocumentTool extends BaseTool {
     };
   }
 
-  async execute(args: any, context: ToolExecutionContext): Promise<any> {
+  async execute(
+    args: {
+      source_id: string;
+      chunk_index: number;
+    },
+    context: ToolExecutionContext,
+  ): Promise<{
+    id: string;
+    source_id: string;
+    source_name?: string;
+    chunk_index: number;
+    content: string;
+  }> {
     try {
       if (!args.source_id || typeof args.source_id !== 'string') {
         throw new Error('Invalid source_id: must be a non-empty string');

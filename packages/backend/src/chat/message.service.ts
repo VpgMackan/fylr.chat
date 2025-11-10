@@ -15,7 +15,7 @@ import {
 
 import { UserRole, Message as PrismaMessage } from '@prisma/client';
 
-import { LLMService } from 'src/ai/llm.service';
+import { ChatMessage, LLMService, ToolCall } from 'src/ai/llm.service';
 import { AiVectorService } from 'src/ai/vector.service';
 import { RerankingService, VectorSearchResult } from 'src/ai/reranking.service';
 import { SourceService } from 'src/source/source.service';
@@ -36,24 +36,6 @@ import { ToolDefinition } from './tools/base.tool';
 
 interface MessageWithThoughts extends MessageApiResponse {
   agentThoughts?: MessageApiResponse[];
-}
-
-interface LLMToolCallFunction {
-  name: string;
-  arguments: string;
-}
-
-interface LLMToolCall {
-  id: string;
-  type: 'function';
-  function: LLMToolCallFunction;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'tool' | 'system';
-  content: string | null;
-  tool_calls?: LLMToolCall[];
-  tool_call_id?: string;
 }
 
 interface SynthesisPromptVars {
@@ -505,7 +487,7 @@ export class MessageService {
           llmMessages.push({
             role: 'assistant',
             content: responseMessage.content,
-            tool_calls: responseMessage.tool_calls as LLMToolCall[],
+            tool_calls: responseMessage.tool_calls as ToolCall[],
           });
 
           if (
@@ -535,7 +517,9 @@ export class MessageService {
             responseMessage.tool_calls.map(async (toolCall) => {
               try {
                 const parsedArgs = JSON.parse(
-                  toolCall.function.arguments,
+                  typeof toolCall.function.arguments === 'string'
+                    ? toolCall.function.arguments
+                    : JSON.stringify(toolCall.function.arguments),
                 ) as Record<string, unknown>;
                 const toolName = toolCall.function.name;
 
@@ -714,7 +698,7 @@ export class MessageService {
         let content = msg.content || '';
         if (msg.tool_calls && msg.tool_calls.length > 0) {
           const toolCallsText = msg.tool_calls
-            .map((tc: LLMToolCall) => {
+            .map((tc: ToolCall) => {
               const args =
                 typeof tc.function.arguments === 'string'
                   ? tc.function.arguments
@@ -793,10 +777,10 @@ export class MessageService {
       .map((m) => {
         const msg: ChatMessage = {
           role: m.role as ChatMessage['role'],
-          content: m.content,
+          content: m.content ?? undefined,
         };
         if (m.toolCalls) {
-          msg.tool_calls = m.toolCalls as unknown as LLMToolCall[];
+          msg.tool_calls = m.toolCalls as unknown as ToolCall[];
         }
         if (m.role === 'tool' && m.toolCallId) {
           msg.tool_call_id = m.toolCallId;
