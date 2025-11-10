@@ -85,16 +85,19 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       );
     } catch (error) {
       console.error(
-        "Error publishing to file-processing-exchange with routing key:",
+        'Error publishing to file-processing-exchange with routing key:',
         error,
       );
       throw error;
     }
   }
 
-  async sendToQueue(queue: string, data: any) {
+  async sendToQueue(queue: string, data: { [key: string]: unknown } | string) {
     try {
-      const queueOptions: any = { durable: true };
+      const queueOptions: {
+        durable: boolean;
+        arguments?: { [key: string]: unknown };
+      } = { durable: true };
 
       if (queue === 'summary-generator') {
         queueOptions.arguments = {
@@ -123,7 +126,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       if (this.channel) await this.channel.close();
       if (this.connection) await this.connection.close();
     } catch (error) {
-      console.error("Error closing connection and / or channel");
+      console.error('Error closing connection and / or channel');
       throw error;
     }
   }

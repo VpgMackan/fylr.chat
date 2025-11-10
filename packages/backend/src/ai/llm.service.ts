@@ -13,14 +13,7 @@ interface ChatCompletionChoice {
   message: {
     role: string;
     content: string;
-    tool_calls?: {
-      id: string;
-      function: {
-        name: string;
-        arguments: any;
-      };
-      type: string;
-    }[];
+    tool_calls?: ToolCall[];
     reasoning?: string;
   };
   finish_reason: string | null;
@@ -62,18 +55,45 @@ interface ReasoningConfig {
   exclude?: boolean;
 }
 
+type FunctionDefinition = {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+};
+
+type ToolDefinition = {
+  type?: 'function' | string;
+  function: FunctionDefinition;
+};
+
+export type ToolCall = {
+  id: string;
+  type?: string;
+  function: {
+    name: string;
+    arguments: Record<string, unknown>;
+  };
+};
+
+export type ChatMessage = {
+  role: string;
+  content?: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+};
+
 type TemplatePayload = {
   prompt_type: string;
   prompt_vars: Record<string, unknown>;
   prompt_version?: string;
-  messages?: any[];
-  tools?: any[];
+  messages?: ChatMessage[];
+  tools?: ToolDefinition[];
   reasoning?: ReasoningConfig | boolean;
 };
 
 type MessagePayload = {
-  messages: any[];
-  tools?: any[];
+  messages: ChatMessage[];
+  tools?: ToolDefinition[];
   reasoning?: ReasoningConfig | boolean;
 };
 
@@ -148,8 +168,8 @@ export class LLMService {
   }
 
   async generateWithTools(
-    messages: any[],
-    tools: any[],
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
   ): Promise<ChatCompletionResponse> {
     const payload = {
       provider: 'auto',
@@ -171,9 +191,11 @@ export class LLMService {
   async *generateStream(
     promptOrOptions: string | TemplatePayload,
   ): AsyncGenerator<string> {
-    const payload =
+    const payload: TemplatePayload | MessagePayload =
       typeof promptOrOptions === 'string'
-        ? { messages: [{ role: 'user', content: promptOrOptions }] }
+        ? ({
+            messages: [{ role: 'user', content: promptOrOptions }],
+          } as MessagePayload)
         : promptOrOptions;
 
     const response = await this._fetchChatCompletionFromAiGateway(

@@ -49,15 +49,17 @@ export function sanitizeObject<T>(obj: T): T {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizeObject(item)) as T;
+    return (obj as unknown[]).map((item) =>
+      sanitizeObject(item),
+    ) as unknown as T;
   }
 
   if (typeof obj === 'object') {
-    const sanitized: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      sanitized[key] = sanitizeObject(value);
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      sanitized[key] = sanitizeObject(value as unknown);
     }
-    return sanitized;
+    return sanitized as unknown as T;
   }
 
   return obj;
@@ -66,21 +68,36 @@ export function sanitizeObject<T>(obj: T): T {
 /**
  * Sanitizes a message object before sending it through Socket.IO
  */
-export function sanitizeMessage(message: any): any {
+export function sanitizeMessage(message: unknown): unknown {
   if (!message) return message;
 
-  return {
-    ...message,
-    content: sanitizeText(message.content),
-    reasoning: sanitizeText(message.reasoning),
-    toolCalls: message.toolCalls
-      ? sanitizeObject(message.toolCalls)
-      : message.toolCalls,
-    toolResult: message.toolResult
-      ? sanitizeObject(message.toolResult)
-      : message.toolResult,
-    metadata: message.metadata
-      ? sanitizeObject(message.metadata)
-      : message.metadata,
+  if (typeof message !== 'object' || message === null) return message;
+
+  const msg = message as Record<string, unknown>;
+
+  const sanitized: Record<string, unknown> = {
+    ...msg,
+    content:
+      'content' in msg
+        ? sanitizeText(msg.content as string | null | undefined)
+        : undefined,
+    reasoning:
+      'reasoning' in msg
+        ? sanitizeText(msg.reasoning as string | null | undefined)
+        : undefined,
+    toolCalls:
+      'toolCalls' in msg && msg.toolCalls !== undefined
+        ? sanitizeObject(msg.toolCalls as unknown)
+        : msg.toolCalls,
+    toolResult:
+      'toolResult' in msg && msg.toolResult !== undefined
+        ? sanitizeObject(msg.toolResult as unknown)
+        : msg.toolResult,
+    metadata:
+      'metadata' in msg && msg.metadata !== undefined
+        ? sanitizeObject(msg.metadata as unknown)
+        : msg.metadata,
   };
+
+  return sanitized as unknown;
 }
