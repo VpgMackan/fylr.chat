@@ -29,6 +29,7 @@ class AutoProvider(BaseProvider):
         MODEL_MAP = {
             "default": ("openai", "z-ai/glm-4.5-air:free"),
             "tool": ("openai", "minimax/minimax-m2:free"),
+            "coding-tool": ("openai", "x-ai/grok-code-fast-1"),
             "synthesis": ("openai", "x-ai/grok-4-fast"),
         }
 

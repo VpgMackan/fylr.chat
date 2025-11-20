@@ -15,6 +15,15 @@ export interface AgentRunOptions {
   server: Server;
 }
 
+export interface ToolDefinition {
+  type: string;
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
+}
+
 @Injectable()
 export abstract class BaseAgentStrategy {
   constructor(
@@ -54,6 +63,38 @@ export abstract class BaseAgentStrategy {
     const firstMessage = contextMessages[0];
     const recentMessages = contextMessages.slice(-(maxMessages - 1));
     return [firstMessage, ...recentMessages];
+  }
+
+  protected getAvailableTools(
+    hasSources: boolean,
+    webSearchEnabled: boolean,
+  ): ToolDefinition[] {
+    const tools: ToolDefinition[] = [];
+    const allToolDefinitions = this.toolService.getAllToolDefinitions();
+
+    if (hasSources) {
+      const documentTools = [
+        'search_documents',
+        'read_document_chunk',
+        'list_sources_in_library',
+      ];
+      tools.push(
+        ...allToolDefinitions.filter((tool: ToolDefinition) =>
+          documentTools.includes(tool.function.name),
+        ),
+      );
+    }
+
+    if (webSearchEnabled) {
+      const webTools = ['web_search', 'fetch_webpage'];
+      tools.push(
+        ...allToolDefinitions.filter((tool: ToolDefinition) =>
+          webTools.includes(tool.function.name),
+        ),
+      );
+    }
+
+    return tools;
   }
 
   protected async synthesiseAndStream(): Promise<void> {
