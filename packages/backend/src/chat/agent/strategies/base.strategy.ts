@@ -4,6 +4,7 @@ import { Message as PrismaMessage } from '@prisma/client';
 import { ChatMessage, LLMService, ToolCall } from 'src/ai/llm.service';
 import { MessageService } from 'src/chat/message.service';
 import { ToolService } from 'src/chat/tools';
+import { MessageApiResponse } from '@fylr/types';
 
 export interface AgentRunOptions {
   userMessage: PrismaMessage;
@@ -33,7 +34,7 @@ export abstract class BaseAgentStrategy {
   }
 
   protected buildContextMessages(
-    messages: PrismaMessage[],
+    messages: MessageApiResponse[],
     maxMessages: number,
   ): ChatMessage[] {
     const contextMessages: ChatMessage[] = messages
@@ -42,19 +43,13 @@ export abstract class BaseAgentStrategy {
           role: m.role as ChatMessage['role'],
           content: m.content ?? undefined,
         };
-        if (m.toolCalls) {
-          msg.tool_calls = m.toolCalls as unknown as ToolCall[];
-        }
-        if (m.role === 'tool' && m.toolCallId) {
-          msg.tool_call_id = m.toolCallId;
-        }
+        if (m.toolCalls) msg.tool_calls = m.toolCalls as unknown as ToolCall[];
+        if (m.role === 'tool' && m.toolCallId) msg.tool_call_id = m.toolCallId;
         return msg;
       })
       .filter((m) => m.content || m.tool_calls || m.role === 'tool');
 
-    if (contextMessages.length <= maxMessages) {
-      return contextMessages;
-    }
+    if (contextMessages.length <= maxMessages) return contextMessages;
 
     const firstMessage = contextMessages[0];
     const recentMessages = contextMessages.slice(-(maxMessages - 1));
