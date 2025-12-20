@@ -6,7 +6,7 @@ authors = ["VpgMackan <dev@mndev.se>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 openai = "^1.95.0"
 pydantic-settings = "^2.10.1"
 httpx = "^0.28.1"

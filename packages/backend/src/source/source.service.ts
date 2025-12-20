@@ -38,99 +38,104 @@ export class SourceService {
     userId: string,
   ) {
     // Use transaction to prevent race conditions when checking source limits
-    return await this.prisma.$transaction(async (tx) => {
-      const library = await tx.library.findFirst({
-        where: { id: libraryId, userId },
-      });
+    return await this.prisma.$transaction(
+      async (tx) => {
+        const library = await tx.library.findFirst({
+          where: { id: libraryId, userId },
+        });
 
-      if (!library) {
-        await fs.unlink(file.path);
-        throw new NotFoundException(
-          `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
-        );
-      }
+        if (!library) {
+          await fs.unlink(file.path);
+          throw new NotFoundException(
+            `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
+          );
+        }
 
-      // Get user to check role
-      const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user) {
-        await fs.unlink(file.path);
-        throw new NotFoundException('User not found.');
-      }
+        // Get user to check role
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        if (!user) {
+          await fs.unlink(file.path);
+          throw new NotFoundException('User not found.');
+        }
 
-      // Check source count limit within transaction to prevent race conditions
-      const currentCount = await tx.source.count({ where: { libraryId } });
-      const limit = user.role === 'PRO' ? Infinity : 50; // FREE users: 50 sources per library
+        // Check source count limit within transaction to prevent race conditions
+        const currentCount = await tx.source.count({ where: { libraryId } });
+        const limit = user.role === 'PRO' ? Infinity : 50; // FREE users: 50 sources per library
 
-      if (currentCount >= limit) {
-        await fs.unlink(file.path);
-        throw new ForbiddenException(
-          'You have reached the maximum number of sources for this library. Please upgrade to add more.',
-        );
-      }
+        if (currentCount >= limit) {
+          await fs.unlink(file.path);
+          throw new ForbiddenException(
+            'You have reached the maximum number of sources for this library. Please upgrade to add more.',
+          );
+        }
 
-      // Check daily upload limit - if exceeded, allow deferred ingestion
-      let shouldDeferIngestion = false;
-      try {
-        await this.permissionsService.authorizeFeatureUsage(
-          userId,
-          'SOURCE_UPLOAD_DAILY',
-        );
-      } catch (error) {
-        if (error instanceof ForbiddenException) {
-          // Allow upload but defer ingestion
-          shouldDeferIngestion = true;
-        } else {
+        // Check daily upload limit - if exceeded, allow deferred ingestion
+        let shouldDeferIngestion = false;
+        try {
+          await this.permissionsService.authorizeFeatureUsage(
+            userId,
+            'SOURCE_UPLOAD_DAILY',
+          );
+        } catch (error) {
+          if (error instanceof ForbiddenException) {
+            // Allow upload but defer ingestion
+            shouldDeferIngestion = true;
+          } else {
+            throw error;
+          }
+        }
+
+        const jobKey = uuidv4();
+        const s3Key = file.filename || file.originalname;
+
+        try {
+          const buffer = await fs.readFile(file.path);
+          await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
+            'Content-Type': file.mimetype,
+          });
+        } catch (error) {
+          await fs.unlink(file.path);
           throw error;
         }
-      }
 
-      const jobKey = uuidv4();
-      const s3Key = file.filename || file.originalname;
-
-      try {
-        const buffer = await fs.readFile(file.path);
-        await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
-          'Content-Type': file.mimetype,
-        });
-      } catch (error) {
         await fs.unlink(file.path);
-        throw error;
-      }
 
-      await fs.unlink(file.path);
-
-      const data: Prisma.SourceCreateInput = {
-        library: { connect: { id: libraryId } },
-        name: file.originalname,
-        mimeType: file.mimetype,
-        url: s3Key,
-        size: file.size,
-        jobKey,
-        status: shouldDeferIngestion ? 'PENDING' : 'QUEUED',
-        pendingIngestion: shouldDeferIngestion,
-      };
-
-      const entry = await tx.source.create({ data });
-
-      // Only queue for processing if not deferred
-      if (!shouldDeferIngestion) {
-        await this.rabbitMQService.publishFileProcessingJob({
-          sourceId: entry.id,
-          s3Key,
+        const data: Prisma.SourceCreateInput = {
+          library: { connect: { id: libraryId } },
+          name: file.originalname,
+          mimeType: file.mimetype,
+          url: s3Key,
+          size: file.size,
           jobKey,
-          embeddingModel: library.defaultEmbeddingModel,
-        });
-      }
+          status: shouldDeferIngestion ? 'PENDING' : 'QUEUED',
+          pendingIngestion: shouldDeferIngestion,
+        };
 
-      return {
-        message: shouldDeferIngestion
-          ? 'File uploaded successfully. Processing will start when your daily limit resets or you can manually trigger ingestion.'
-          : 'File uploaded successfully and queued for processing.',
-        jobKey,
-        database: entry,
-        deferred: shouldDeferIngestion,
-      };
-    });
+        const entry = await tx.source.create({ data });
+
+        // Only queue for processing if not deferred
+        if (!shouldDeferIngestion) {
+          await this.rabbitMQService.publishFileProcessingJob({
+            sourceId: entry.id,
+            s3Key,
+            jobKey,
+            embeddingModel: library.defaultEmbeddingModel,
+          });
+        }
+
+        return {
+          message: shouldDeferIngestion
+            ? 'File uploaded successfully. Processing will start when your daily limit resets or you can manually trigger ingestion.'
+            : 'File uploaded successfully and queued for processing.',
+          jobKey,
+          database: entry,
+          deferred: shouldDeferIngestion,
+        };
+      },
+      {
+        timeout: 30000,
+      },
+    );
   }
 
   async deleteSource(sourceId: string, userId: string) {
