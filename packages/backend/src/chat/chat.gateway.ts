@@ -41,6 +41,7 @@ export class ChatGateway
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly messageService: MessageService,
+    private readonly strategiesService: St
     private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
     private readonly permissionsService: PermissionsService,
@@ -147,16 +148,11 @@ export class ChatGateway
             webSearchEnabled,
           } = payload as {
             content: string;
+            agenticMode: string;
             sourceIds?: string[];
             libraryIds?: string[];
-            agenticMode?: boolean;
             webSearchEnabled?: boolean;
           };
-
-          // Log the received agenticMode value for debugging
-          this.logger.log(
-            `SendMessage - agenticMode received: ${agenticMode} (type: ${typeof agenticMode})`,
-          );
 
           // Handle both sourceIds and libraryIds
           if (
@@ -233,66 +229,69 @@ export class ChatGateway
           const usageStats = await this.permissionsService.getUsageStats(
             client.user.id,
           );
-          const hasReachedAgenticLimit =
-            usageStats.role === 'FREE' &&
-            usageStats.usage.dailyAgenticMessages >=
-              usageStats.limits.dailyAgenticMessages;
 
-          let useAgenticMode = agenticMode !== false; // User's preference
-
-          // Backend enforcement
-          if (useAgenticMode && hasReachedAgenticLimit) {
-            this.logger.warn(
-              `User ${client.user.id} hit agentic message limit. Forcing RAG mode for conversation ${conversationId}.`,
-            );
-            useAgenticMode = false; // Override user preference
-
-            // Emit a special event to the client to notify them of the change
-            client.emit('forceRAGMode', {
-              reason:
-                'You have used all your Agentic Mode messages for today. Switching to standard mode.',
-            });
+          var limitReached = false;
+          switch (agenticMode) {
+            case 'fast':
+              limitReached =
+                usageStats.usage.CHAT_FAST_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_FAST_MESSAGES_DAILY;
+              break;
+            case 'normal':
+              limitReached =
+                usageStats.usage.CHAT_NORMAL_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_NORMAL_MESSAGES_DAILY;
+              break;
+            case 'thorough':
+              limitReached =
+                usageStats.usage.CHAT_THOROUGH_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY;
+              break;
+            default:
+              limitReached =
+                usageStats.usage.CHAT_AUTO_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY;
+              break;
           }
 
-          // Update conversation metadata with the current agenticMode and webSearchEnabled settings
-          // Web search is only available in agentic mode
-          const useWebSearch = useAgenticMode && webSearchEnabled === true;
-          await this.conversationService.updateConversation(
-            {
-              metadata: {
-                agenticMode: useAgenticMode,
-                webSearchEnabled: useWebSearch,
+          if (limitReached) {
+            this.logger.warn(
+              `User ${client.user.id} hit agentic mode ${agenticMode} message limit. Forcing FAST mode for conversation ${conversationId}.`,
+            );
+            /*client.emit('forceFASTMode', {
+              reason:
+                'You have used all your Agentic Mode messages for today. Switching to standard mode.',
+            });*/
+          } else {
+            await this.conversationService.updateConversation(
+              {
+                metadata: {
+                  agenticMode,
+                  webSearchEnabled: webSearchEnabled === true,
+                },
               },
-            },
-            conversationId,
-            client.user.id,
-          );
+              conversationId,
+              client.user.id,
+            );
 
-          const userMessage = await this.messageService.createMessage(
-            {
-              role: 'user',
-              content: content,
-              metadata: {
-                agenticMode: useAgenticMode,
-                webSearchEnabled: useWebSearch,
-              }, // Store mode and web search in metadata
-            },
-            conversationId,
-          );
-          this.server.to(conversationId).emit('conversationAction', {
-            action: 'newMessage',
-            conversationId,
-            data: userMessage,
-          });
+            const userMessage = await this.messageService.createMessage(
+              {
+                role: 'user',
+                content: content,
+                metadata: {
+                  agenticMode,
+                  webSearchEnabled: webSearchEnabled === true,
+                },
+              },
+              conversationId,
+            );
+            this.server.to(conversationId).emit('conversationAction', {
+              action: 'newMessage',
+              conversationId,
+              data: userMessage,
+            });
 
-          // Execute AI response generation without awaiting to not block
-          // Use agenticMode flag to determine which method to call (default to true for agentic)
-
-          this.logger.log(
-            `Using ${useAgenticMode ? 'AGENTIC' : 'RAG'} mode for conversation ${conversationId}`,
-          );
-
-          if (useAgenticMode) {
+            // Call a new function to handle generating messages or whatever it should be called
             this.messageService
               .generateAndStreamAiResponseWithTools(userMessage, this.server)
               .catch((error) => {
@@ -309,23 +308,42 @@ export class ChatGateway
                   },
                 });
               });
-          } else {
-            this.messageService
-              .generateAndStreamAiResponse(userMessage, this.server)
-              .catch((error) => {
-                this.logger.error(
-                  `Error generating AI response for conversation ${conversationId}:`,
-                  error,
-                );
-                this.server.to(conversationId).emit('conversationAction', {
-                  action: 'streamError',
-                  conversationId,
-                  data: {
-                    message:
-                      'Failed to generate AI response. Please try again.',
-                  },
+
+            /*if (useAgenticMode) {
+              this.messageService
+                .generateAndStreamAiResponseWithTools(userMessage, this.server)
+                .catch((error) => {
+                  this.logger.error(
+                    `Error generating AI response for conversation ${conversationId}:`,
+                    error,
+                  );
+                  this.server.to(conversationId).emit('conversationAction', {
+                    action: 'streamError',
+                    conversationId,
+                    data: {
+                      message:
+                        'Failed to generate AI response. Please try again.',
+                    },
+                  });
                 });
-              });
+            } else {
+              this.messageService
+                .generateAndStreamAiResponse(userMessage, this.server)
+                .catch((error) => {
+                  this.logger.error(
+                    `Error generating AI response for conversation ${conversationId}:`,
+                    error,
+                  );
+                  this.server.to(conversationId).emit('conversationAction', {
+                    action: 'streamError',
+                    conversationId,
+                    data: {
+                      message:
+                        'Failed to generate AI response. Please try again.',
+                    },
+                  });
+                });
+            }*/
           }
         } catch (error) {
           this.logger.error('Error in sendMessage handler:', error);

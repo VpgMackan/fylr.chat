@@ -12,8 +12,10 @@ const LIMITS = {
     sourcesPerLibrary: 50,
     SUMMARY_GENERATION_MONTHLY: 20,
     PODCAST_GENERATION_MONTHLY: 5,
-    CHAT_MESSAGES_DAILY: 50,
-    CHAT_AGENTIC_MESSAGES_DAILY: 20,
+    CHAT_AUTO_MESSAGES_DAILY: 20,
+    CHAT_FAST_MESSAGES_DAILY: 20,
+    CHAT_NORMAL_MESSAGES_DAILY: 10,
+    CHAT_THOROUGH_MESSAGES_DAILY: 5,
     SOURCE_UPLOAD_DAILY: 10,
   },
   PRO: {
@@ -21,8 +23,10 @@ const LIMITS = {
     sourcesPerLibrary: Infinity,
     SUMMARY_GENERATION_MONTHLY: Infinity,
     PODCAST_GENERATION_MONTHLY: Infinity,
-    CHAT_MESSAGES_DAILY: Infinity,
-    CHAT_AGENTIC_MESSAGES_DAILY: Infinity,
+    CHAT_AUTO_MESSAGES_DAILY: 100,
+    CHAT_FAST_MESSAGES_DAILY: 100,
+    CHAT_NORMAL_MESSAGES_DAILY: 50,
+    CHAT_THOROUGH_MESSAGES_DAILY: 25,
     SOURCE_UPLOAD_DAILY: Infinity,
   },
 };
@@ -103,7 +107,7 @@ export class PermissionsService {
 
       if (usageRecord.usageCount >= limit) {
         throw new ForbiddenException(
-          "You have reached your usage limit for this feature. Please upgrade to Pro.",
+          'You have reached your usage limit for this feature. Please upgrade to Pro.',
         );
       }
 
@@ -123,70 +127,58 @@ export class PermissionsService {
       throw new NotFoundException('User not found.');
     }
 
-    const limits = LIMITS[user.role];
-    const sourceUploadPeriodStart = this._getPeriodStart(
-      UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
-    );
-    const dailyChatPeriodStart = this._getPeriodStart(
-      UsageRecordFeatrue.CHAT_MESSAGES_DAILY,
-    );
-    const dailyAgenticPeriodStart = this._getPeriodStart(
-      UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY,
-    );
+    const roleLimits = LIMITS[user.role];
+    const featureKeys = Object.keys(roleLimits).filter(
+      (k) => k.endsWith('_DAILY') || k.endsWith('_MONTHLY'),
+    ) as Array<UsageRecordFeatrue>;
 
-    const usageRecord = await this.prisma.usageRecord.findMany({
+    const periodStartByFeature: Record<UsageRecordFeatrue, Date> =
+      Object.fromEntries(
+        featureKeys.map((f) => [f, this._getPeriodStart(f)]),
+      ) as Record<UsageRecordFeatrue, Date>;
+
+    const usageRecords = await this.prisma.usageRecord.findMany({
       where: {
         userId,
-        OR: [
-          { feature: UsageRecordFeatrue.SOURCE_UPLOAD_DAILY },
-          { feature: UsageRecordFeatrue.CHAT_MESSAGES_DAILY },
-          { feature: UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY },
-        ],
+        feature: { in: featureKeys },
       },
+      select: { feature: true, usageCount: true, periodStart: true },
     });
 
-    const dailyMessagesRecord = usageRecord.find(
-      (r) => r.feature === UsageRecordFeatrue.CHAT_MESSAGES_DAILY,
-    );
-    const dailyAgenticMessagesRecord = usageRecord.find(
-      (r) => r.feature === UsageRecordFeatrue.CHAT_AGENTIC_MESSAGES_DAILY,
-    );
-    const sourceUploadsRecord = usageRecord.find(
-      (r) => r.feature === UsageRecordFeatrue.SOURCE_UPLOAD_DAILY,
-    );
+    const recordByFeature = new Map(usageRecords.map((r) => [r.feature, r]));
 
-    const dailyMessagesUsed =
-      dailyMessagesRecord &&
-      dailyMessagesRecord.periodStart >= dailyChatPeriodStart
-        ? dailyMessagesRecord.usageCount
-        : 0;
-
-    const dailyAgenticMessagesUsed =
-      dailyAgenticMessagesRecord &&
-      dailyAgenticMessagesRecord.periodStart >= dailyAgenticPeriodStart
-        ? dailyAgenticMessagesRecord.usageCount
-        : 0;
-
-    const dailyUploadsUsed =
-      sourceUploadsRecord &&
-      sourceUploadsRecord.periodStart >= sourceUploadPeriodStart
-        ? sourceUploadsRecord.usageCount
-        : 0;
+    const { usageByFeature, limitsByFeature } = featureKeys.reduce(
+      (
+        acc,
+        feature,
+      ): {
+        usageByFeature: Record<UsageRecordFeatrue, number>;
+        limitsByFeature: Record<UsageRecordFeatrue, number>;
+      } => {
+        const record = recordByFeature.get(feature);
+        acc.usageByFeature[feature] =
+          record && record.periodStart >= periodStartByFeature[feature]
+            ? record.usageCount
+            : 0;
+        acc.limitsByFeature[feature] = roleLimits[
+          feature as keyof typeof roleLimits
+        ] as number;
+        return acc;
+      },
+      {
+        usageByFeature: {} as Record<UsageRecordFeatrue, number>,
+        limitsByFeature: {} as Record<UsageRecordFeatrue, number>,
+      },
+    );
 
     return {
       role: user.role,
       limits: {
-        libraries: limits.libraries,
-        sourcesPerLibrary: limits.sourcesPerLibrary,
-        dailySourceUploads: limits.SOURCE_UPLOAD_DAILY,
-        dailyMessages: limits.CHAT_MESSAGES_DAILY,
-        dailyAgenticMessages: limits.CHAT_AGENTIC_MESSAGES_DAILY,
+        libraries: roleLimits.libraries,
+        sourcesPerLibrary: roleLimits.sourcesPerLibrary,
+        features: limitsByFeature,
       },
-      usage: {
-        dailySourceUploads: dailyUploadsUsed,
-        dailyMessages: dailyMessagesUsed,
-        dailyAgenticMessages: dailyAgenticMessagesUsed,
-      },
+      usage: usageByFeature,
     };
   }
 

@@ -4,7 +4,7 @@ export interface WsSendMessagePayload {
   action: 'sendMessage';
   conversationId: string;
   content: string;
-  agenticMode?: boolean;
+  agenticMode: string;
 }
 
 export interface WsDeleteMessagePayload {
@@ -24,6 +24,7 @@ export interface WsRegenerateMessagePayload {
   action: 'regenerateMessage';
   conversationId: string;
   messageId: string;
+  agenticMode: string;
 }
 
 export interface WsJoinConversationPayload {
