@@ -22,6 +22,7 @@ import { MessageService } from './message.service';
 import { SourceService } from 'src/source/source.service';
 import { ConversationService } from './conversation.service';
 import { PermissionsService } from 'src/auth/permissions.service';
+import { AgentFactory, AgentMode } from './strategies/strategies.factory';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -41,7 +42,7 @@ export class ChatGateway
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly messageService: MessageService,
-    private readonly strategiesService: St
+    private readonly agentFactory: AgentFactory,
     private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
     private readonly permissionsService: PermissionsService,
@@ -148,7 +149,7 @@ export class ChatGateway
             webSearchEnabled,
           } = payload as {
             content: string;
-            agenticMode: string;
+            agenticMode: AgentMode;
             sourceIds?: string[];
             libraryIds?: string[];
             webSearchEnabled?: boolean;
@@ -232,17 +233,17 @@ export class ChatGateway
 
           var limitReached = false;
           switch (agenticMode) {
-            case 'fast':
+            case 'FAST':
               limitReached =
                 usageStats.usage.CHAT_FAST_MESSAGES_DAILY >=
                 usageStats.limits.features.CHAT_FAST_MESSAGES_DAILY;
               break;
-            case 'normal':
+            case 'NORMAL':
               limitReached =
                 usageStats.usage.CHAT_NORMAL_MESSAGES_DAILY >=
                 usageStats.limits.features.CHAT_NORMAL_MESSAGES_DAILY;
               break;
-            case 'thorough':
+            case 'THOROUGH':
               limitReached =
                 usageStats.usage.CHAT_THOROUGH_MESSAGES_DAILY >=
                 usageStats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY;
@@ -291,9 +292,9 @@ export class ChatGateway
               data: userMessage,
             });
 
-            // Call a new function to handle generating messages or whatever it should be called
-            this.messageService
-              .generateAndStreamAiResponseWithTools(userMessage, this.server)
+            const agent = this.agentFactory.getStrategy(agenticMode);
+            agent
+              .execute(userMessage, conversationId, this.server)
               .catch((error) => {
                 this.logger.error(
                   `Error generating AI response for conversation ${conversationId}:`,
@@ -308,42 +309,6 @@ export class ChatGateway
                   },
                 });
               });
-
-            /*if (useAgenticMode) {
-              this.messageService
-                .generateAndStreamAiResponseWithTools(userMessage, this.server)
-                .catch((error) => {
-                  this.logger.error(
-                    `Error generating AI response for conversation ${conversationId}:`,
-                    error,
-                  );
-                  this.server.to(conversationId).emit('conversationAction', {
-                    action: 'streamError',
-                    conversationId,
-                    data: {
-                      message:
-                        'Failed to generate AI response. Please try again.',
-                    },
-                  });
-                });
-            } else {
-              this.messageService
-                .generateAndStreamAiResponse(userMessage, this.server)
-                .catch((error) => {
-                  this.logger.error(
-                    `Error generating AI response for conversation ${conversationId}:`,
-                    error,
-                  );
-                  this.server.to(conversationId).emit('conversationAction', {
-                    action: 'streamError',
-                    conversationId,
-                    data: {
-                      message:
-                        'Failed to generate AI response. Please try again.',
-                    },
-                  });
-                });
-            }*/
           }
         } catch (error) {
           this.logger.error('Error in sendMessage handler:', error);

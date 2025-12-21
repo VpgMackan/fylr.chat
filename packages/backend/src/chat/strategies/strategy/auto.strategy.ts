@@ -9,7 +9,5 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     userMessage: Message,
     conversation: Conversation,
     server: Server,
-    tools: ToolDefinition[],
-  ): Promise<void> {
-  }
+  ): Promise<void> {}
 }

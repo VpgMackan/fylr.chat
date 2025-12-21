@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Server } from 'socket.io';
 import { IAgentStrategy } from './strategy/agent.strategy';
 import { FastStrategy } from './strategy/fast.strategy';
 import { LoopStrategy } from './strategy/loop.strategy';
@@ -13,17 +14,22 @@ export enum AgentMode {
 
 @Injectable()
 export class AgentFactory {
+  constructor(
+    readonly server: Server,
+    readonly conversationId: string,
+  ) {}
+
   getStrategy(mode: AgentMode): IAgentStrategy {
     switch (mode) {
       case AgentMode.FAST:
-        return new FastStrategy();
+        return new FastStrategy(this.server, this.conversationId);
       case AgentMode.THOROUGH:
-        return new LoopStrategy(15);
+        return new LoopStrategy(15, this.server, this.conversationId);
       case AgentMode.AUTO:
-        return new AutoStrategy();
+        return new AutoStrategy(this.server, this.conversationId);
       case AgentMode.NORMAL:
       default:
-        return new LoopStrategy(5);
+        return new LoopStrategy(5, this.server, this.conversationId);
     }
   }
 }
