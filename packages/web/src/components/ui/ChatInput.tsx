@@ -327,7 +327,7 @@ export default function ChatInput({
                 )}
               </div>
 
-              {stats && stats.role === 'FREE' && (
+              {stats && (
                 <div className="flex items-center text-xs text-gray-500 bg-white/60 px-2 rounded-full">
                   <span>
                     {stats.usage[`CHAT_${agentMode}_MESSAGES_DAILY`] ?? 0}/
