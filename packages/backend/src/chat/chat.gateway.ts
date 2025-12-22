@@ -293,12 +293,19 @@ export class ChatGateway
               data: userMessage,
             });
 
+            // Fetch conversation with sources for the agent
+            const conversationWithSources =
+              await this.conversationService.getConversationWithSources(
+                conversationId,
+                client.user.id,
+              );
+
             const agent = await this.agentFactory.getStrategy(
               agenticMode,
               conversation.userId,
             );
             agent
-              .execute(userMessage, conversation, this.server)
+              .execute(userMessage, conversationWithSources, this.server)
               .catch((error) => {
                 this.logger.error(
                   `Error generating AI response for conversation ${conversationId}:`,
@@ -447,11 +454,21 @@ export class ChatGateway
             conversationId,
             data: { messageId },
           });
-
+          
           // Execute regeneration without awaiting
-          this.messageService
-            .regenerateAndStreamAiResponse(messageId, this.server)
-            .catch((error) => {
+          (async () => {
+            try {
+              const conversation =
+                await this.conversationService.getConversationWithSources(
+                  conversationId,
+                  client.user.id,
+                );
+              const strategy = await this.agentFactory.getStrategy(
+                (conversation.metadata as { agenticMode?: AgentMode })?.agenticMode || AgentMode.NORMAL,
+                client.user.id,
+              );
+              await strategy.regenerate(messageId, conversation, this.server);
+            } catch (error) {
               this.logger.error(
                 `Error regenerating message ${messageId}:`,
                 error,
@@ -463,7 +480,8 @@ export class ChatGateway
                   message: 'Failed to regenerate message. Please try again.',
                 },
               });
-            });
+            }
+          })();
         } catch (error) {
           this.logger.error('Error in regenerateMessage handler:', error);
           client.emit('conversationAction', {

@@ -26,4 +26,10 @@ export interface IAgentStrategy {
     conversation: ConversationWithSources,
     server: Server,
   ): Promise<void>;
+
+  regenerate(
+    assistantMessageId: string,
+    conversation: ConversationWithSources,
+    server: Server,
+  ): Promise<void>;
 }

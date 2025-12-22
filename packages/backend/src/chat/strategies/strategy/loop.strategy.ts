@@ -6,19 +6,17 @@ import {
   AgentStrategyServices,
 } from './agent.strategy';
 import { HelperStrategy } from './helper.strategy';
-import { ToolService } from 'src/chat/tools';
 import { VectorSearchResult } from 'src/ai/reranking.service';
 import { ChatMessage, ToolCall } from 'src/ai/llm.service';
-import { InternalServerErrorException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   createStructuredError,
   createEmptyResultResponse,
 } from '../../tools/error-handler';
-import {
-  sanitizeMessage,
-  sanitizeText,
-  sanitizeObject,
-} from 'src/utils/text-sanitizer';
+import { sanitizeObject } from 'src/utils/text-sanitizer';
 
 interface ConversationMetadata {
   agenticMode?: string;
@@ -33,6 +31,62 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
     services: AgentStrategyServices,
   ) {
     super(services);
+  }
+
+  async regenerate(
+    assistantMessageId: string,
+    conversation: ConversationWithSources,
+    server: Server,
+  ): Promise<void> {
+    if (!assistantMessageId) {
+      throw new NotFoundException(
+        'Assistant message ID is required for regeneration.',
+      );
+    }
+
+    const assistantMessage = await this.prisma.message.findUnique({
+      where: { id: assistantMessageId },
+    });
+    if (!assistantMessage || assistantMessage.role !== 'assistant') {
+      throw new NotFoundException('Assistant message to regenerate not found.');
+    }
+
+    let userMessage;
+    if (assistantMessage.parentMessageId) {
+      userMessage = await this.prisma.message.findUnique({
+        where: { id: assistantMessage.parentMessageId },
+      });
+    } else {
+      userMessage = await this.prisma.message.findFirst({
+        where: {
+          conversationId: assistantMessage.conversationId,
+          createdAt: { lt: assistantMessage.createdAt },
+          role: 'user',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    if (!userMessage || userMessage.role !== 'user') {
+      throw new NotFoundException(
+        'Could not find the original user prompt for regeneration.',
+      );
+    }
+
+    await this.prisma.message.delete({ where: { id: assistantMessageId } });
+    await this.prisma.message.deleteMany({
+      where: {
+        conversationId: assistantMessage.conversationId,
+        createdAt: {
+          gt: userMessage.createdAt,
+          lt: assistantMessage.createdAt,
+        },
+        role: 'assistant',
+        content: null,
+      },
+    });
+
+    await this.execute(userMessage, conversation, server);
   }
 
   async execute(
@@ -67,7 +121,13 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
         this.logger.log(
           `No tools available for conversation ${conversation.id}, falling back to RAG mode`,
         );
-        return this.provideFinalAnswer();
+        return this.provideFinalAnswer(
+          [],
+          conversation.id,
+          server,
+          userMessage.id,
+          usedSourceChunks,
+        );
       }
 
       const initialThought = await this.messageService.createMessage(
@@ -140,8 +200,13 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
             (tc) => tc.function.name === 'provide_final_answer',
           );
           if (finalAnswerCall) {
-            // TODO
-            await this.provideFinalAnswer();
+            await this.provideFinalAnswer(
+              llmMessages,
+              conversation.id,
+              server,
+              userMessage.id,
+              usedSourceChunks,
+            );
             return;
           }
 
@@ -291,9 +356,15 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
             `Reached max iterations (${this.iterations}) for conversation ${conversation.id}`,
           );
         }
-
-        await this.provideFinalAnswer();
       }
+
+      await this.provideFinalAnswer(
+        llmMessages,
+        conversation.id,
+        server,
+        userMessage.id,
+        usedSourceChunks,
+      );
     } catch (error) {
       console.error('Error in generateAndStreamAiResponseWithTools:', error);
       server.to(conversation.id).emit('conversationAction', {

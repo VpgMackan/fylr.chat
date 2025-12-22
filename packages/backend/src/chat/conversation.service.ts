@@ -254,6 +254,25 @@ export class ConversationService {
     return conversation;
   }
 
+  async getConversationWithSources(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+      include: {
+        sources: {
+          include: {
+            library: {
+              select: { defaultEmbeddingModel: true },
+            },
+          },
+        },
+      },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or access denied.');
+    }
+    return conversation;
+  }
+
   async getConversationSourceIds(
     conversationId: string,
     userId: string,
