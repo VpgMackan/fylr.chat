@@ -7,6 +7,9 @@ import {
   AgentStrategyServices,
 } from './agent.strategy';
 import { HelperStrategy } from './helper.strategy';
+import { VectorSearchResult } from 'src/ai/reranking.service';
+import { ChatMessage, ToolCall } from 'src/ai/llm.service';
+import { sanitizeObject } from 'src/utils/text-sanitizer';
 
 export class FastStrategy extends HelperStrategy implements IAgentStrategy {
   constructor(services: AgentStrategyServices) {
@@ -17,7 +20,95 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
     userMessage: Message,
     conversation: ConversationWithSources,
     server: Server,
-  ): Promise<void> {}
+  ): Promise<void> {
+    const usedSourceChunks: VectorSearchResult[] = [];
+
+    const hasSources = conversation.sources.length > 0;
+    const metadata = userMessage.metadata as any;
+    const webSearchEnabled = metadata?.webSearchEnabled === true;
+    const availableTools = this.getAvailableTools(hasSources, webSearchEnabled);
+
+    const planningMessages: ChatMessage[] = [
+      { role: 'user', content: userMessage.content ? userMessage.content : '' },
+    ];
+
+    const planResponse = await this.llmService.generateWithTools(
+      planningMessages,
+      availableTools,
+      'planner_system',
+    );
+
+    const planMessage = planResponse.choices[0]?.message;
+    const toolCalls = planMessage?.tool_calls || [];
+
+    const llmMessages: ChatMessage[] = [
+      { role: 'user', content: userMessage.content ? userMessage.content : '' },
+      {
+        role: 'assistant',
+        content: undefined,
+        tool_calls: toolCalls as ToolCall[],
+      },
+    ];
+
+    if (toolCalls.length > 0) {
+      const toolPromises = toolCalls.map(async (toolCall) => {
+        const args =
+          typeof toolCall.function.arguments === 'string'
+            ? JSON.parse(toolCall.function.arguments)
+            : toolCall.function.arguments;
+        this.emitToolProgress(
+          toolCall.function.name,
+          'Executing...',
+          server,
+          conversation.id,
+        );
+
+        try {
+          const result = await this.toolService.executeTool(
+            toolCall.function.name,
+            args,
+            {
+              conversationId: conversation.id,
+              userId: conversation.userId,
+              embeddingModel:
+                conversation.sources[0]?.library.defaultEmbeddingModel,
+            },
+          );
+
+          if (
+            toolCall.function.name === 'search_documents' &&
+            (result as any).results
+          ) {
+            usedSourceChunks.push(...(result as any).results);
+          }
+
+          return {
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            content: JSON.stringify(sanitizeObject(result)),
+          };
+        } catch (e) {
+          return {
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            content: JSON.stringify({ error: e.message }),
+          };
+        }
+      });
+
+      const toolResults = await Promise.all(toolPromises);
+
+      llmMessages.push(...(toolResults as any));
+    }
+
+    await this.provideFinalAnswer(
+      llmMessages,
+      conversation.id,
+      server,
+      userMessage.id,
+      usedSourceChunks,
+    );
+  }
 
   async regenerate(
     assistantMessageId: string,

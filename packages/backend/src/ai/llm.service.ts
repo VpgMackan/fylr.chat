@@ -170,11 +170,12 @@ export class LLMService {
   async generateWithTools(
     messages: ChatMessage[],
     tools: ToolDefinition[],
+    promptType = 'agentic_system',
   ): Promise<ChatCompletionResponse> {
     const payload = {
       provider: 'auto',
 
-      prompt_type: 'agentic_system',
+      prompt_type: promptType,
 
       messages: messages,
 

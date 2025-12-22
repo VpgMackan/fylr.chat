@@ -101,6 +101,30 @@ export class HelperStrategy {
       })
       .filter((m) => m.content || m.tool_calls || m.role === 'tool');
 
+    const toolMessageIndices: number[] = [];
+    contextMessages.forEach((msg, idx) => {
+      if (msg.role === 'tool') {
+        toolMessageIndices.push(idx);
+      }
+    });
+
+    const keepFullToolCount = 3;
+    const toolIndicesToTruncate = toolMessageIndices.slice(
+      0,
+      Math.max(0, toolMessageIndices.length - keepFullToolCount),
+    );
+
+    toolIndicesToTruncate.forEach((idx) => {
+      const msg = contextMessages[idx];
+      if (msg.content && typeof msg.content === 'string') {
+        const maxLength = 200;
+        if (msg.content.length > maxLength) {
+          const truncated = msg.content.substring(0, maxLength);
+          msg.content = `[Tool response truncated for context efficiency. Original length: ${msg.content.length} chars. Preview: ${truncated}...]`;
+        }
+      }
+    });
+
     if (contextMessages.length <= maxMessages) {
       return contextMessages;
     }
