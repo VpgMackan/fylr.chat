@@ -141,7 +141,7 @@ export class ConversationService {
   async initiateConversation(
     content: string,
     userId: string,
-    agenticMode: AgentMode,
+    agentMode: AgentMode,
     sourceIds?: string[],
     libraryIds?: string[],
     webSearchEnabled?: boolean,
@@ -190,7 +190,7 @@ export class ConversationService {
         userId,
         title: content.split(' ').slice(0, 5).join(' ') + '...',
         metadata: {
-          agenticMode,
+          agentMode,
           webSearchEnabled: useWebSearch,
         },
         sources:
@@ -215,14 +215,14 @@ export class ConversationService {
           role: 'user',
           content: content,
           metadata: {
-            agenticMode,
+            agentMode,
             webSearchEnabled: useWebSearch,
           },
         },
         newConversation.id,
       );
 
-      const agent = await this.agentFactory.getStrategy(agenticMode, userId);
+      const agent = await this.agentFactory.getStrategy(agentMode, userId);
 
       agent
         .execute(userMessage, newConversation, this.server)

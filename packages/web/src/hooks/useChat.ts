@@ -414,15 +414,15 @@ export function useChat(chatId: string | null) {
   const sendMessage = useCallback(
     (payload: {
       content: string;
+      agentMode: string;
       sourceIds?: string[];
       libraryIds?: string[];
-      agenticMode?: boolean;
       webSearchEnabled?: boolean;
     }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
         console.log(
-          '📤 Sending message with agenticMode:',
-          payload.agenticMode,
+          '📤 Sending message with agentMode:',
+          payload.agentMode,
           'webSearchEnabled:',
           payload.webSearchEnabled,
         );
@@ -432,7 +432,7 @@ export function useChat(chatId: string | null) {
           content: payload.content,
           sourceIds: payload.sourceIds,
           libraryIds: payload.libraryIds,
-          agenticMode: payload.agenticMode,
+          agentMode: payload.agentMode,
           webSearchEnabled: payload.webSearchEnabled,
         });
       }
@@ -501,9 +501,9 @@ export function useChat(chatId: string | null) {
   const initiateAndSendMessage = useCallback(
     async (payload: {
       content: string;
+      agentMode: string;
       sourceIds?: string[];
       libraryIds?: string[];
-      agenticMode?: boolean;
       webSearchEnabled?: boolean;
     }) => {
       if (chatId) {
@@ -513,16 +513,16 @@ export function useChat(chatId: string | null) {
 
       try {
         console.log(
-          '🚀 Initiating conversation with agenticMode:',
-          payload.agenticMode,
+          '🚀 Initiating conversation with agentMode:',
+          payload.agentMode,
           'webSearchEnabled:',
           payload.webSearchEnabled,
         );
         const newConversation: any = await apiInitiateConversation(
           payload.content,
+          payload.agentMode,
           payload.sourceIds,
           payload.libraryIds,
-          payload.agenticMode,
           payload.webSearchEnabled,
         );
         return newConversation;
@@ -542,7 +542,7 @@ export function useChat(chatId: string | null) {
     status: state.status,
     toolProgress: state.toolProgress,
     currentThoughts: state.currentThoughts,
-    agenticMode: state.metadata?.agenticMode !== false, // Default to true
+    agentMode: state.metadata?.agentMode,
     sendMessage,
     initiateAndSendMessage,
     deleteMessage,

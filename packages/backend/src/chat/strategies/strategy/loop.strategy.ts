@@ -19,7 +19,7 @@ import {
 import { sanitizeObject } from 'src/utils/text-sanitizer';
 
 interface ConversationMetadata {
-  agenticMode?: string;
+  agentMode?: string;
   webSearchEnabled?: boolean;
 }
 

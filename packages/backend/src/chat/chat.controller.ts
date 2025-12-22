@@ -58,7 +58,7 @@ export class ChatController {
     @Body()
     body: {
       content: string;
-      agenticMode: AgentMode;
+      agentMode: AgentMode;
       sourceIds?: string[];
       libraryIds?: string[];
       webSearchEnabled?: boolean;
@@ -68,7 +68,7 @@ export class ChatController {
     return this.conversationService.initiateConversation(
       body.content,
       req.user.id,
-      body.agenticMode,
+      body.agentMode,
       body.sourceIds,
       body.libraryIds,
       body.webSearchEnabled,

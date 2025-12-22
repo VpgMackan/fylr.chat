@@ -21,11 +21,6 @@ interface MessageWithThoughts extends MessageApiResponse {
   agentThoughts?: MessageApiResponse[];
 }
 
-interface ConversationMetadata {
-  agenticMode?: boolean;
-  webSearchEnabled?: boolean;
-}
-
 @Injectable()
 export class MessageService {
   constructor(private prisma: PrismaService) {}

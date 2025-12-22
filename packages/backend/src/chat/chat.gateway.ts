@@ -145,11 +145,11 @@ export class ChatGateway
             content,
             sourceIds,
             libraryIds,
-            agenticMode,
+            agentMode,
             webSearchEnabled,
           } = payload as {
             content: string;
-            agenticMode: AgentMode;
+            agentMode: AgentMode;
             sourceIds?: string[];
             libraryIds?: string[];
             webSearchEnabled?: boolean;
@@ -232,7 +232,7 @@ export class ChatGateway
           );
 
           var limitReached = false;
-          switch (agenticMode) {
+          switch (agentMode) {
             case 'FAST':
               limitReached =
                 usageStats.usage.CHAT_FAST_MESSAGES_DAILY >=
@@ -251,13 +251,13 @@ export class ChatGateway
             default:
               limitReached =
                 usageStats.usage.CHAT_AUTO_MESSAGES_DAILY >=
-                usageStats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY;
+                usageStats.limits.features.CHAT_AUTO_MESSAGES_DAILY;
               break;
           }
 
           if (limitReached) {
             this.logger.warn(
-              `User ${client.user.id} hit agentic mode ${agenticMode} message limit. Forcing FAST mode for conversation ${conversationId}.`,
+              `User ${client.user.id} hit agentic mode ${agentMode} message limit. Forcing FAST mode for conversation ${conversationId}.`,
             );
             /*client.emit('forceFASTMode', {
               reason:
@@ -268,7 +268,7 @@ export class ChatGateway
               await this.conversationService.updateConversation(
                 {
                   metadata: {
-                    agenticMode,
+                    agentMode,
                     webSearchEnabled: webSearchEnabled === true,
                   },
                 },
@@ -281,7 +281,7 @@ export class ChatGateway
                 role: 'user',
                 content: content,
                 metadata: {
-                  agenticMode,
+                  agentMode,
                   webSearchEnabled: webSearchEnabled === true,
                 },
               },
@@ -301,7 +301,7 @@ export class ChatGateway
               );
 
             const agent = await this.agentFactory.getStrategy(
-              agenticMode,
+              agentMode,
               conversation.userId,
             );
             agent
@@ -454,7 +454,7 @@ export class ChatGateway
             conversationId,
             data: { messageId },
           });
-          
+
           // Execute regeneration without awaiting
           (async () => {
             try {
@@ -464,7 +464,8 @@ export class ChatGateway
                   client.user.id,
                 );
               const strategy = await this.agentFactory.getStrategy(
-                (conversation.metadata as { agenticMode?: AgentMode })?.agenticMode || AgentMode.NORMAL,
+                (conversation.metadata as { agentMode?: AgentMode })
+                  ?.agentMode || AgentMode.NORMAL,
                 client.user.id,
               );
               await strategy.regenerate(messageId, conversation, this.server);

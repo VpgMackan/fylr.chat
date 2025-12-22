@@ -17,7 +17,21 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     userMessage: Message,
     conversation: ConversationWithSources,
     server: Server,
-  ): Promise<void> {}
+  ): Promise<void> {
+    const initialThought = await this.messageService.createMessage(
+      {
+        role: 'assistant',
+        reasoning: 'Processing your request...',
+        parentMessageId: userMessage.id,
+      },
+      conversation.id,
+    );
+    server.to(conversation.id).emit('conversationAction', {
+      action: 'agentThought',
+      conversationId: conversation.id,
+      data: initialThought,
+    });
+  }
 
   async regenerate(
     assistantMessageId: string,
