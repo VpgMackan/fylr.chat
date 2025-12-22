@@ -264,16 +264,17 @@ export class ChatGateway
                 'You have used all your Agentic Mode messages for today. Switching to standard mode.',
             });*/
           } else {
-            await this.conversationService.updateConversation(
-              {
-                metadata: {
-                  agenticMode,
-                  webSearchEnabled: webSearchEnabled === true,
+            const conversation =
+              await this.conversationService.updateConversation(
+                {
+                  metadata: {
+                    agenticMode,
+                    webSearchEnabled: webSearchEnabled === true,
+                  },
                 },
-              },
-              conversationId,
-              client.user.id,
-            );
+                conversationId,
+                client.user.id,
+              );
 
             const userMessage = await this.messageService.createMessage(
               {
@@ -292,9 +293,12 @@ export class ChatGateway
               data: userMessage,
             });
 
-            const agent = this.agentFactory.getStrategy(agenticMode);
+            const agent = await this.agentFactory.getStrategy(
+              agenticMode,
+              conversation.userId,
+            );
             agent
-              .execute(userMessage, conversationId, this.server)
+              .execute(userMessage, conversation, this.server)
               .catch((error) => {
                 this.logger.error(
                   `Error generating AI response for conversation ${conversationId}:`,

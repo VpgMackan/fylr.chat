@@ -1,13 +1,20 @@
-import { Message, Conversation } from '@prisma/client';
+import { Message } from '@prisma/client';
 import { Server } from 'socket.io';
-import { ToolDefinition } from 'src/chat/tools';
-import { IAgentStrategy } from './agent.strategy';
+import {
+  IAgentStrategy,
+  ConversationWithSources,
+  AgentStrategyServices,
+} from './agent.strategy';
 import { HelperStrategy } from './helper.strategy';
 
 export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
+  constructor(services: AgentStrategyServices) {
+    super(services);
+  }
+
   async execute(
     userMessage: Message,
-    conversation: Conversation,
+    conversation: ConversationWithSources,
     server: Server,
   ): Promise<void> {}
 }
