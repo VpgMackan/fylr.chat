@@ -74,12 +74,39 @@ export class PermissionsService {
         throw new NotFoundException('User not found.');
       }
 
+      const limit = LIMITS[user.role][feature];
+      const currentPeriodStart = this._getPeriodStart(feature);
+
       if (user.role === UserRole.PRO) {
+        // For PRO users, increment usage but don't enforce limits
+        const usageRecord = await tx.usageRecord.findUnique({
+          where: { userId_feature: { userId, feature } },
+        });
+
+        if (!usageRecord) {
+          await tx.usageRecord.create({
+            data: {
+              userId,
+              feature,
+              usageCount: 1,
+              periodStart: currentPeriodStart,
+            },
+          });
+        } else {
+          if (usageRecord.periodStart < currentPeriodStart) {
+            await tx.usageRecord.update({
+              where: { id: usageRecord.id },
+              data: { usageCount: 1, periodStart: currentPeriodStart },
+            });
+          } else {
+            await tx.usageRecord.update({
+              where: { id: usageRecord.id },
+              data: { usageCount: { increment: 1 } },
+            });
+          }
+        }
         return;
       }
-
-      const limit = LIMITS.FREE[feature];
-      const currentPeriodStart = this._getPeriodStart(feature);
 
       const usageRecord = await tx.usageRecord.findUnique({
         where: { userId_feature: { userId, feature } },

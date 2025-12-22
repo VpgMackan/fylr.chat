@@ -57,7 +57,7 @@ export class HelperStrategy {
       const documentTools = [
         'search_documents',
         'read_document_chunk',
-        'list_sources_in_library',
+        'list_associated_sources',
       ];
       tools.push(
         ...allToolDefinitions.filter((tool) =>
