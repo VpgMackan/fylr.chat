@@ -24,25 +24,23 @@ const SETTINGS_TYPES: SettingsType[] = [
   'Info',
 ];
 
-const HeaderSection = ({ onClose }: { onClose: () => void }) => {
+const HeaderSection = () => {
   return (
-    <div className="flex items-center">
-      <button
-        onClick={onClose}
-        className="mr-4 text-gray-600 hover:text-gray-900 transition-colors p-2 hover:bg-gray-100 rounded-lg"
-      >
-        <Icon icon="weui:back-outlined" className="text-2xl" />
-      </button>
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your account information</p>
-      </div>
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+      <p className="text-gray-600 mt-1">Manage your account information</p>
     </div>
   );
 };
 
 const SubscriptionSection = () => {
-  return <SubscriptionManager />;
+  return (
+    <div className="flex h-full items-center justify-center w-full">
+      <div className="w-full max-w-3/4">
+        <SubscriptionManager />
+      </div>
+    </div>
+  );
 };
 
 const ProfileSection = ({
@@ -191,7 +189,7 @@ const ProfileSection = ({
 
 const SessionsSection = () => {
   return (
-    <div className="overflow-y-scroll">
+    <div className="h-full overflow-y-auto">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         Active Sessions
       </h2>
@@ -206,7 +204,7 @@ const SessionsSection = () => {
 
 const InfoSection = ({ user }: { user: UserApiResponse | null }) => {
   return (
-    <div className="mt-8 pt-6 border-t">
+    <div>
       <h2 className="text-sm font-medium text-gray-700 mb-2">
         Account Information
       </h2>
@@ -339,19 +337,22 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-16">
       <div className="bg-blue-50 w-full h-full p-2 rounded-3xl flex gap-4">
-        <div className="bg-blue-100 rounded-2xl p-4 w-1/4 h-full">
-          <HeaderSection onClose={onClose} />
-          <div className="flex flex-col gap-2 mt-4">
-            {SETTINGS_TYPES.map((type) => (
-              <Button
-                key={type}
-                variant={settingsType === type ? 'primary' : 'secondary'}
-                disabled={settingsType === type}
-                name={type}
-                onClick={() => setSettingsType(type)}
-              />
-            ))}
+        <div className="flex bg-blue-100 rounded-2xl p-4 w-1/4 h-full justify-between flex-col">
+          <div>
+            <HeaderSection />
+            <div className="flex flex-col gap-2 mt-4">
+              {SETTINGS_TYPES.map((type) => (
+                <Button
+                  key={type}
+                  variant={settingsType === type ? 'primary' : 'secondary'}
+                  disabled={settingsType === type}
+                  name={type}
+                  onClick={() => setSettingsType(type)}
+                />
+              ))}
+            </div>
           </div>
+          <Button name="Close" variant="secondary" onClick={onClose} />
         </div>
         <div className="w-full flex justify-center">
           <div className="bg-white rounded-2xl p-6 w-full h-full flex flex-col">

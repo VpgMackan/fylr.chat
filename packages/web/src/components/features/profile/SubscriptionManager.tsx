@@ -25,12 +25,14 @@ const SubscriptionStatusBadge = ({
     },
     PAUSED: {
       text: 'Paused',
-      color: 'bg-amber-500/20 text-amber-100 backdrop-blur-sm border border-amber-300/30',
+      color:
+        'bg-amber-500/20 text-amber-100 backdrop-blur-sm border border-amber-300/30',
       icon: 'mdi:pause-circle',
     },
     EXPIRED: {
       text: 'Expired',
-      color: 'bg-red-500/20 text-red-100 backdrop-blur-sm border border-red-300/30',
+      color:
+        'bg-red-500/20 text-red-100 backdrop-blur-sm border border-red-300/30',
       icon: 'mdi:alert-circle',
     },
     INACTIVE: {
@@ -41,7 +43,9 @@ const SubscriptionStatusBadge = ({
   };
   const { text, color, icon } = config[status] || config.INACTIVE;
   return (
-    <div className={`px-4 py-1.5 flex items-center gap-2 rounded-full ${color}`}>
+    <div
+      className={`px-4 py-1.5 flex items-center gap-2 rounded-full ${color}`}
+    >
       <Icon icon={icon} className="w-4 h-4" />
       <span className="text-sm font-semibold">{text}</span>
     </div>
@@ -130,9 +134,14 @@ export default function SubscriptionManager() {
   if (!subscription) {
     return (
       <div className="text-center py-12 px-6 bg-gray-50 rounded-2xl border border-gray-200">
-        <Icon icon="mdi:alert-circle-outline" className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-500 font-medium">Could not load subscription details.</p>
-        <button 
+        <Icon
+          icon="mdi:alert-circle-outline"
+          className="w-12 h-12 mx-auto text-gray-400 mb-4"
+        />
+        <p className="text-gray-500 font-medium">
+          Could not load subscription details.
+        </p>
+        <button
           onClick={fetchSubscription}
           className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm"
         >
@@ -160,17 +169,23 @@ export default function SubscriptionManager() {
   return (
     <div className="rounded-2xl overflow-hidden shadow-lg">
       {/* Main Card */}
-      <div className={`relative bg-gradient-to-br ${getGradient()} p-6 text-white min-h-[280px] flex flex-col`}>
+      <div
+        className={`relative bg-gradient-to-br ${getGradient()} p-6 text-white min-h-[280px] flex flex-col`}
+      >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        
+
         {/* Header */}
         <div className="flex justify-between items-start relative z-10">
           <div>
-            <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">Your Plan</p>
+            <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">
+              Your Plan
+            </p>
             <h3 className="text-2xl font-bold">
-              {status === 'ACTIVE' || status === 'PAUSED' ? 'Fylr Pro' : 'Fylr Free'}
+              {status === 'ACTIVE' || status === 'PAUSED'
+                ? 'Fylr Pro'
+                : 'Fylr Free'}
             </h3>
           </div>
           <SubscriptionStatusBadge status={status} />
@@ -197,7 +212,7 @@ export default function SubscriptionManager() {
               </div>
             </div>
           )}
-          
+
           {status === 'PAUSED' && remainingDurationOnPause && (
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center gap-3">
@@ -205,7 +220,9 @@ export default function SubscriptionManager() {
                   <Icon icon="mdi:timer-pause" className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-white/70 text-sm">Time remaining when resumed</p>
+                  <p className="text-white/70 text-sm">
+                    Time remaining when resumed
+                  </p>
                   <p className="text-lg font-bold">
                     {Math.ceil(remainingDurationOnPause / 86400)} days of Pro
                   </p>
@@ -213,7 +230,7 @@ export default function SubscriptionManager() {
               </div>
             </div>
           )}
-          
+
           {status === 'EXPIRED' && (
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center gap-3">
@@ -221,13 +238,17 @@ export default function SubscriptionManager() {
                   <Icon icon="mdi:clock-alert" className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-white/90 font-medium">Your subscription has expired</p>
-                  <p className="text-white/70 text-sm">Redeem a gift card to regain Pro features</p>
+                  <p className="text-white/90 font-medium">
+                    Your subscription has expired
+                  </p>
+                  <p className="text-white/70 text-sm">
+                    Redeem a gift card to regain Pro features
+                  </p>
                 </div>
               </div>
             </div>
           )}
-          
+
           {status === 'INACTIVE' && (
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
               <div className="flex items-center gap-3">
@@ -236,7 +257,9 @@ export default function SubscriptionManager() {
                 </div>
                 <div>
                   <p className="text-white/90 font-medium">Upgrade to Pro</p>
-                  <p className="text-white/70 text-sm">Unlimited access and advanced features</p>
+                  <p className="text-white/70 text-sm">
+                    Unlimited access and advanced features
+                  </p>
                 </div>
               </div>
             </div>
@@ -245,7 +268,7 @@ export default function SubscriptionManager() {
       </div>
 
       {/* Action Section */}
-      <div className="bg-gray-50 p-4">
+      <div className="bg-gray-50 p-4 space-y-4">
         {status === 'ACTIVE' && (
           <button
             onClick={() => handleAction(pauseSubscription)}
@@ -260,7 +283,7 @@ export default function SubscriptionManager() {
             {isActionLoading ? 'Processing...' : 'Pause Subscription'}
           </button>
         )}
-        
+
         {status === 'PAUSED' && (
           <button
             onClick={() => handleAction(resumeSubscription)}
@@ -275,64 +298,70 @@ export default function SubscriptionManager() {
             {isActionLoading ? 'Processing...' : 'Resume Subscription'}
           </button>
         )}
-        
-        {(status === 'INACTIVE' || status === 'EXPIRED') && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-              <Icon icon="mdi:gift" className="w-4 h-4" />
-              <span>Have a gift card? Enter it below</span>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="FYLR-XXXX-XXXX-XXXX-XX"
-                  className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all duration-200 font-mono text-sm ${
-                    isCodeValid
-                      ? 'border-gray-200 focus:ring-blue-500 focus:border-blue-500'
-                      : 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                  }`}
-                  value={giftCardCode}
-                  onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === 'Enter' &&
-                      !isActionLoading &&
-                      giftCardCode.trim() &&
-                      isCodeValid
-                    ) {
-                      handleRedeemGiftCard();
-                    }
-                  }}
-                />
-                {giftCardCode && isCodeValid && (
-                  <Icon 
-                    icon="mdi:check-circle" 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" 
-                  />
-                )}
-                {giftCardCode && !isCodeValid && (
-                  <Icon 
-                    icon="mdi:alert-circle" 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" 
-                  />
-                )}
-              </div>
-              <button
-                onClick={handleRedeemGiftCard}
-                disabled={isActionLoading || !giftCardCode.trim() || !isCodeValid}
-                className="sm:w-auto w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
-              >
-                {isActionLoading ? (
-                  <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Icon icon="mdi:gift-open" className="w-5 h-5" />
-                )}
-                {isActionLoading ? 'Redeeming...' : 'Redeem'}
-              </button>
-            </div>
+
+        {/* Gift Card Section - Always visible */}
+        <div className="space-y-3">
+          {(status === 'ACTIVE' || status === 'PAUSED') && (
+            <div className="border-t border-gray-200 pt-4 mt-2" />
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Icon icon="mdi:gift" className="w-4 h-4" />
+            <span>
+              {status === 'ACTIVE' || status === 'PAUSED'
+                ? 'Redeem a gift card to extend your subscription'
+                : 'Have a gift card? Enter it below'}
+            </span>
           </div>
-        )}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="FYLR-XXXX-XXXX-XXXX-XX"
+                className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all duration-200 font-mono text-sm ${
+                  isCodeValid
+                    ? 'border-gray-200 focus:ring-blue-500 focus:border-blue-500'
+                    : 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                }`}
+                value={giftCardCode}
+                onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    !isActionLoading &&
+                    giftCardCode.trim() &&
+                    isCodeValid
+                  ) {
+                    handleRedeemGiftCard();
+                  }
+                }}
+              />
+              {giftCardCode && isCodeValid && (
+                <Icon
+                  icon="mdi:check-circle"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500"
+                />
+              )}
+              {giftCardCode && !isCodeValid && (
+                <Icon
+                  icon="mdi:alert-circle"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500"
+                />
+              )}
+            </div>
+            <button
+              onClick={handleRedeemGiftCard}
+              disabled={isActionLoading || !giftCardCode.trim() || !isCodeValid}
+              className="sm:w-auto w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+            >
+              {isActionLoading ? (
+                <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+              ) : (
+                <Icon icon="mdi:gift-open" className="w-5 h-5" />
+              )}
+              {isActionLoading ? 'Redeeming...' : 'Redeem'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
