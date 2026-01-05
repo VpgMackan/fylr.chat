@@ -7,10 +7,17 @@ import { getProfile, updateProfile, logout } from '@/services/api/auth.api';
 import { UserApiResponse } from '@fylr/types';
 import SessionsManager from '@/components/features/profile/SessionsManager';
 import SubscriptionManager from '@/components/features/profile/SubscriptionManager';
+import { TrackingSettings } from '../TrackingSettings';
+import { resetUser, captureEvent } from '../../../instrumentation-client';
 
 import Button from '../ui/Button';
 
-type SettingsType = 'Subscription' | 'Profile' | 'Sessions' | 'Info';
+type SettingsType =
+  | 'Subscription'
+  | 'Profile'
+  | 'Sessions'
+  | 'Tracking & Data'
+  | 'Info';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -21,6 +28,7 @@ const SETTINGS_TYPES: SettingsType[] = [
   'Subscription',
   'Profile',
   'Sessions',
+  'Tracking & Data',
   'Info',
 ];
 
@@ -217,6 +225,18 @@ const InfoSection = ({ user }: { user: UserApiResponse | null }) => {
   );
 };
 
+const TrackingAndDataSection = ({ user }: { user: UserApiResponse | null }) => {
+  return (
+    <TrackingSettings
+      user={
+        user
+          ? { id: user.id, email: user.email, name: user.name, role: user.role }
+          : null
+      }
+    />
+  );
+};
+
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -275,6 +295,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleLogout = async () => {
     try {
       await logout();
+      captureEvent('user_logged_out');
+      resetUser();
       toast.success('Logged out successfully');
       router.push('/auth/login');
     } catch (error) {
@@ -331,6 +353,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         return <SessionsSection />;
       case 'Info':
         return <InfoSection user={user} />;
+      case 'Tracking & Data':
+        return <TrackingAndDataSection user={user} />;
     }
   };
 
