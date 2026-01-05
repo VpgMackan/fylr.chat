@@ -196,7 +196,7 @@ function getAlternativeTools(
         errorType === ToolErrorType.NOT_FOUND
       ) {
         alternatives.push(
-          'list_sources_in_library() - to see what documents are available',
+          'list_associated_sources() - to see what documents are available',
           'web_search() - to find information from the internet instead',
         );
       }
@@ -230,7 +230,7 @@ function getAlternativeTools(
       if (errorType === ToolErrorType.NOT_FOUND) {
         alternatives.push(
           'search_documents() - to find the correct chunk location',
-          'list_sources_in_library() - to verify the source exists',
+          'list_associated_sources() - to verify the source exists',
         );
       }
       break;

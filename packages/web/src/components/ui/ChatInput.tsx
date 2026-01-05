@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { MentionsInput, Mention } from 'react-mentions';
 import type { SuggestionDataItem } from 'react-mentions';
@@ -13,14 +13,14 @@ interface ChatInputProps {
     content: string;
     sourceIds?: string[];
     libraryIds?: string[];
-    agenticMode?: boolean;
+    agentMode: string;
     webSearchEnabled?: boolean;
   }) => void;
   className?: string;
   showSourceMenu?: boolean;
   conversationSources?: SourceApiResponseWithIsActive[];
   disabled?: boolean;
-  initialAgenticMode?: boolean;
+  initialAgentMode?: string;
 }
 
 const mentionsInputStyle = {
@@ -78,35 +78,69 @@ const mentionStyle = {
   borderRadius: '6px',
 };
 
+type AgentMode = 'FAST' | 'NORMAL' | 'THOROUGH' | 'AUTO';
+
 export default function ChatInput({
   onSend,
   className = '',
   showSourceMenu = false,
   conversationSources = [],
   disabled = false,
-  initialAgenticMode = true,
+  initialAgentMode = 'AUTO',
 }: ChatInputProps) {
-  const [agenticMode, setAgenticMode] = useState(initialAgenticMode);
+  const [agentMode, setAgentMode] = useState<AgentMode>(
+    initialAgentMode as AgentMode,
+  );
+  const [showAgentModeMenu, setShowAgentModeMenu] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const { stats, hasReachedAgenticLimit } = useUsageStats();
+  const agentModeMenuRef = useRef<HTMLDivElement>(null);
 
-  // Update local state when initialAgenticMode changes
+  const handleSetWebSearchEnabled = useCallback(() => {
+    setWebSearchEnabled(!webSearchEnabled);
+  }, [setWebSearchEnabled, webSearchEnabled]);
+
+  const handleToggleAgentModeMenu = useCallback(() => {
+    setShowAgentModeMenu((prev) => !prev);
+  }, []);
+
+  const handleAgentModeClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const mode = e.currentTarget.dataset.mode as AgentMode;
+      setAgentMode(mode);
+      setShowAgentModeMenu(false);
+    },
+    [],
+  );
+
   useEffect(() => {
-    setAgenticMode(initialAgenticMode);
-  }, [initialAgenticMode]);
+    setAgentMode(initialAgentMode as AgentMode);
+  }, [initialAgentMode]);
 
   useEffect(() => {
     if (hasReachedAgenticLimit) {
-      setAgenticMode(false);
+      setAgentMode('AUTO');
     }
   }, [hasReachedAgenticLimit]);
 
-  // Disable web search when agentic mode is turned off
   useEffect(() => {
-    if (!agenticMode && webSearchEnabled) {
-      setWebSearchEnabled(false);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        agentModeMenuRef.current &&
+        !agentModeMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowAgentModeMenu(false);
+      }
+    };
+
+    if (showAgentModeMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  }, [agenticMode, webSearchEnabled]);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showAgentModeMenu]);
 
   const {
     value,
@@ -122,7 +156,7 @@ export default function ChatInput({
     isLibrarySelected,
     libraryData,
     plainText,
-  } = useChatInput(onSend, agenticMode, webSearchEnabled);
+  } = useChatInput(onSend, agentMode, webSearchEnabled);
 
   const getConversationSourceIds = (): Set<string> => {
     const sourceIds = new Set<string>();
@@ -135,15 +169,151 @@ export default function ChatInput({
   const buttonStyle =
     'p-2 bg-white/80 text-gray-600 rounded-full hover:bg-blue-200 hover:text-blue-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/80 disabled:hover:text-gray-600';
 
-  const agenticButtonStyle = agenticMode
-    ? 'p-2 px-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-medium rounded-full hover:from-purple-600 hover:to-indigo-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5'
-    : 'p-2 px-3 bg-white/80 text-gray-600 text-sm font-medium rounded-full hover:bg-purple-100 hover:text-purple-600 transition-all duration-150 shadow-sm hover:shadow active:scale-95 flex items-center gap-1.5';
+  const getAgentModeColor = () => {
+    switch (agentMode) {
+      case 'FAST':
+        return 'from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600';
+      case 'NORMAL':
+        return 'from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600';
+      case 'THOROUGH':
+        return 'from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600';
+      default:
+      case 'AUTO':
+        return 'from-gray-500 to-slate-500 hover:from-gray-600 hover:to-slate-600';
+    }
+  };
 
-  const webSearchButtonStyle = !agenticMode
-    ? 'p-2 bg-white/80 text-gray-400 rounded-full transition-all duration-150 shadow-sm opacity-40 cursor-not-allowed'
-    : webSearchEnabled
-      ? 'p-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full hover:from-green-600 hover:to-emerald-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95'
-      : buttonStyle;
+  const getAgentModeIcon = () => {
+    switch (agentMode) {
+      case 'FAST':
+        return 'mdi:lightning-bolt';
+      case 'NORMAL':
+        return 'mdi:robot';
+      case 'THOROUGH':
+        return 'mdi:brain';
+      default:
+      case 'AUTO':
+        return 'mdi:auto-fix';
+    }
+  };
+
+  const agenticButtonStyle = `p-2 px-3 bg-gradient-to-r ${getAgentModeColor()} text-white text-sm font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1.5 relative`;
+
+  const webSearchButtonStyle = webSearchEnabled
+    ? 'p-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full hover:from-green-600 hover:to-emerald-600 transition-all duration-150 shadow-sm hover:shadow-md active:scale-95'
+    : buttonStyle;
+
+  const ModeMenu = () => (
+    <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
+      {(['FAST', 'NORMAL', 'THOROUGH', 'AUTO'] as AgentMode[]).map((mode) => (
+        <ModeMenuItem
+          key={mode}
+          mode={mode}
+          isActive={agentMode === mode}
+          onClick={handleAgentModeClick}
+        />
+      ))}
+    </div>
+  );
+
+  const ModeMenuItem = ({
+    mode,
+    isActive,
+    onClick,
+  }: {
+    mode: AgentMode;
+    isActive: boolean;
+    onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  }) => {
+    const getModeIcon = () => {
+      const iconMap = {
+        FAST: 'mdi:lightning-bolt',
+        NORMAL: 'mdi:robot',
+        THOROUGH: 'mdi:brain',
+        AUTO: 'mdi:auto-fix',
+      };
+      return iconMap[mode];
+    };
+
+    const getModeDescription = () => {
+      const descriptionMap = {
+        FAST: 'Quick responses',
+        NORMAL: 'Balanced approach',
+        THOROUGH: 'Deep reasoning',
+        AUTO: 'Automatic selection',
+      };
+      return descriptionMap[mode];
+    };
+
+    return (
+      <button
+        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors flex items-center gap-2 ${
+          isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+        }`}
+        onClick={onClick}
+        data-mode={mode}
+      >
+        <Icon icon={getModeIcon()} width="16" height="16" />
+        <div className="flex-1">
+          <div className="font-medium">{mode}</div>
+          <div className="text-xs text-gray-500">{getModeDescription()}</div>
+        </div>
+        {isActive && (
+          <Icon
+            icon="mdi:check"
+            width="16"
+            height="16"
+            className="text-blue-600"
+          />
+        )}
+      </button>
+    );
+  };
+
+  const UsageStats = () =>
+    stats ? (
+      <div className="flex items-center text-xs text-gray-500 bg-white/60 px-2 rounded-full">
+        <span>
+          {stats.usage[`CHAT_${agentMode}_MESSAGES_DAILY`] ?? 0}/
+          {stats.limits.features[`CHAT_${agentMode}_MESSAGES_DAILY`] ?? 0}{' '}
+          {agentMode.toLowerCase()}
+        </span>
+      </div>
+    ) : null;
+
+  const AgentModeButton = () => (
+    <div className="relative" ref={agentModeMenuRef}>
+      <button
+        className={agenticButtonStyle}
+        onClick={handleToggleAgentModeMenu}
+        disabled={hasReachedAgenticLimit}
+        title={
+          hasReachedAgenticLimit
+            ? 'You have used all your Agentic Mode messages for today.'
+            : `Current mode: ${agentMode}`
+        }
+      >
+        <Icon icon={getAgentModeIcon()} width="16" height="16" />
+        <span>{agentMode}</span>
+        <Icon icon="mdi:chevron-down" width="14" height="14" />
+      </button>
+      {showAgentModeMenu && !hasReachedAgenticLimit && <ModeMenu />}
+    </div>
+  );
+
+  const LimitWarning = () =>
+    hasReachedAgenticLimit ? (
+      <div className="text-center text-xs text-purple-700 bg-purple-100 p-2 rounded-md mb-2 flex items-center justify-center gap-2">
+        <Icon icon="mdi:lock-outline" />
+        <span>
+          Agentic Mode is disabled for today.{' '}
+          <Link href="/profile" className="font-bold underline">
+            Upgrade to Pro
+          </Link>{' '}
+          for unlimited use.
+        </span>
+      </div>
+    ) : null;
 
   return (
     <div className={`w-full relative ${className}`}>
@@ -204,67 +374,24 @@ export default function ChatInput({
               />
             </MentionsInput>
           </div>
-          {hasReachedAgenticLimit && (
-            <div className="text-center text-xs text-purple-700 bg-purple-100 p-2 rounded-md mb-2 flex items-center justify-center gap-2">
-              <Icon icon="mdi:lock-outline" />
-              <span>
-                Agentic Mode is disabled for today.{' '}
-                <Link href="/profile" className="font-bold underline">
-                  Upgrade to Pro
-                </Link>{' '}
-                for unlimited use.
-              </span>
-            </div>
-          )}
-
+          <LimitWarning />
           <div className="flex items-center justify-between pt-2 px-1 border-t border-blue-200/50 mt-1">
             <div className="flex gap-1.5">
-              <button
-                className={agenticButtonStyle}
-                onClick={() => setAgenticMode(!agenticMode)}
-                disabled={hasReachedAgenticLimit}
-                title={
-                  hasReachedAgenticLimit
-                    ? 'You have used all your Agentic Mode messages for today.'
-                    : agenticMode
-                      ? 'Using Agentic Mode (Tools & Reasoning)'
-                      : 'Using RAG Mode (Vector Search)'
-                }
-              >
-                <Icon icon="mdi:robot" width="16" height="16" />
-                <span>Agentic Mode</span>
-              </button>
-
-              {stats && stats.role === 'FREE' && (
-                <div className="flex items-center text-xs text-gray-500 bg-white/60 px-2 rounded-full">
-                  <span>
-                    {stats.usage.dailyAgenticMessages}/
-                    {stats.limits.dailyAgenticMessages} used
-                  </span>
-                </div>
-              )}
+              <AgentModeButton />
+              <UsageStats />
               <button className={buttonStyle} aria-label="Add attachment">
                 <Icon icon="mdi:plus" width="18" height="18" />
               </button>
               <button
                 className={webSearchButtonStyle}
-                onClick={() =>
-                  agenticMode && setWebSearchEnabled(!webSearchEnabled)
-                }
-                disabled={!agenticMode}
+                onClick={handleSetWebSearchEnabled}
                 aria-label={
-                  !agenticMode
-                    ? 'Web search only available in Agentic Mode'
-                    : webSearchEnabled
-                      ? 'Disable web search'
-                      : 'Enable web search'
+                  webSearchEnabled ? 'Disable web search' : 'Enable web search'
                 }
                 title={
-                  !agenticMode
-                    ? 'Enable Agentic Mode to use web search'
-                    : webSearchEnabled
-                      ? 'Web Search Enabled'
-                      : 'Click to enable web search'
+                  webSearchEnabled
+                    ? 'Web Search Enabled'
+                    : 'Click to enable web search'
                 }
               >
                 <Icon icon="mdi:web" width="18" height="18" />
@@ -273,7 +400,6 @@ export default function ChatInput({
                 <Icon icon="mdi:dots-horizontal" width="18" height="18" />
               </button>
             </div>
-
             <div className="flex gap-2">
               <button className={buttonStyle} aria-label="Voice input">
                 <Icon icon="mdi:microphone" width="20" height="20" />

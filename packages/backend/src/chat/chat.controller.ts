@@ -20,6 +20,7 @@ import { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface
 import { ConversationService } from './conversation.service';
 
 import { CreateConversationDto, UpdateConversationDto } from '@fylr/types';
+import { AgentMode } from './strategies/strategies.factory';
 
 @UseGuards(AuthGuard)
 @Controller('chat')
@@ -57,9 +58,9 @@ export class ChatController {
     @Body()
     body: {
       content: string;
+      agentMode: AgentMode;
       sourceIds?: string[];
       libraryIds?: string[];
-      agenticMode?: boolean;
       webSearchEnabled?: boolean;
     },
     @Request() req: RequestWithUser,
@@ -67,9 +68,9 @@ export class ChatController {
     return this.conversationService.initiateConversation(
       body.content,
       req.user.id,
+      body.agentMode,
       body.sourceIds,
       body.libraryIds,
-      body.agenticMode,
       body.webSearchEnabled,
     );
   }

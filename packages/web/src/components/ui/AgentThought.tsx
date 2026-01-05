@@ -49,32 +49,32 @@ export default function AgentThoughts({ thoughts }: AgentThoughtsProps) {
   const thoughtsLabel = validThoughts.length === 1 ? 'thought' : 'thoughts';
 
   return (
-    <div className="max-w-[70%] mb-2">
+    <div className="max-w-[85%] lg:max-w-[70%] mb-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 w-full bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 hover:bg-purple-100 transition-colors text-left"
+        className="flex items-center gap-2.5 w-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl px-4 py-2.5 hover:from-purple-100 hover:to-indigo-100 transition-all duration-150 text-left shadow-sm"
         aria-expanded={isExpanded}
       >
         <Icon
           icon={isExpanded ? 'mdi:chevron-down' : 'mdi:chevron-right'}
-          className="w-4 h-4 text-purple-600 flex-shrink-0"
+          className="w-4 h-4 text-purple-600 flex-shrink-0 transition-transform duration-150"
         />
         <Icon
           icon="mdi:brain"
-          className="w-4 h-4 text-purple-600 flex-shrink-0"
+          className="w-5 h-5 text-purple-600 flex-shrink-0"
         />
-        <span className="text-xs font-medium text-purple-700">
+        <span className="text-sm font-medium text-purple-700">
           {validThoughts.length} agent {thoughtsLabel}
         </span>
         {totalToolCalls > 0 && (
-          <span className="ml-auto text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full flex-shrink-0">
-            {totalToolCalls} tool{totalToolCalls > 1 ? 's' : ''}
+          <span className="ml-auto text-xs font-medium bg-purple-200 text-purple-800 px-2.5 py-1 rounded-full flex-shrink-0">
+            {totalToolCalls} tool{totalToolCalls > 1 ? 's' : ''} used
           </span>
         )}
       </button>
 
       {isExpanded && (
-        <div className="mt-1 bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
+        <div className="mt-2 bg-gradient-to-b from-purple-50 to-white border border-purple-200 rounded-xl p-4 space-y-4 shadow-sm">
           {validThoughts.map((thought, index) => {
             const hasReasoning = Boolean(
               thought.reasoning &&
@@ -90,28 +90,33 @@ export default function AgentThoughts({ thoughts }: AgentThoughtsProps) {
             return (
               <div
                 key={thought.id || index}
-                className="bg-white rounded-lg p-2.5 border border-purple-100"
+                className="bg-white rounded-xl p-3 border border-purple-100 shadow-sm"
               >
-                <div className="flex items-center gap-1.5 mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="flex items-center justify-center w-6 h-6 bg-purple-100 rounded-full">
+                    <span className="text-xs font-bold text-purple-700">
+                      {index + 1}
+                    </span>
+                  </span>
                   <Icon
                     icon="mdi:lightbulb-outline"
-                    className="w-3.5 h-3.5 text-purple-600"
+                    className="w-4 h-4 text-purple-500"
                   />
-                  <span className="text-xs font-semibold text-purple-800">
+                  <span className="text-xs font-semibold text-purple-800 uppercase tracking-wide">
                     Step {index + 1}
                   </span>
                 </div>
 
                 {hasReasoning && (
-                  <div className="mb-2">
-                    <p className="text-xs text-gray-700 leading-relaxed">
+                  <div className="mb-3 pl-8">
+                    <p className="text-sm text-gray-700 leading-relaxed">
                       {thought.reasoning}
                     </p>
                   </div>
                 )}
 
                 {hasToolCalls && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2 pl-8">
                     {(thought.toolCalls as ToolCall[]).map((toolCall) => {
                       let parsedArgs: any = {};
                       try {
@@ -123,19 +128,19 @@ export default function AgentThoughts({ thoughts }: AgentThoughtsProps) {
                       return (
                         <div
                           key={toolCall.id}
-                          className="bg-purple-50 rounded p-2"
+                          className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-100"
                         >
-                          <div className="flex items-center gap-1.5 mb-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <Icon
                               icon="mdi:tools"
-                              className="w-3 h-3 text-purple-600"
+                              className="w-4 h-4 text-purple-600"
                             />
-                            <span className="text-xs font-mono font-semibold text-purple-900">
+                            <span className="text-xs font-mono font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-200">
                               {toolCall.function.name}
                             </span>
                           </div>
-                          <div className="text-xs bg-white rounded p-1.5 font-mono overflow-x-auto border border-purple-100">
-                            <pre className="whitespace-pre-wrap break-words text-[10px] leading-tight">
+                          <div className="text-xs bg-white rounded-lg p-2.5 font-mono overflow-x-auto border border-purple-100">
+                            <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-700">
                               {JSON.stringify(parsedArgs, null, 2)}
                             </pre>
                           </div>

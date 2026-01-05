@@ -3,20 +3,23 @@
 import { useState, useEffect } from 'react';
 import axios from '@/utils/axios';
 
+export type UsageRecordFeature =
+  | 'SUMMARY_GENERATION_MONTHLY'
+  | 'PODCAST_GENERATION_MONTHLY'
+  | 'CHAT_AUTO_MESSAGES_DAILY'
+  | 'CHAT_FAST_MESSAGES_DAILY'
+  | 'CHAT_NORMAL_MESSAGES_DAILY'
+  | 'CHAT_THOROUGH_MESSAGES_DAILY'
+  | 'SOURCE_UPLOAD_DAILY';
+
 export interface UsageStats {
   role: 'FREE' | 'PRO';
   limits: {
     libraries: number;
     sourcesPerLibrary: number;
-    dailySourceUploads: number;
-    dailyMessages: number;
-    dailyAgenticMessages: number;
+    features: Partial<Record<UsageRecordFeature, number>>;
   };
-  usage: {
-    dailySourceUploads: number;
-    dailyMessages: number;
-    dailyAgenticMessages: number;
-  };
+  usage: Partial<Record<UsageRecordFeature, number>>;
 }
 
 export function useUsageStats() {
@@ -39,14 +42,24 @@ export function useUsageStats() {
         limits: {
           libraries: 10,
           sourcesPerLibrary: 50,
-          dailySourceUploads: 10,
-          dailyMessages: 50,
-          dailyAgenticMessages: 20,
+          features: {
+            SOURCE_UPLOAD_DAILY: 10,
+            CHAT_AUTO_MESSAGES_DAILY: 20,
+            CHAT_FAST_MESSAGES_DAILY: 20,
+            CHAT_NORMAL_MESSAGES_DAILY: 10,
+            CHAT_THOROUGH_MESSAGES_DAILY: 5,
+            SUMMARY_GENERATION_MONTHLY: 20,
+            PODCAST_GENERATION_MONTHLY: 5,
+          },
         },
         usage: {
-          dailySourceUploads: 0,
-          dailyMessages: 0,
-          dailyAgenticMessages: 0,
+          SOURCE_UPLOAD_DAILY: 0,
+          CHAT_AUTO_MESSAGES_DAILY: 0,
+          CHAT_FAST_MESSAGES_DAILY: 0,
+          CHAT_NORMAL_MESSAGES_DAILY: 0,
+          CHAT_THOROUGH_MESSAGES_DAILY: 0,
+          SUMMARY_GENERATION_MONTHLY: 0,
+          PODCAST_GENERATION_MONTHLY: 0,
         },
       });
     } finally {
@@ -63,12 +76,20 @@ export function useUsageStats() {
   };
 
   const hasReachedDailyLimit = stats
-    ? stats.usage.dailySourceUploads >= stats.limits.dailySourceUploads
+    ? (stats.usage.SOURCE_UPLOAD_DAILY ?? 0) >=
+      (stats.limits.features.SOURCE_UPLOAD_DAILY ?? Infinity)
     : false;
 
   const hasReachedAgenticLimit = stats
     ? stats.role === 'FREE' &&
-      stats.usage.dailyAgenticMessages >= stats.limits.dailyAgenticMessages
+      (stats.usage.CHAT_AUTO_MESSAGES_DAILY ?? 0) +
+        (stats.usage.CHAT_FAST_MESSAGES_DAILY ?? 0) +
+        (stats.usage.CHAT_NORMAL_MESSAGES_DAILY ?? 0) +
+        (stats.usage.CHAT_THOROUGH_MESSAGES_DAILY ?? 0) >=
+        (stats.limits.features.CHAT_AUTO_MESSAGES_DAILY ?? 0) +
+          (stats.limits.features.CHAT_FAST_MESSAGES_DAILY ?? 0) +
+          (stats.limits.features.CHAT_NORMAL_MESSAGES_DAILY ?? 0) +
+          (stats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY ?? 0)
     : false;
 
   const canUploadMore = stats
@@ -78,7 +99,8 @@ export function useUsageStats() {
   const remainingUploads = stats
     ? Math.max(
         0,
-        stats.limits.dailySourceUploads - stats.usage.dailySourceUploads,
+        (stats.limits.features.SOURCE_UPLOAD_DAILY ?? 0) -
+          (stats.usage.SOURCE_UPLOAD_DAILY ?? 0),
       )
     : 0;
 

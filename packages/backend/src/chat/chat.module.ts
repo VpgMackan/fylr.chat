@@ -10,6 +10,7 @@ import { AiModule } from 'src/ai/ai.module';
 import { SourceModule } from 'src/source/source.module';
 import { ToolsModule } from './tools/tools.module';
 import { PermissionsService } from 'src/auth/permissions.service';
+import { AgentFactory } from './strategies/strategies.factory';
 
 @Module({
   imports: [AuthModule, AiModule, SourceModule, ToolsModule],
@@ -19,6 +20,7 @@ import { PermissionsService } from 'src/auth/permissions.service';
     MessageService,
     ChatGateway,
     PermissionsService,
+    AgentFactory,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class

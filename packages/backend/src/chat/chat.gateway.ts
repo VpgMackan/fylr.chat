@@ -22,6 +22,7 @@ import { MessageService } from './message.service';
 import { SourceService } from 'src/source/source.service';
 import { ConversationService } from './conversation.service';
 import { PermissionsService } from 'src/auth/permissions.service';
+import { AgentFactory, AgentMode } from './strategies/strategies.factory';
 
 interface SocketWithChatUser extends Socket {
   user: ChatTokenPayload;
@@ -41,6 +42,7 @@ export class ChatGateway
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly messageService: MessageService,
+    private readonly agentFactory: AgentFactory,
     private readonly conversationService: ConversationService,
     private readonly sourceService: SourceService,
     private readonly permissionsService: PermissionsService,
@@ -143,20 +145,15 @@ export class ChatGateway
             content,
             sourceIds,
             libraryIds,
-            agenticMode,
+            agentMode,
             webSearchEnabled,
           } = payload as {
             content: string;
+            agentMode: AgentMode;
             sourceIds?: string[];
             libraryIds?: string[];
-            agenticMode?: boolean;
             webSearchEnabled?: boolean;
           };
-
-          // Log the received agenticMode value for debugging
-          this.logger.log(
-            `SendMessage - agenticMode received: ${agenticMode} (type: ${typeof agenticMode})`,
-          );
 
           // Handle both sourceIds and libraryIds
           if (
@@ -233,85 +230,82 @@ export class ChatGateway
           const usageStats = await this.permissionsService.getUsageStats(
             client.user.id,
           );
-          const hasReachedAgenticLimit =
-            usageStats.role === 'FREE' &&
-            usageStats.usage.dailyAgenticMessages >=
-              usageStats.limits.dailyAgenticMessages;
 
-          let useAgenticMode = agenticMode !== false; // User's preference
-
-          // Backend enforcement
-          if (useAgenticMode && hasReachedAgenticLimit) {
-            this.logger.warn(
-              `User ${client.user.id} hit agentic message limit. Forcing RAG mode for conversation ${conversationId}.`,
-            );
-            useAgenticMode = false; // Override user preference
-
-            // Emit a special event to the client to notify them of the change
-            client.emit('forceRAGMode', {
-              reason:
-                'You have used all your Agentic Mode messages for today. Switching to standard mode.',
-            });
+          let limitReached = false;
+          switch (agentMode) {
+            case 'FAST':
+              limitReached =
+                usageStats.usage.CHAT_FAST_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_FAST_MESSAGES_DAILY;
+              break;
+            case 'NORMAL':
+              limitReached =
+                usageStats.usage.CHAT_NORMAL_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_NORMAL_MESSAGES_DAILY;
+              break;
+            case 'THOROUGH':
+              limitReached =
+                usageStats.usage.CHAT_THOROUGH_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_THOROUGH_MESSAGES_DAILY;
+              break;
+            default:
+              limitReached =
+                usageStats.usage.CHAT_AUTO_MESSAGES_DAILY >=
+                usageStats.limits.features.CHAT_AUTO_MESSAGES_DAILY;
+              break;
           }
 
-          // Update conversation metadata with the current agenticMode and webSearchEnabled settings
-          // Web search is only available in agentic mode
-          const useWebSearch = useAgenticMode && webSearchEnabled === true;
-          await this.conversationService.updateConversation(
-            {
-              metadata: {
-                agenticMode: useAgenticMode,
-                webSearchEnabled: useWebSearch,
-              },
-            },
-            conversationId,
-            client.user.id,
-          );
-
-          const userMessage = await this.messageService.createMessage(
-            {
-              role: 'user',
-              content: content,
-              metadata: {
-                agenticMode: useAgenticMode,
-                webSearchEnabled: useWebSearch,
-              }, // Store mode and web search in metadata
-            },
-            conversationId,
-          );
-          this.server.to(conversationId).emit('conversationAction', {
-            action: 'newMessage',
-            conversationId,
-            data: userMessage,
-          });
-
-          // Execute AI response generation without awaiting to not block
-          // Use agenticMode flag to determine which method to call (default to true for agentic)
-
-          this.logger.log(
-            `Using ${useAgenticMode ? 'AGENTIC' : 'RAG'} mode for conversation ${conversationId}`,
-          );
-
-          if (useAgenticMode) {
-            this.messageService
-              .generateAndStreamAiResponseWithTools(userMessage, this.server)
-              .catch((error) => {
-                this.logger.error(
-                  `Error generating AI response for conversation ${conversationId}:`,
-                  error,
-                );
-                this.server.to(conversationId).emit('conversationAction', {
-                  action: 'streamError',
-                  conversationId,
-                  data: {
-                    message:
-                      'Failed to generate AI response. Please try again.',
-                  },
-                });
-              });
+          if (limitReached) {
+            this.logger.warn(
+              `User ${client.user.id} hit agentic mode ${agentMode} message limit. Forcing FAST mode for conversation ${conversationId}.`,
+            );
+            /*client.emit('forceFASTMode', {
+              reason:
+                'You have used all your Agentic Mode messages for today. Switching to standard mode.',
+            });*/
           } else {
-            this.messageService
-              .generateAndStreamAiResponse(userMessage, this.server)
+            const conversation =
+              await this.conversationService.updateConversation(
+                {
+                  metadata: {
+                    agentMode,
+                    webSearchEnabled: webSearchEnabled === true,
+                  },
+                },
+                conversationId,
+                client.user.id,
+              );
+
+            const userMessage = await this.messageService.createMessage(
+              {
+                role: 'user',
+                content,
+                metadata: {
+                  agentMode,
+                  webSearchEnabled: webSearchEnabled === true,
+                },
+              },
+              conversationId,
+            );
+            this.server.to(conversationId).emit('conversationAction', {
+              action: 'newMessage',
+              conversationId,
+              data: userMessage,
+            });
+
+            // Fetch conversation with sources for the agent
+            const conversationWithSources =
+              await this.conversationService.getConversationWithSources(
+                conversationId,
+                client.user.id,
+              );
+
+            const agent = await this.agentFactory.getStrategy(
+              agentMode,
+              conversation.userId,
+            );
+            agent
+              .execute(userMessage, conversationWithSources, this.server)
               .catch((error) => {
                 this.logger.error(
                   `Error generating AI response for conversation ${conversationId}:`,
@@ -462,9 +456,20 @@ export class ChatGateway
           });
 
           // Execute regeneration without awaiting
-          this.messageService
-            .regenerateAndStreamAiResponse(messageId, this.server)
-            .catch((error) => {
+          (async () => {
+            try {
+              const conversation =
+                await this.conversationService.getConversationWithSources(
+                  conversationId,
+                  client.user.id,
+                );
+              const strategy = await this.agentFactory.getStrategy(
+                (conversation.metadata as { agentMode?: AgentMode })
+                  ?.agentMode || AgentMode.NORMAL,
+                client.user.id,
+              );
+              await strategy.regenerate(messageId, conversation, this.server);
+            } catch (error) {
               this.logger.error(
                 `Error regenerating message ${messageId}:`,
                 error,
@@ -476,7 +481,8 @@ export class ChatGateway
                   message: 'Failed to regenerate message. Please try again.',
                 },
               });
-            });
+            }
+          })();
         } catch (error) {
           this.logger.error('Error in regenerateMessage handler:', error);
           client.emit('conversationAction', {
@@ -515,6 +521,20 @@ export class ChatGateway
           client.emit('error', { message: 'Failed to update sources' });
           throw new WsException('Failed to update sources');
         }
+      }
+
+      case 'stopGeneration': {
+        // Acknowledge the stop request - actual stopping happens client-side
+        // The server will continue processing but client will ignore further chunks
+        this.logger.log(
+          `Stop generation requested for conversation ${conversationId}`,
+        );
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'generationStopped',
+          conversationId,
+          data: { message: 'Generation stopped by user' },
+        });
+        break;
       }
 
       default:

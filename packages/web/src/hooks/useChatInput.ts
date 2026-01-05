@@ -17,12 +17,12 @@ interface Mention {
 export function useChatInput(
   onSend: (payload: {
     content: string;
+    agentMode: string;
     sourceIds?: string[];
     libraryIds?: string[];
-    agenticMode?: boolean;
     webSearchEnabled?: boolean;
   }) => void,
-  agenticMode: boolean = false,
+  agentMode: string,
   webSearchEnabled: boolean = false,
 ) {
   const [value, setValue] = useState('');
@@ -84,11 +84,11 @@ export function useChatInput(
       xmlContent,
       mentions,
       libraryIds,
-      agenticMode,
+      agentMode,
       webSearchEnabled,
     });
 
-    onSend({ content: xmlContent, libraryIds, agenticMode, webSearchEnabled });
+    onSend({ content: xmlContent, libraryIds, agentMode, webSearchEnabled });
     setValue('');
     setPlainText('');
     setMentions([]);

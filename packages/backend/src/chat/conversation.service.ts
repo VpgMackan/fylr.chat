@@ -16,6 +16,7 @@ import {
 import { AuthService } from 'src/auth/auth.service';
 import { MessageService } from './message.service';
 import { Server } from 'socket.io';
+import { AgentFactory, AgentMode } from './strategies/strategies.factory';
 
 @Injectable()
 export class ConversationService {
@@ -25,6 +26,7 @@ export class ConversationService {
     private prisma: PrismaService,
     private authService: AuthService,
     private messageService: MessageService,
+    private agentFactory: AgentFactory,
   ) {}
 
   setServer(server: Server) {
@@ -139,9 +141,9 @@ export class ConversationService {
   async initiateConversation(
     content: string,
     userId: string,
+    agentMode: AgentMode,
     sourceIds?: string[],
     libraryIds?: string[],
-    agenticMode?: boolean,
     webSearchEnabled?: boolean,
   ) {
     // Collect all source IDs from both sourceIds and libraryIds
@@ -181,59 +183,62 @@ export class ConversationService {
     }
 
     // Web search is only available in agentic mode
-    const useAgenticMode = agenticMode !== false;
-    const useWebSearch = useAgenticMode && webSearchEnabled === true;
+    const useWebSearch = webSearchEnabled === true;
 
     const newConversation = await this.prisma.conversation.create({
       data: {
         userId,
         title: content.split(' ').slice(0, 5).join(' ') + '...',
         metadata: {
-          agenticMode: useAgenticMode,
+          agentMode,
           webSearchEnabled: useWebSearch,
-        }, // Store in conversation metadata
+        },
         sources:
           allSourceIds.length > 0
             ? { connect: allSourceIds.map((id) => ({ id })) }
             : undefined,
-        messages: {
-          create: {
-            role: 'user',
-            content: content,
-            metadata: {
-              agenticMode: useAgenticMode,
-              webSearchEnabled: useWebSearch,
-            }, // Also store in message metadata
+      },
+      include: {
+        sources: {
+          include: {
+            library: {
+              select: { defaultEmbeddingModel: true },
+            },
           },
         },
       },
-      include: {
-        messages: true,
-      },
     });
 
-    if (this.server && newConversation.messages.length > 0) {
-      const userMessage = newConversation.messages[0];
-      
-      if (useAgenticMode) {
-        this.messageService
-          .generateAndStreamAiResponseWithTools(userMessage, this.server)
-          .catch((error) => {
-            console.error(
-              `Failed to generate AI response for conversation ${newConversation.id}:`,
-              error,
-            );
+    if (this.server) {
+      const userMessage = await this.messageService.createMessage(
+        {
+          role: 'user',
+          content,
+          metadata: {
+            agentMode,
+            webSearchEnabled: useWebSearch,
+          },
+        },
+        newConversation.id,
+      );
+
+      const agent = await this.agentFactory.getStrategy(agentMode, userId);
+
+      agent
+        .execute(userMessage, newConversation, this.server)
+        .catch((error) => {
+          console.error(
+            `Failed to generate AI response for conversation ${newConversation.id}:`,
+            error,
+          );
+          this.server.to(newConversation.id).emit('conversationAction', {
+            action: 'streamError',
+            conversationId: newConversation.id,
+            data: {
+              message: 'Failed to generate AI response. Please try again.',
+            },
           });
-      } else {
-        this.messageService
-          .generateAndStreamAiResponse(userMessage, this.server)
-          .catch((error) => {
-            console.error(
-              `Failed to generate AI response for conversation ${newConversation.id}:`,
-              error,
-            );
-          });
-      }
+        });
     }
 
     return newConversation;
@@ -244,7 +249,26 @@ export class ConversationService {
       where: { id: conversationId, userId },
     });
     if (!conversation) {
-      throw new NotFoundException("Conversation not found or access denied.");
+      throw new NotFoundException('Conversation not found or access denied.');
+    }
+    return conversation;
+  }
+
+  async getConversationWithSources(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+      include: {
+        sources: {
+          include: {
+            library: {
+              select: { defaultEmbeddingModel: true },
+            },
+          },
+        },
+      },
+    });
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found or access denied.');
     }
     return conversation;
   }
@@ -258,7 +282,7 @@ export class ConversationService {
       select: { sources: { select: { id: true } } },
     });
     if (!conversation) {
-      throw new NotFoundException("Conversation not found or access denied.");
+      throw new NotFoundException('Conversation not found or access denied.');
     }
     return conversation.sources.map((s) => s.id);
   }
@@ -273,6 +297,15 @@ export class ConversationService {
       return await this.prisma.conversation.update({
         where: { id },
         data: body,
+        include: {
+          sources: {
+            include: {
+              library: {
+                select: { defaultEmbeddingModel: true },
+              },
+            },
+          },
+        },
       });
     } catch (error) {
       throw new InternalServerErrorException(

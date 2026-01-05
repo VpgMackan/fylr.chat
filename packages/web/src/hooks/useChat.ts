@@ -37,6 +37,8 @@ interface ChatState {
   currentThoughts: MessageApiResponse[];
   streamingState: StreamingState;
   metadata: any;
+  error: { message: string; lastUserMessageId?: string } | null;
+  isGenerating: boolean;
 }
 
 type ChatAction =
@@ -64,7 +66,13 @@ type ChatAction =
   | { type: 'SET_SOURCES'; payload: SourceApiResponseWithIsActive[] }
   | { type: 'SET_NAME'; payload: string }
   | { type: 'SET_METADATA'; payload: any }
-  | { type: 'RESET_STREAMING_STATE' };
+  | { type: 'RESET_STREAMING_STATE' }
+  | {
+      type: 'SET_ERROR';
+      payload: { message: string; lastUserMessageId?: string } | null;
+    }
+  | { type: 'SET_GENERATING'; payload: boolean }
+  | { type: 'STOP_GENERATION' };
 
 const initialState: ChatState = {
   messages: [],
@@ -81,6 +89,8 @@ const initialState: ChatState = {
     receivedChunks: new Set(),
     content: '',
   },
+  error: null,
+  isGenerating: false,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -248,6 +258,36 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
           m.id === action.payload.id ? action.payload : m,
         ),
       };
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload,
+        status: null,
+        toolProgress: null,
+        isGenerating: false,
+      };
+    case 'SET_GENERATING':
+      return {
+        ...state,
+        isGenerating: action.payload,
+        error: action.payload ? null : state.error, // Clear error when starting generation
+      };
+    case 'STOP_GENERATION':
+      return {
+        ...state,
+        isGenerating: false,
+        status: null,
+        toolProgress: null,
+        currentThoughts: [],
+        // Remove the streaming message if it exists
+        messages: state.messages.filter((m) => m.id !== STREAMING_ASSISTANT_ID),
+        streamingState: {
+          streamId: null,
+          expectedChunkIndex: 0,
+          receivedChunks: new Set(),
+          content: '',
+        },
+      };
     default:
       return state;
   }
@@ -354,6 +394,10 @@ export function useChat(chatId: string | null) {
                 break;
               case 'newMessage':
                 dispatch({ type: 'ADD_MESSAGE', payload: data });
+                // Start generating when user message is added
+                if (data.role === 'user') {
+                  dispatch({ type: 'SET_GENERATING', payload: true });
+                }
                 break;
               case 'messageChunk':
                 console.log(
@@ -373,11 +417,21 @@ export function useChat(chatId: string | null) {
 
               case 'messageEnd':
                 dispatch({ type: 'FINALIZE_ASSISTANT_MESSAGE', payload: data });
+                dispatch({ type: 'SET_GENERATING', payload: false });
                 break;
 
               case 'streamError':
-                dispatch({ type: 'SET_STATUS', payload: null });
                 console.error('AI Stream Error:', data.message);
+                // Find the last user message for retry
+                dispatch({
+                  type: 'SET_ERROR',
+                  payload: {
+                    message:
+                      data.message ||
+                      'An error occurred while generating the response.',
+                    lastUserMessageId: data.lastUserMessageId,
+                  },
+                });
                 break;
 
               case 'messageDeleted':
@@ -414,15 +468,15 @@ export function useChat(chatId: string | null) {
   const sendMessage = useCallback(
     (payload: {
       content: string;
+      agentMode: string;
       sourceIds?: string[];
       libraryIds?: string[];
-      agenticMode?: boolean;
       webSearchEnabled?: boolean;
     }) => {
       if (socketRef.current && chatId && payload.content.trim()) {
         console.log(
-          '📤 Sending message with agenticMode:',
-          payload.agenticMode,
+          '📤 Sending message with agentMode:',
+          payload.agentMode,
           'webSearchEnabled:',
           payload.webSearchEnabled,
         );
@@ -432,7 +486,7 @@ export function useChat(chatId: string | null) {
           content: payload.content,
           sourceIds: payload.sourceIds,
           libraryIds: payload.libraryIds,
-          agenticMode: payload.agenticMode,
+          agentMode: payload.agentMode,
           webSearchEnabled: payload.webSearchEnabled,
         });
       }
@@ -483,6 +537,8 @@ export function useChat(chatId: string | null) {
   const regenerateMessage = useCallback(
     (messageId: string) => {
       if (socketRef.current && chatId) {
+        dispatch({ type: 'SET_GENERATING', payload: true });
+        dispatch({ type: 'SET_ERROR', payload: null });
         socketRef.current.emit('conversationAction', {
           action: 'regenerateMessage',
           conversationId: chatId,
@@ -493,6 +549,43 @@ export function useChat(chatId: string | null) {
     [chatId],
   );
 
+  const stopGeneration = useCallback(() => {
+    if (socketRef.current && chatId) {
+      console.log('🛑 Stopping generation');
+      socketRef.current.emit('conversationAction', {
+        action: 'stopGeneration',
+        conversationId: chatId,
+      });
+      dispatch({ type: 'STOP_GENERATION' });
+    }
+  }, [chatId]);
+
+  const clearError = useCallback(() => {
+    dispatch({ type: 'SET_ERROR', payload: null });
+  }, []);
+
+  const retryLastMessage = useCallback(() => {
+    // Find the last user message
+    const lastUserMessage = [...state.messages]
+      .reverse()
+      .find((m) => m.role === 'user');
+    if (lastUserMessage && socketRef.current && chatId) {
+      dispatch({ type: 'SET_ERROR', payload: null });
+      dispatch({ type: 'SET_GENERATING', payload: true });
+      // Regenerate from the last assistant message if it exists, or just retry
+      const lastAssistantMessage = [...state.messages]
+        .reverse()
+        .find((m) => m.role === 'assistant');
+      if (lastAssistantMessage) {
+        socketRef.current.emit('conversationAction', {
+          action: 'regenerateMessage',
+          conversationId: chatId,
+          payload: { messageId: lastAssistantMessage.id },
+        });
+      }
+    }
+  }, [chatId, state.messages]);
+
   const retryConnection = useCallback(() => {
     dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
     socketRef.current?.connect();
@@ -501,9 +594,9 @@ export function useChat(chatId: string | null) {
   const initiateAndSendMessage = useCallback(
     async (payload: {
       content: string;
+      agentMode: string;
       sourceIds?: string[];
       libraryIds?: string[];
-      agenticMode?: boolean;
       webSearchEnabled?: boolean;
     }) => {
       if (chatId) {
@@ -513,16 +606,16 @@ export function useChat(chatId: string | null) {
 
       try {
         console.log(
-          '🚀 Initiating conversation with agenticMode:',
-          payload.agenticMode,
+          '🚀 Initiating conversation with agentMode:',
+          payload.agentMode,
           'webSearchEnabled:',
           payload.webSearchEnabled,
         );
         const newConversation: any = await apiInitiateConversation(
           payload.content,
+          payload.agentMode,
           payload.sourceIds,
           payload.libraryIds,
-          payload.agenticMode,
           payload.webSearchEnabled,
         );
         return newConversation;
@@ -542,13 +635,18 @@ export function useChat(chatId: string | null) {
     status: state.status,
     toolProgress: state.toolProgress,
     currentThoughts: state.currentThoughts,
-    agenticMode: state.metadata?.agenticMode !== false, // Default to true
+    agentMode: state.metadata?.agentMode,
+    error: state.error,
+    isGenerating: state.isGenerating,
     sendMessage,
     initiateAndSendMessage,
     deleteMessage,
     updateMessage,
     updateSources,
     regenerateMessage,
+    stopGeneration,
+    clearError,
+    retryLastMessage,
     retryConnection,
   };
 }
