@@ -2,9 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  Logger,
 } from '@nestjs/common';
-import { Server } from 'socket.io';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 import {

@@ -213,7 +213,7 @@ export class ConversationService {
       const userMessage = await this.messageService.createMessage(
         {
           role: 'user',
-          content: content,
+          content,
           metadata: {
             agentMode,
             webSearchEnabled: useWebSearch,

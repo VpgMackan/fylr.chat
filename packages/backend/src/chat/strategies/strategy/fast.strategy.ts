@@ -12,10 +12,6 @@ import { ChatMessage, ToolCall } from 'src/ai/llm.service';
 import { sanitizeObject } from 'src/utils/text-sanitizer';
 
 export class FastStrategy extends HelperStrategy implements IAgentStrategy {
-  constructor(services: AgentStrategyServices) {
-    super(services);
-  }
-
   async execute(
     userMessage: Message,
     conversation: ConversationWithSources,
@@ -24,7 +20,7 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
     const usedSourceChunks: VectorSearchResult[] = [];
 
     const hasSources = conversation.sources.length > 0;
-    const metadata = userMessage.metadata as any;
+    const metadata = (userMessage.metadata ?? {}) as Record<string, unknown>;
     const webSearchEnabled = metadata?.webSearchEnabled === true;
     const availableTools = this.getAvailableTools(hasSources, webSearchEnabled);
 
@@ -60,7 +56,7 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
           typeof toolCall.function.arguments === 'string'
             ? JSON.parse(toolCall.function.arguments)
             : toolCall.function.arguments;
-        this.emitToolProgress(
+        HelperStrategy.emitToolProgress(
           toolCall.function.name,
           'Executing...',
           server,
@@ -79,11 +75,14 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
             },
           );
 
+          const resultWithResults = result as Record<string, unknown>;
           if (
             toolCall.function.name === 'search_documents' &&
-            (result as any).results
+            resultWithResults.results
           ) {
-            usedSourceChunks.push(...(result as any).results);
+            usedSourceChunks.push(
+              ...(resultWithResults.results as VectorSearchResult[]),
+            );
           }
 
           return {
@@ -102,7 +101,13 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
 
       const toolResults = await Promise.all(toolPromises);
 
-      llmMessages.push(...(toolResults as any));
+      llmMessages.push(
+        ...(toolResults as Array<{
+          tool_call_id: string;
+          role: 'tool';
+          content: string;
+        }>),
+      );
     }
 
     await this.provideFinalAnswer(

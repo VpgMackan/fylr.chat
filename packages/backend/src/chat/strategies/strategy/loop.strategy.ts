@@ -116,13 +116,14 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
       );
 
       if (availableTools.length === 0) {
-        return this.provideFinalAnswer(
+        await this.provideFinalAnswer(
           [],
           conversation.id,
           server,
           userMessage.id,
           usedSourceChunks,
         );
+        return;
       }
 
       const initialThought = await this.messageService.createMessage(
@@ -144,7 +145,7 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
         orderBy: { createdAt: 'asc' },
       });
 
-      const llmMessages: ChatMessage[] = this.buildContextMessages(
+      const llmMessages: ChatMessage[] = HelperStrategy.buildContextMessages(
         messages,
         MAX_CONTEXT_MESSAGES,
       );
@@ -180,13 +181,18 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
           });
 
           // Only push assistant message if it has content or tool_calls
-          const hasContent = responseMessage.content !== null && responseMessage.content !== undefined;
-          const hasToolCalls = responseMessage.tool_calls && responseMessage.tool_calls.length > 0;
+          const hasContent =
+            responseMessage.content !== null &&
+            responseMessage.content !== undefined;
+          const hasToolCalls =
+            responseMessage.tool_calls && responseMessage.tool_calls.length > 0;
           if (hasContent || hasToolCalls) {
             llmMessages.push({
               role: 'assistant',
               content: responseMessage.content ?? undefined,
-              tool_calls: hasToolCalls ? (responseMessage.tool_calls as ToolCall[]) : undefined,
+              tool_calls: hasToolCalls
+                ? (responseMessage.tool_calls as ToolCall[])
+                : undefined,
             });
           }
 
@@ -221,7 +227,7 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
                 ) as Record<string, unknown>;
                 const toolName = toolCall.function.name;
 
-                this.emitToolProgress(
+                HelperStrategy.emitToolProgress(
                   toolName,
                   `Executing ${toolName}...`,
                   server,
@@ -335,7 +341,10 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
           }
 
           if (llmMessages.length > MAX_CONTEXT_MESSAGES) {
-            this.pruneContextMessages(llmMessages, MAX_CONTEXT_MESSAGES);
+            HelperStrategy.pruneContextMessages(
+              llmMessages,
+              MAX_CONTEXT_MESSAGES,
+            );
           }
         } catch (iterationError) {
           console.error(
@@ -393,6 +402,7 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
         userMessage.id,
         usedSourceChunks,
       );
+      return;
     } catch (error) {
       console.error('Error in generateAndStreamAiResponseWithTools:', error);
       server.to(conversation.id).emit('conversationAction', {
@@ -405,7 +415,7 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
               : 'An unexpected error occurred during processing',
         },
       });
-      throw error;
+      return;
     }
   }
 }

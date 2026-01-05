@@ -231,7 +231,7 @@ export class ChatGateway
             client.user.id,
           );
 
-          var limitReached = false;
+          let limitReached = false;
           switch (agentMode) {
             case 'FAST':
               limitReached =
@@ -279,7 +279,7 @@ export class ChatGateway
             const userMessage = await this.messageService.createMessage(
               {
                 role: 'user',
-                content: content,
+                content,
                 metadata: {
                   agentMode,
                   webSearchEnabled: webSearchEnabled === true,

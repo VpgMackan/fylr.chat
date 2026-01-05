@@ -33,7 +33,7 @@ export class HelperStrategy {
     this.toolService = services.toolService;
   }
 
-  emitToolProgress(
+  static emitToolProgress(
     toolName: string,
     message: string,
     server: Server,
@@ -81,7 +81,7 @@ export class HelperStrategy {
     return tools;
   }
 
-  buildContextMessages(
+  static buildContextMessages(
     messages: PrismaMessage[],
     maxMessages: number,
   ): ChatMessage[] {
@@ -139,7 +139,7 @@ export class HelperStrategy {
     return [firstMessage, ...recentMessages];
   }
 
-  pruneContextMessages(messages: ChatMessage[], maxMessages: number): void {
+  static pruneContextMessages(messages: ChatMessage[], maxMessages: number): void {
     if (messages.length <= maxMessages) return;
 
     const systemMessages = messages.filter((m) => m.role === 'system');
@@ -157,7 +157,7 @@ export class HelperStrategy {
     messages.push(...recentMessages.filter((m) => m !== firstUserMessage));
   }
 
-  private convertToolMessagesToPlainText(
+  private static convertToolMessagesToPlainText(
     messages: ChatMessage[],
   ): { role: string; content: string }[] {
     const plainTextMessages: { role: string; content: string }[] = [];
@@ -199,7 +199,7 @@ export class HelperStrategy {
     return plainTextMessages;
   }
 
-  private getMostRecentUserQuestion(messages: ChatMessage[]): string {
+  private static getMostRecentUserQuestion(messages: ChatMessage[]): string {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user' && messages[i].content) {
         return messages[i].content as string;
@@ -218,8 +218,8 @@ export class HelperStrategy {
     userRole?: UserRole,
   ): Promise<void> {
     try {
-      const plainTextMessages = this.convertToolMessagesToPlainText(messages);
-      const recentUserQuestion = this.getMostRecentUserQuestion(messages);
+      const plainTextMessages = HelperStrategy.convertToolMessagesToPlainText(messages);
+      const recentUserQuestion = HelperStrategy.getMostRecentUserQuestion(messages);
       const promptVars: Record<string, unknown> = {
         messages: plainTextMessages,
       };
@@ -286,11 +286,11 @@ export class HelperStrategy {
                     chunkIndex: c.chunkIndex,
                   })),
                   rerankingUsed: userRole === UserRole.PRO,
-                  userRole: userRole,
+                  userRole,
                 }
               : {
                   rerankingUsed: userRole === UserRole.PRO,
-                  userRole: userRole,
+                  userRole,
                 },
         },
         conversationId,
@@ -315,8 +315,8 @@ export class HelperStrategy {
 
   async regenerate(
     assistantMessageId: string,
-    conversation: ConversationWithSources,
-    server: Server,
+    _conversation: ConversationWithSources,
+    _server: Server,
   ): Promise<void> {
     if (!assistantMessageId) {
       throw new NotFoundException(
