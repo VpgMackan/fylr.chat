@@ -19,6 +19,7 @@
     "next": "^15.5.2",
     "next-intl": "^4.0.2",
     "npm": "^11.4.2",
+    "posthog-js": "^1.313.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.6.0",
