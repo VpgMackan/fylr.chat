@@ -99,7 +99,12 @@ export class HelperStrategy {
         }
         return msg;
       })
-      .filter((m) => m.content || m.tool_calls || m.role === 'tool');
+      .filter(
+        (m) =>
+          m.content ||
+          (m.tool_calls && m.tool_calls.length > 0) ||
+          m.role === 'tool',
+      );
 
     const toolMessageIndices: number[] = [];
     contextMessages.forEach((msg, idx) => {

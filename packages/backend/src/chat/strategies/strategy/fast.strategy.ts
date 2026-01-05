@@ -43,12 +43,16 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
 
     const llmMessages: ChatMessage[] = [
       { role: 'user', content: userMessage.content ? userMessage.content : '' },
-      {
-        role: 'assistant',
-        content: undefined,
-        tool_calls: toolCalls as ToolCall[],
-      },
     ];
+
+    // Only add assistant message if it has tool_calls
+    if (toolCalls.length > 0) {
+      llmMessages.push({
+        role: 'assistant',
+        content: planMessage?.content ?? undefined,
+        tool_calls: toolCalls as ToolCall[],
+      });
+    }
 
     if (toolCalls.length > 0) {
       const toolPromises = toolCalls.map(async (toolCall) => {

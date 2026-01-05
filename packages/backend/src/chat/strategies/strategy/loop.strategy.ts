@@ -178,11 +178,17 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
             conversationId: conversation.id,
             data: thoughtMessage,
           });
-          llmMessages.push({
-            role: 'assistant',
-            content: responseMessage.content,
-            tool_calls: responseMessage.tool_calls as ToolCall[],
-          });
+
+          // Only push assistant message if it has content or tool_calls
+          const hasContent = responseMessage.content !== null && responseMessage.content !== undefined;
+          const hasToolCalls = responseMessage.tool_calls && responseMessage.tool_calls.length > 0;
+          if (hasContent || hasToolCalls) {
+            llmMessages.push({
+              role: 'assistant',
+              content: responseMessage.content ?? undefined,
+              tool_calls: hasToolCalls ? (responseMessage.tool_calls as ToolCall[]) : undefined,
+            });
+          }
 
           if (
             !responseMessage.tool_calls ||

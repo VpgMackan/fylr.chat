@@ -523,6 +523,20 @@ export class ChatGateway
         }
       }
 
+      case 'stopGeneration': {
+        // Acknowledge the stop request - actual stopping happens client-side
+        // The server will continue processing but client will ignore further chunks
+        this.logger.log(
+          `Stop generation requested for conversation ${conversationId}`,
+        );
+        this.server.to(conversationId).emit('conversationAction', {
+          action: 'generationStopped',
+          conversationId,
+          data: { message: 'Generation stopped by user' },
+        });
+        break;
+      }
+
       default:
         throw new WsException(`Invalid action: ${action}`);
     }

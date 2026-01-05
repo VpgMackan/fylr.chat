@@ -42,7 +42,18 @@
       "record": "Record message with microphone",
       "send": "Send",
       "sourcesUsed": "Sources Used",
-      "messageActions": "Actions"
+      "messageActions": "Actions",
+      "regenerate": "Regenerate response",
+      "regenerating": "Regenerating...",
+      "copy": "Copy to clipboard",
+      "copied": "Copied!",
+      "delete": "Delete message",
+      "confirmDelete": "Confirm delete",
+      "reconnecting": "Reconnecting...",
+      "stopGenerating": "Stop generating",
+      "generationFailed": "Generation failed",
+      "retry": "Retry",
+      "dismiss": "Dismiss"
     }
   }
 }
