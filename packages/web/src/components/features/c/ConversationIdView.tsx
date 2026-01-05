@@ -54,6 +54,13 @@ export default function ConversationIdPageView() {
     [regenerateMessage],
   );
 
+  const handleDeleteMessage = useCallback(
+    (messageId: string) => {
+      deleteMessage(messageId);
+    },
+    [deleteMessage],
+  );
+
   // Find the last assistant message for showing the regenerate label
   const lastAssistantMessageIndex = messages.reduceRight((acc, m, idx) => {
     if (
@@ -90,8 +97,9 @@ export default function ConversationIdPageView() {
                   user={m.role === 'user'}
                   text={m.content || ''}
                   metadata={m.metadata}
-                  onRegenerate={() => handleRegenerate(m.id)}
-                  onDelete={() => deleteMessage(m.id)}
+                  onRegenerate={handleRegenerate}
+                  onDelete={handleDeleteMessage}
+                  messageId={m.id}
                   isRegenerating={regeneratingMessageId === m.id}
                   isLastAssistantMessage={index === lastAssistantMessageIndex}
                 />

@@ -105,14 +105,16 @@ export default function ChatBubble({
   metadata,
   onRegenerate,
   onDelete,
+  messageId,
   isRegenerating = false,
   isLastAssistantMessage = false,
 }: {
   user: boolean;
   text: string;
   metadata?: MessageMetadata;
-  onRegenerate: () => void;
-  onDelete: () => void;
+  onRegenerate: (messageId: string) => void;
+  onDelete: (messageId: string) => void;
+  messageId: string;
   isRegenerating?: boolean;
   isLastAssistantMessage?: boolean;
 }) {
@@ -135,20 +137,20 @@ export default function ChatBubble({
 
   const handleDelete = useCallback(() => {
     if (showDeleteConfirm) {
-      onDelete();
+      onDelete(messageId);
       setShowDeleteConfirm(false);
     } else {
       setShowDeleteConfirm(true);
       // Auto-hide confirmation after 3 seconds
       setTimeout(() => setShowDeleteConfirm(false), 3000);
     }
-  }, [onDelete, showDeleteConfirm]);
+  }, [onDelete, messageId, showDeleteConfirm]);
 
   const handleRegenerate = useCallback(() => {
     if (!isRegenerating) {
-      onRegenerate();
+      onRegenerate(messageId);
     }
-  }, [onRegenerate, isRegenerating]);
+  }, [onRegenerate, messageId, isRegenerating]);
 
   const handleVisitingSource = useCallback(
     (chunk: RelatedSource) =>
