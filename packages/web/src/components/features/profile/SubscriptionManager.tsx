@@ -18,18 +18,32 @@ const SubscriptionStatusBadge = ({
   status: Subscription['status'];
 }) => {
   const config = {
-    ACTIVE: { text: 'Pro', color: 'bg-green-100 text-green-800' },
-    PAUSED: { text: 'Paused', color: 'bg-yellow-100 text-yellow-800' },
-    EXPIRED: { text: 'Expired', color: 'bg-red-100 text-red-800' },
-    INACTIVE: { text: 'Free', color: 'bg-gray-100 text-gray-800' },
+    ACTIVE: {
+      text: 'Pro',
+      color: 'bg-white/20 text-white backdrop-blur-sm border border-white/30',
+      icon: 'mdi:crown',
+    },
+    PAUSED: {
+      text: 'Paused',
+      color: 'bg-amber-500/20 text-amber-100 backdrop-blur-sm border border-amber-300/30',
+      icon: 'mdi:pause-circle',
+    },
+    EXPIRED: {
+      text: 'Expired',
+      color: 'bg-red-500/20 text-red-100 backdrop-blur-sm border border-red-300/30',
+      icon: 'mdi:alert-circle',
+    },
+    INACTIVE: {
+      text: 'Free',
+      color: 'bg-white/20 text-white backdrop-blur-sm border border-white/30',
+      icon: 'mdi:account',
+    },
   };
-  const { text, color } = config[status] || config.INACTIVE;
+  const { text, color, icon } = config[status] || config.INACTIVE;
   return (
-    <div className={`px-3 py-1 flex items-center rounded-full ${color}`}>
-      {status === 'ACTIVE' && (
-        <Icon icon="mdi:check-circle" className="w-5 h-5 mr-2" />
-      )}
-      <span className=" text-sm font-medium">{text}</span>
+    <div className={`px-4 py-1.5 flex items-center gap-2 rounded-full ${color}`}>
+      <Icon icon={icon} className="w-4 h-4" />
+      <span className="text-sm font-semibold">{text}</span>
     </div>
   );
 };
@@ -105,114 +119,221 @@ export default function SubscriptionManager() {
   };
 
   if (isLoading) {
-    return <div className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>;
+    return (
+      <div className="rounded-2xl overflow-hidden">
+        <div className="h-72 bg-gradient-to-br from-gray-200 to-gray-300 animate-pulse" />
+        <div className="h-16 bg-gray-100 animate-pulse mt-1 rounded-b-2xl" />
+      </div>
+    );
   }
 
   if (!subscription) {
     return (
-      <div className="text-center text-gray-500">
-        Could not load subscription details.
+      <div className="text-center py-12 px-6 bg-gray-50 rounded-2xl border border-gray-200">
+        <Icon icon="mdi:alert-circle-outline" className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <p className="text-gray-500 font-medium">Could not load subscription details.</p>
+        <button 
+          onClick={fetchSubscription}
+          className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
   const { status, expiresAt, remainingDurationOnPause } = subscription;
 
+  const getGradient = () => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'from-violet-600 via-purple-600 to-fuchsia-600';
+      case 'PAUSED':
+        return 'from-amber-500 via-orange-500 to-yellow-500';
+      case 'EXPIRED':
+        return 'from-gray-500 via-gray-600 to-gray-700';
+      default:
+        return 'from-slate-600 via-slate-700 to-slate-800';
+    }
+  };
+
   return (
-    <>
-      <div className="space-y-4 bg-gradient-to-br from-purple-400 to-pink-400 p-3 text-white rounded-t-2xl h-64 flex flex-col">
-        <div className="flex justify-between items-start">
+    <div className="rounded-2xl overflow-hidden shadow-lg">
+      {/* Main Card */}
+      <div className={`relative bg-gradient-to-br ${getGradient()} p-6 text-white min-h-[280px] flex flex-col`}>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        
+        {/* Header */}
+        <div className="flex justify-between items-start relative z-10">
           <div>
-            <h3 className="text-xl font-semibold">Your Plan</h3>
+            <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">Your Plan</p>
+            <h3 className="text-2xl font-bold">
+              {status === 'ACTIVE' || status === 'PAUSED' ? 'Fylr Pro' : 'Fylr Free'}
+            </h3>
           </div>
           <SubscriptionStatusBadge status={status} />
         </div>
 
-        <div className="flex-1 flex flex-col justify-end">
+        {/* Content */}
+        <div className="flex-1 flex flex-col justify-end relative z-10 mt-6">
           {status === 'ACTIVE' && expiresAt && (
-            <>
-              <p className="text-sm font-semibold">Expiration date:</p>
-              <p className="text-xl font-bold">
-                {new Date(expiresAt).toLocaleDateString()}
-              </p>
-            </>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Icon icon="mdi:calendar-clock" className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white/70 text-sm">Valid until</p>
+                  <p className="text-lg font-bold">
+                    {new Date(expiresAt).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
+          
           {status === 'PAUSED' && remainingDurationOnPause && (
-            <>
-              <p className="text-xl font-bold">
-                {Math.ceil(remainingDurationOnPause / 86400)} days of Pro left
-                when you resume
-              </p>
-            </>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Icon icon="mdi:timer-pause" className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white/70 text-sm">Time remaining when resumed</p>
+                  <p className="text-lg font-bold">
+                    {Math.ceil(remainingDurationOnPause / 86400)} days of Pro
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
+          
           {status === 'EXPIRED' && (
-            <p className="text-xl font-bold">
-              Your subscription has expired. Renew to regain premium features
-            </p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Icon icon="mdi:clock-alert" className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white/90 font-medium">Your subscription has expired</p>
+                  <p className="text-white/70 text-sm">Redeem a gift card to regain Pro features</p>
+                </div>
+              </div>
+            </div>
           )}
+          
           {status === 'INACTIVE' && (
-            <p className="text-xl font-bold">
-              Upgrade to Pro for unlimited access and advanced features
-            </p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Icon icon="mdi:rocket-launch" className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white/90 font-medium">Upgrade to Pro</p>
+                  <p className="text-white/70 text-sm">Unlimited access and advanced features</p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mt-2">
+      {/* Action Section */}
+      <div className="bg-gray-50 p-4">
         {status === 'ACTIVE' && (
           <button
             onClick={() => handleAction(pauseSubscription)}
             disabled={isActionLoading}
-            className="flex-1 bg-yellow-500 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-white text-amber-600 font-semibold py-3 px-4 rounded-xl hover:bg-amber-50 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 border border-amber-200 shadow-sm"
           >
-            <Icon icon="mdi:pause" className="w-5 h-5" />
-            Pause Subscription
+            {isActionLoading ? (
+              <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+            ) : (
+              <Icon icon="mdi:pause-circle" className="w-5 h-5" />
+            )}
+            {isActionLoading ? 'Processing...' : 'Pause Subscription'}
           </button>
         )}
+        
         {status === 'PAUSED' && (
           <button
             onClick={() => handleAction(resumeSubscription)}
             disabled={isActionLoading}
-            className="flex-1 bg-green-500 text-white font-medium py-2 px-4 rounded-b-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
           >
-            <Icon icon="mdi:play" className="w-5 h-5" />
-            Resume Subscription
+            {isActionLoading ? (
+              <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+            ) : (
+              <Icon icon="mdi:play-circle" className="w-5 h-5" />
+            )}
+            {isActionLoading ? 'Processing...' : 'Resume Subscription'}
           </button>
         )}
+        
         {(status === 'INACTIVE' || status === 'EXPIRED') && (
-          <>
-            <input
-              type="text"
-              placeholder="Enter Gift Card Code (FYLR-XXXX-XXXX-XXXX-XX)"
-              className={`flex-1 border rounded-bl-lg px-4 py-2 focus:outline-none focus:ring-2 transition-colors ${
-                isCodeValid
-                  ? 'border-gray-300 focus:ring-blue-500'
-                  : 'border-red-500 focus:ring-red-500'
-              }`}
-              value={giftCardCode}
-              onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (
-                  e.key === 'Enter' &&
-                  !isActionLoading &&
-                  giftCardCode.trim() &&
-                  isCodeValid
-                ) {
-                  handleRedeemGiftCard();
-                }
-              }}
-            />
-            <button
-              onClick={handleRedeemGiftCard}
-              disabled={isActionLoading || !giftCardCode.trim() || !isCodeValid}
-              className="flex-1 bg-blue-600 text-white font-medium py-2 px-4 rounded-br-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Icon icon="mdi:gift" className="w-5 h-5" />
-              {isActionLoading ? 'Redeeming...' : 'Redeem Gift Card'}
-            </button>
-          </>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              <Icon icon="mdi:gift" className="w-4 h-4" />
+              <span>Have a gift card? Enter it below</span>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="FYLR-XXXX-XXXX-XXXX-XX"
+                  className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all duration-200 font-mono text-sm ${
+                    isCodeValid
+                      ? 'border-gray-200 focus:ring-blue-500 focus:border-blue-500'
+                      : 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                  }`}
+                  value={giftCardCode}
+                  onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      !isActionLoading &&
+                      giftCardCode.trim() &&
+                      isCodeValid
+                    ) {
+                      handleRedeemGiftCard();
+                    }
+                  }}
+                />
+                {giftCardCode && isCodeValid && (
+                  <Icon 
+                    icon="mdi:check-circle" 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" 
+                  />
+                )}
+                {giftCardCode && !isCodeValid && (
+                  <Icon 
+                    icon="mdi:alert-circle" 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-red-500" 
+                  />
+                )}
+              </div>
+              <button
+                onClick={handleRedeemGiftCard}
+                disabled={isActionLoading || !giftCardCode.trim() || !isCodeValid}
+                className="sm:w-auto w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+              >
+                {isActionLoading ? (
+                  <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Icon icon="mdi:gift-open" className="w-5 h-5" />
+                )}
+                {isActionLoading ? 'Redeeming...' : 'Redeem'}
+              </button>
+            </div>
+          </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
