@@ -106,7 +106,7 @@ const ProfileSection = ({
         />
       </div>
 
-      <div className="border-t pt-6">
+      <div className="pt-3">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Change Password
         </h2>
@@ -153,7 +153,7 @@ const ProfileSection = ({
         </div>
       </div>
 
-      <div className="flex gap-4 pt-6 border-t">
+      <div className="flex gap-4 pt-6">
         <button
           type="submit"
           disabled={isSaving}
