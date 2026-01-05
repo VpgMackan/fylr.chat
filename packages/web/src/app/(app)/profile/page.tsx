@@ -8,6 +8,8 @@ import { getProfile, updateProfile, logout } from '@/services/api/auth.api';
 import { UserApiResponse } from '@fylr/types';
 import SessionsManager from '@/components/features/profile/SessionsManager';
 import SubscriptionManager from '@/components/features/profile/SubscriptionManager';
+import { TrackingSettings } from '@/components/TrackingSettings';
+import { resetUser, captureEvent } from '../../../../instrumentation-client';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -86,6 +88,11 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     try {
       await logout();
+
+      // Reset analytics user identity on logout
+      captureEvent('user_logged_out');
+      resetUser();
+
       toast.success('Logged out successfully');
       router.push('/auth/login');
     } catch (error) {
@@ -261,6 +268,22 @@ export default function ProfilePage() {
             any sessions that you do not recognize.
           </p>
           <SessionsManager />
+        </div>
+
+        {/* Privacy & Analytics */}
+        <div className="mt-8 pt-6 border-t">
+          <TrackingSettings
+            user={
+              user
+                ? {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role,
+                  }
+                : null
+            }
+          />
         </div>
 
         {/* User Info */}

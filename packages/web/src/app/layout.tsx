@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { Toaster } from 'react-hot-toast';
 import CursorFollower from '@/components/CursorFollower';
 import { PostHogProvider } from '@/components/PostHogProvider';
+import { TrackingConsentBanner } from '@/components/TrackingConsentBanner';
 
 export const metadata: Metadata = {
   title: 'Flyr.Chat',
@@ -26,6 +27,7 @@ export default async function RootLayout({
           <NextIntlClientProvider locale={locale} messages={messages}>
             <Toaster position="top-right" reverseOrder={false} />
             {children}
+            <TrackingConsentBanner />
           </NextIntlClientProvider>
         </PostHogProvider>
 
