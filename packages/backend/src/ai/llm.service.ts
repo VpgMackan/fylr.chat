@@ -89,6 +89,8 @@ type TemplatePayload = {
   messages?: ChatMessage[];
   tools?: ToolDefinition[];
   reasoning?: ReasoningConfig | boolean;
+  provider?: string;
+  model?: string;
 };
 
 type MessagePayload = {

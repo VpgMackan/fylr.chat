@@ -24,8 +24,6 @@ interface ConversationMetadata {
 }
 
 export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
-  protected logger: any;
-
   constructor(
     readonly iterations: number,
     services: AgentStrategyServices,
@@ -118,9 +116,6 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
       );
 
       if (availableTools.length === 0) {
-        this.logger.log(
-          `No tools available for conversation ${conversation.id}, falling back to RAG mode`,
-        );
         return this.provideFinalAnswer(
           [],
           conversation.id,
@@ -341,14 +336,41 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
             `Error in iteration ${currentIteration}:`,
             iterationError,
           );
+
+          const errorMessage: ChatMessage = {
+            role: 'assistant',
+            content: JSON.stringify({
+              error: true,
+              error_type: 'iteration_error',
+              message: `An error occurred during iteration ${currentIteration}: ${
+                iterationError instanceof Error
+                  ? iterationError.message
+                  : 'Unknown error'
+              }`,
+              suggested_actions: [
+                'Review the previous tool calls for issues',
+                'Try a different approach or simpler query',
+                'Use alternative tools if available',
+                'Break down the task into smaller steps',
+              ],
+              retry_recommended: true,
+            }),
+          };
+
+          llmMessages.push(errorMessage);
+
           server.to(conversation.id).emit('conversationAction', {
-            action: 'streamError',
+            action: 'agentThought',
             conversationId: conversation.id,
             data: {
-              message: `Error during processing: ${iterationError instanceof Error ? iterationError.message : 'Unknown error'}`,
+              role: 'assistant',
+              reasoning: `Encountered an error: ${
+                iterationError instanceof Error
+                  ? iterationError.message
+                  : 'Unknown error'
+              }. Attempting to recover...`,
             },
           });
-          throw iterationError;
         }
 
         if (currentIteration >= this.iterations) {

@@ -21,14 +21,12 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     server: Server,
   ): Promise<void> {
     const prompt = userMessage.content || '';
-    const score = this.calculateComplexityScore(prompt);
+    const strategyType = await this.classifyQueryComplexity(prompt);
 
     const thoughtMessage = await this.services.messageService.createMessage(
       {
         role: 'assistant',
-        reasoning: `${
-          score < 33 ? 'Fast' : score < 66 ? 'Normal' : 'Thorough'
-        } strategy selected based on complexity score of ${score}.`,
+        reasoning: `${strategyType} strategy selected based on LLM-powered semantic analysis.`,
         toolCalls: [],
         parentMessageId: userMessage.id,
       },
@@ -41,9 +39,9 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     });
 
     let strategy: IAgentStrategy;
-    if (score < 33) {
+    if (strategyType === 'FAST') {
       strategy = new FastStrategy(this.services);
-    } else if (score < 66) {
+    } else if (strategyType === 'NORMAL') {
       strategy = new LoopStrategy(5, this.services);
     } else {
       strategy = new LoopStrategy(15, this.services);
@@ -52,74 +50,32 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     await strategy.execute(userMessage, conversation, server);
   }
 
-  private calculateComplexityScore(prompt: string): number {
-    const lowerPrompt = prompt.toLowerCase();
+  private async classifyQueryComplexity(
+    query: string,
+  ): Promise<'FAST' | 'NORMAL' | 'THOROUGH'> {
+    try {
+      const response = await this.services.llmService.generate({
+        prompt_type: 'strategy_router',
+        prompt_version: 'v1',
+        prompt_vars: {
+          query,
+        },
+      });
 
-    // Length score: min(prompt_length / 2000 * 25, 25)
-    const lengthScore = Math.min((prompt.length / 2000) * 25, 25);
+      const classification = response.trim().toUpperCase();
 
-    // Task type score
-    const simpleKeywords = [
-      'summarize',
-      'short',
-      'define',
-      'rewrite',
-      'convert',
-      'explain',
-    ];
-    const complexKeywords = [
-      'analyze',
-      'design',
-      'debug',
-      'evaluate',
-      'compare',
-      'architect',
-      'step-by-step',
-      'algorithm',
-      'simulate',
-    ];
+      if (['FAST', 'NORMAL', 'THOROUGH'].includes(classification)) {
+        return classification as 'FAST' | 'NORMAL' | 'THOROUGH';
+      }
 
-    let taskScore = 0;
-    simpleKeywords.forEach((kw) => {
-      if (lowerPrompt.includes(kw)) taskScore += 1;
-    });
-    complexKeywords.forEach((kw) => {
-      if (lowerPrompt.includes(kw)) taskScore += 10;
-    });
-    taskScore = Math.min(taskScore, 25);
-
-    let domainScore = 0;
-    if (
-      ['code', 'api', 'algorithm', 'programming'].some((kw) =>
-        lowerPrompt.includes(kw),
-      )
-    ) {
-      domainScore = 10;
+      console.warn(
+        `Unexpected LLM classification: "${response}". Defaulting to NORMAL.`,
+      );
+      return 'NORMAL';
+    } catch (error) {
+      console.error('Error classifying query complexity:', error);
+      return 'NORMAL';
     }
-    if (
-      ['math', 'legal', 'scientific', 'medical', 'reasoning'].some((kw) =>
-        lowerPrompt.includes(kw),
-      )
-    ) {
-      domainScore = 20;
-    }
-
-    let reasoningScore = 0;
-    if (lowerPrompt.includes('step')) reasoningScore += 10;
-    if ((lowerPrompt.match(/\?/g) || []).length > 2) reasoningScore += 10;
-    if (lowerPrompt.split('\n').length > 3) reasoningScore += 10;
-    if (
-      ['why', 'how does', 'break down', 'trade offs'].some((kw) =>
-        lowerPrompt.includes(kw),
-      )
-    )
-      reasoningScore += 10;
-    reasoningScore = Math.min(reasoningScore, 25);
-
-    return Math.min(
-      lengthScore + taskScore + domainScore + reasoningScore,
-      100,
-    );
   }
 
   async regenerate(

@@ -1,0 +1,49 @@
+id: strategy_router
+version: v1
+description: >
+  Intelligently routes user queries to the appropriate strategy (FAST, NORMAL, or THOROUGH)
+  based on semantic understanding of complexity and requirements.
+form: prompt
+variables:
+  - name: query
+    required: true
+    type: string
+meta:
+  complexity: simple
+template: |
+  You are a query complexity classifier. Analyze the user's query and determine which processing strategy is most appropriate.
+
+  **STRATEGY DEFINITIONS:**
+
+  FAST:
+  - Simple factual questions with clear answers
+  - Definitions, conversions, or basic explanations
+  - Single-step tasks that require minimal reasoning
+  - Quick lookups or summarizations
+  Examples: "What is X?", "Summarize this briefly", "Convert X to Y", "Define Z"
+
+  NORMAL:
+  - Questions requiring a few steps or moderate reasoning
+  - Comparisons, evaluations, or explanations with context
+  - Tasks needing 2-5 logical steps
+  - Standard coding or analysis tasks
+  Examples: "Compare X and Y", "Explain how Z works", "Debug this issue", "Implement feature X"
+
+  THOROUGH:
+  - Complex multi-step analysis or research
+  - Open-ended design or architectural questions
+  - Tasks requiring deep reasoning, planning, or exploration
+  - Problems with multiple constraints or trade-offs
+  - Requests explicitly asking for step-by-step or detailed work
+  Examples: "Design a system for X", "Analyze all trade-offs", "Create a comprehensive plan", "Step-by-step solution for complex problem"
+
+  **USER QUERY:**
+  {{ query }}
+
+  **INSTRUCTIONS:**
+  1. Analyze the query's complexity, scope, and requirements
+  2. Consider the semantic intent, not just keywords
+  3. Respond with EXACTLY ONE WORD: FAST, NORMAL, or THOROUGH
+  4. Do not include any explanation, just the classification
+
+  CLASSIFICATION:
