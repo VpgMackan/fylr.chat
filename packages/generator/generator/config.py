@@ -28,5 +28,8 @@ class Settings(BaseSettings):
     rabbitmq_heartbeat: int = 600  # 10 minutes for long-running tasks
     rabbitmq_blocked_connection_timeout: int = 300  # 5 minutes
 
+    otel_service_name: str = "generator"
+    otel_exporter_otlp_endpoint: str = "localhost:4317"
+
 
 settings = Settings()

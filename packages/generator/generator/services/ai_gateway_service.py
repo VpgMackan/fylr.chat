@@ -1,10 +1,10 @@
 import httpx
-import structlog
+import logging
 from typing import Dict, Any, List, Union
 
 from ..config import settings
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class AIGatewayService:
@@ -13,7 +13,7 @@ class AIGatewayService:
         self.client = httpx.Client(base_url=self.base_url, timeout=120.0)
         log.info(
             f"AI Gateway Service initialized for URL: {self.base_url}",
-            method="__init__",
+            extra={"method": "__init__"},
         )
 
     def generate_embeddings(

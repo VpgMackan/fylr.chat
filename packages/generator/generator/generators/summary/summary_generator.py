@@ -1,4 +1,4 @@
-import structlog
+import logging
 
 from sqlalchemy.orm import Session
 from pika.adapters.blocking_connection import BlockingChannel
@@ -9,7 +9,7 @@ from ..base_generator import BaseGenerator
 from ..database_helper import DatabaseHelper
 from ...services.ai_gateway_service import ai_gateway_service
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class SummaryGenerator(BaseGenerator, DatabaseHelper):
@@ -21,7 +21,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
         """Generates summary content using the AI Gateway and updates the database."""
         log.info(
             f"Generating summary for '{summary.title}' (ID: {summary.id})",
-            method="_create_summary",
+            extra={"method": "_create_summary"},
         )
         self._publish_status(
             channel,
@@ -42,7 +42,8 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
 
             for episode in summary.episodes:
                 log.info(
-                    f"Processing episode: '{episode.title}'", method="_create_summary"
+                    f"Processing episode: '{episode.title}'",
+                    extra={"method": "_create_summary"},
                 )
                 self._publish_status(
                     channel,
@@ -71,7 +72,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
 
                 log.info(
                     f"Generated search queries: {search_queries}",
-                    method="_create_summary",
+                    extra={"method": "_create_summary"},
                 )
 
                 all_related_docs = []
@@ -114,7 +115,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
                     episode.content = episode_content
                     log.info(
                         f"Generated content for episode '{episode.title}' ({len(episode_content)} characters)",
-                        method="_create_summary",
+                        extra={"method": "_create_summary"},
                     )
 
                     self._publish_status(
@@ -143,7 +144,7 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
                 else:
                     log.warning(
                         f"No relevant content found for episode '{episode.title}'",
-                        method="_create_summary",
+                        extra={"method": "_create_summary"},
                     )
                     episode.content = f"No relevant content found for the topic '{episode.title}' in the available documents."
                     self._publish_status(
@@ -165,12 +166,13 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
                 summary.generated = "COMPLETED"
                 log.info(
                     f"Successfully generated content for {len(generated_episodes)} episodes",
-                    method="_create_summary",
+                    extra={"method": "_create_summary"},
                 )
             else:
                 summary.generated = "FAILED"
                 log.warning(
-                    "No content generated for any episodes", method="_create_summary"
+                    "No content generated for any episodes",
+                    extra={"method": "_create_summary"},
                 )
 
             self._publish_status(
@@ -187,14 +189,14 @@ class SummaryGenerator(BaseGenerator, DatabaseHelper):
             db.commit()
             log.info(
                 f"Successfully saved summary episodes to database",
-                method="_create_summary",
+                extra={"method": "_create_summary"},
             )
 
         except Exception as e:
             log.error(
                 f"Error generating summary content: {e}",
                 exc_info=True,
-                method="_create_summary",
+                extra={"method": "_create_summary"},
             )
             summary.generated = "FAILED"
             db.commit()

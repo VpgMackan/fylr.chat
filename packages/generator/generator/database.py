@@ -1,5 +1,5 @@
 import os
-import structlog
+import logging
 from contextlib import contextmanager
 from typing import Generator
 
@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .config import settings
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def get_database_url() -> str:
@@ -52,14 +52,14 @@ def get_db_session() -> Generator[Session, None, None]:
     except SQLAlchemyError as e:
         log.error(
             f"Database transaction failed. Rolling back. Error: {e}",
-            method="get_db_session",
+            extra={"method": "get_db_session"},
         )
         session.rollback()
         raise
     except Exception as e:
         log.error(
             f"An unexpected error occurred in the DB session. Rolling back. Error: {e}",
-            method="get_db_session",
+            extra={"method": "get_db_session"},
         )
         session.rollback()
         raise
