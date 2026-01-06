@@ -12,7 +12,7 @@ class OpenaiCompatibleProvider(BaseProvider):
     def __init__(self, api_key, base_url):
         self.posthog = Posthog(
             settings.posthog_api_key,
-            host=settings.posthog_api_url,
+            host=settings.posthog_host,
             privacy_mode=settings.environment == "production",
         )
         sync_transport = httpx.HTTPTransport(retries=3)

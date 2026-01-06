@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434/v1"
 
     posthog_api_key: Optional[str] = None
-    posthog_api_url: str = "https://app.posthog.com"
+    posthog_host: str = "https://app.posthog.com"
 
     default_embedding_provider: str = "jina"
     default_embedding_model: str = "jina-clip-v2"

@@ -13,6 +13,7 @@ load_dotenv()
 
 from .handlers import HandlerManager
 from .database import get_db_session, Source, DocumentVector
+from .logger import logger
 
 ROUTING_KEYS_STR = os.getenv("INGESTOR_ROUTING_KEYS")
 QUEUE_NAME = os.getenv("INGESTOR_QUEUE_NAME")
@@ -64,7 +65,10 @@ def publish_status(channel, job_key, stage, message, error=False):
         body=json.dumps({"eventName": "jobStatusUpdate", "payload": payload}),
         properties=pika.BasicProperties(delivery_mode=2),
     )
-    print(f"[{job_key}] Status: {stage} - {message}")
+    logger.info(
+        "Job status update",
+        extra={"job_key": job_key, "stage": stage, "status_message": message, "error": error},
+    )
 
 
 def get_embeddings(chunks: list[str], model: str) -> list[list[float]]:
@@ -96,9 +100,9 @@ def main():
 
     for rk in ROUTING_KEYS:
         channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=rk)
-        print(f"Binding queue '{QUEUE_NAME}' to routing key '{rk}'")
+        logger.info("Queue bound", extra={"queue": QUEUE_NAME, "routing_key": rk})
 
-    print(f"Ingestor online. Listening on queue '{QUEUE_NAME}'...")
+    logger.info("Ingestor online", extra={"queue": QUEUE_NAME})
 
     def callback(ch, method, properties, body):
         message = json.loads(body)
@@ -118,7 +122,9 @@ def main():
             # 2. Extract file extension from S3 key
             file_extension = os.path.splitext(s3_key)[1]
             if not file_extension:
-                raise ValueError(f"Could not determine file extension from key: {s3_key}")
+                raise ValueError(
+                    f"Could not determine file extension from key: {s3_key}"
+                )
 
             # 3. Extract Text
             publish_status(ch, job_key, "PARSING", f"Parsing {file_extension} file.")
@@ -169,8 +175,9 @@ def main():
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
-            print(
-                f"Error processing message for source {source_id}: {e}", file=sys.stderr
+            logger.exception(
+                "Error processing message",
+                extra={"source_id": source_id, "error": str(e)},
             )
             publish_status(ch, job_key, "FAILED", str(e), error=True)
             with get_db_session() as db:
