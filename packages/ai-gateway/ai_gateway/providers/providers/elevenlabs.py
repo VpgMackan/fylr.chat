@@ -1,18 +1,20 @@
+import logging
 import httpx
 from elevenlabs import ElevenLabs
 from typing import Dict, Any
-import structlog
+from opentelemetry import trace
 
 from ..base import BaseProvider
 from ...config import settings
 
-log = structlog.get_logger()
+log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class ElevenLabsProvider(BaseProvider):
     def __init__(self):
         if not settings.elevenlabs_api_key:
-            log.warn("elevenlabs_api_key_not_set")
+            log.warning("elevenlabs_api_key_not_set")
             self.client = None
         else:
             self.client = ElevenLabs(api_key=settings.elevenlabs_api_key)
@@ -23,35 +25,51 @@ class ElevenLabsProvider(BaseProvider):
         """
         Generates text-to-speech audio using ElevenLabs.
         """
-        if not self.client:
-            raise ValueError("ElevenLabs API key is not configured")
+        with tracer.start_as_current_span("elevenlabs_tts") as span:
+            span.set_attribute("model", model or "default")
+            span.set_attribute("voice", voice or "default")
+            span.set_attribute("text_length", len(text))
 
-        try:
-            # ElevenLabs specific options
-            stability = options.get("stability", 0.5)
-            similarity_boost = options.get("similarity_boost", 0.5)
-            style = options.get("style", 0.0)
-            use_speaker_boost = options.get("use_speaker_boost", True)
+            if not self.client:
+                raise ValueError("ElevenLabs API key is not configured")
 
-            voice_settings = {
-                "stability": stability,
-                "similarity_boost": similarity_boost,
-                "style": style,
-                "use_speaker_boost": use_speaker_boost,
-            }
+            try:
+                # ElevenLabs specific options
+                stability = options.get("stability", 0.5)
+                similarity_boost = options.get("similarity_boost", 0.5)
+                style = options.get("style", 0.0)
+                use_speaker_boost = options.get("use_speaker_boost", True)
 
-            # Generate audio
-            audio = self.client.generate(
-                text=text,
-                voice=voice,
-                model=model,
-                voice_settings=voice_settings,
-            )
+                voice_settings = {
+                    "stability": stability,
+                    "similarity_boost": similarity_boost,
+                    "style": style,
+                    "use_speaker_boost": use_speaker_boost,
+                }
 
-            # Convert generator to bytes
-            audio_bytes = b"".join(audio)
-            return audio_bytes
+                # Generate audio
+                audio = self.client.generate(
+                    text=text,
+                    voice=voice,
+                    model=model,
+                    voice_settings=voice_settings,
+                )
 
-        except Exception as e:
-            log.error("elevenlabs_tts_error", error=str(e))
-            raise Exception(f"ElevenLabs TTS error: {e}") from e
+                # Convert generator to bytes
+                audio_bytes = b"".join(audio)
+                span.set_attribute("audio_bytes", len(audio_bytes))
+                log.debug(
+                    "ElevenLabs TTS success",
+                    extra={
+                        "model": model,
+                        "voice": voice,
+                        "audio_bytes": len(audio_bytes),
+                    },
+                )
+                return audio_bytes
+
+            except Exception as e:
+                log.error("ElevenLabs TTS error", extra={"error": str(e)})
+                span.set_attribute("error", True)
+                span.record_exception(e)
+                raise Exception(f"ElevenLabs TTS error: {e}") from e

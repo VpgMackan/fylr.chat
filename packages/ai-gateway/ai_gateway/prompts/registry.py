@@ -1,13 +1,13 @@
 # ai_gateway/prompts/registry.py
 import os
-import structlog
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, Template, StrictUndefined, meta
 
-log = structlog.get_logger()
+log = logging.getLogger(__name__)
 
 
 class PromptNotFound(Exception):
@@ -75,7 +75,7 @@ class PromptRegistry:
         log.info(
             "Loading prompts from %s",
             str(self.prompts_dir),
-            method="_load_all_into_memory",
+            extra={"method": "_load_all_into_memory"},
         )
         for p in sorted(self.prompts_dir.glob("*.yml")) + sorted(
             self.prompts_dir.glob("*.yaml")
@@ -98,24 +98,27 @@ class PromptRegistry:
                         "Duplicate prompt key %s found (file %s); overwriting",
                         key,
                         p,
-                        method="_load_all_into_memory",
+                        extra={"method": "_load_all_into_memory"},
                     )
                 self._store[key] = entry
                 log.debug(
-                    "Loaded prompt %s from %s", key, p, method="_load_all_into_memory"
+                    "Loaded prompt %s from %s",
+                    key,
+                    p,
+                    extra={"method": "_load_all_into_memory"},
                 )
             except Exception as exc:
                 log.exception(
                     "Failed loading prompt file %s: %s",
                     p,
                     exc,
-                    method="_load_all_into_memory",
+                    extra={"method": "_load_all_into_memory"},
                 )
 
         log.info(
             "Loaded %d prompt templates into memory",
             len(self._store),
-            method="_load_all_into_memory",
+            extra={"method": "_load_all_into_memory"},
         )
 
     def list_prompts(self) -> List[str]:
@@ -243,7 +246,7 @@ class PromptRegistry:
                 "Failed to render prompt %s: %s",
                 entry.key(),
                 exc,
-                method="render",
+                extra={"method": "render"},
             )
             raise PromptRenderError(
                 f"Failed to render prompt {entry.key()}: {exc}"

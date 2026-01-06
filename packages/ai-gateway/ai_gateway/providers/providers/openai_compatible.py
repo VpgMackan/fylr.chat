@@ -1,11 +1,16 @@
+import logging
 import httpx
 from posthog import Posthog
 from posthog.ai.openai import OpenAI, AsyncOpenAI
 from typing import List, Dict, Any, AsyncGenerator
+from opentelemetry import trace
 
 from ..base import BaseProvider
 from ...schemas import ChatCompletionRequest
 from ...config import settings
+
+log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class OpenaiCompatibleProvider(BaseProvider):
@@ -46,39 +51,48 @@ class OpenaiCompatibleProvider(BaseProvider):
         """
         Generates a non-streaming chat completion.
         """
-        if not request.model:
-            raise ValueError(
-                "A model must be psecified for the OpenaiCompatibleProvider."
+        with tracer.start_as_current_span("openai_generate_text") as span:
+            if not request.model:
+                raise ValueError(
+                    "A model must be psecified for the OpenaiCompatibleProvider."
+                )
+
+            span.set_attribute("model", request.model)
+            span.set_attribute("message_count", len(messages))
+
+            # Prepare the request parameters
+            params = {
+                "model": request.model,
+                "messages": messages,
+                "stream": False,
+                **request.options,
+            }
+
+            if request.user_id:
+                params["posthog_distinct_id"] = request.user_id
+
+            # Add tool-related parameters if provided
+            if request.tools:
+                params["tools"] = [tool.model_dump() for tool in request.tools]
+                span.set_attribute("has_tools", True)
+            if request.tool_choice:
+                params["tool_choice"] = request.tool_choice
+
+            if request.reasoning is not None:
+                if isinstance(request.reasoning, bool):
+                    if not request.reasoning:
+                        params["reasoning"] = {"exclude": True}
+                else:
+                    reasoning_dict = request.reasoning.model_dump(exclude_none=True)
+                    if reasoning_dict:
+                        params["reasoning"] = reasoning_dict
+
+            log.debug(
+                "OpenAI API call",
+                extra={"model": request.model, "message_count": len(messages)},
             )
-
-        # Prepare the request parameters
-        params = {
-            "model": request.model,
-            "messages": messages,
-            "stream": False,
-            **request.options,
-        }
-
-        if request.user_id:
-            params["posthog_distinct_id"] = request.user_id
-
-        # Add tool-related parameters if provided
-        if request.tools:
-            params["tools"] = [tool.model_dump() for tool in request.tools]
-        if request.tool_choice:
-            params["tool_choice"] = request.tool_choice
-
-        if request.reasoning is not None:
-            if isinstance(request.reasoning, bool):
-                if not request.reasoning:
-                    params["reasoning"] = {"exclude": True}
-            else:
-                reasoning_dict = request.reasoning.model_dump(exclude_none=True)
-                if reasoning_dict:
-                    params["reasoning"] = reasoning_dict
-
-        response = self.client.chat.completions.create(**params)
-        return response.model_dump()
+            response = self.client.chat.completions.create(**params)
+            return response.model_dump()
 
     async def generate_text_stream(
         self, messages: List[Dict[str, Any]], request: ChatCompletionRequest

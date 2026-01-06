@@ -1,10 +1,12 @@
 import json
 import time
 import uuid
+import logging
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
 from openai import APIStatusError
+from opentelemetry import trace
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
@@ -24,6 +26,8 @@ from ..providers.base import BaseProvider
 from ai_gateway.providers import providers
 
 router = APIRouter()
+log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 async def stream_provider_response(
@@ -103,93 +107,122 @@ async def create_chat_completion(request: ChatCompletionRequest):
     - reasoning=True (default): Model uses thinking/reasoning mode
     - reasoning=False: Model uses non-thinking mode for faster responses
     """
-    base_messages = []
-    user_messages = []
+    with tracer.start_as_current_span("chat_completion") as span:
+        span.set_attribute("provider", request.provider)
+        span.set_attribute("model", request.model or "auto")
+        span.set_attribute("stream", request.stream)
+        if request.prompt_type:
+            span.set_attribute("prompt_type", request.prompt_type)
+        if request.user_id:
+            span.set_attribute("user_id", request.user_id)
 
-    if request.prompt_type:
-        try:
-            rendered = prompt_registry.render(
-                prompt_id=request.prompt_type,
-                version=request.prompt_version,
-                vars=request.prompt_vars,
-            )
-            if rendered.get("form") == "messages":
-                base_messages = rendered["messages"]
-            else:
-                base_messages = [{"role": "user", "content": rendered["prompt"]}]
-        except (PromptNotFound, PromptRenderError, PromptValidationError) as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-    if request.messages:
-        user_messages = [msg.model_dump() for msg in request.messages]
-
-    messages_dict = base_messages + user_messages
-
-    if not messages_dict:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either 'messages' or 'prompt_type' must be provided.",
+        log.info(
+            "Chat completion request",
+            extra={
+                "provider": request.provider,
+                "model": request.model,
+                "stream": request.stream,
+                "prompt_type": request.prompt_type,
+                "message_count": len(request.messages) if request.messages else 0,
+            },
         )
 
-    if request.stream:
-        return StreamingResponse(
-            stream_provider_response(
-                providers[request.provider], request, messages_dict
-            ),
-            media_type="text/event-stream",
-        )
-    else:
-        try:
-            response_data = providers[request.provider].generate_text(
-                messages=messages_dict, request=request
-            )
+        base_messages = []
+        user_messages = []
 
-            if "usage" in response_data:
-                usage = response_data["usage"]
+        if request.prompt_type:
+            try:
+                rendered = prompt_registry.render(
+                    prompt_id=request.prompt_type,
+                    version=request.prompt_version,
+                    vars=request.prompt_vars,
+                )
+                if rendered.get("form") == "messages":
+                    base_messages = rendered["messages"]
+                else:
+                    base_messages = [{"role": "user", "content": rendered["prompt"]}]
+            except (PromptNotFound, PromptRenderError, PromptValidationError) as e:
+                log.warning("Prompt error", extra={"error": str(e), "prompt_type": request.prompt_type})
+                span.set_attribute("error", True)
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-                def safe_int_convert(value, default=0):
-                    """Safely convert a value to int, handling dicts and non-numeric values."""
-                    if value is None:
-                        return default
-                    if isinstance(value, dict):
-                        # If it's a dict, try to extract a reasonable numeric value
-                        # Common patterns: {"total": 123} or {"value": 123}
-                        for key in ["total", "value", "count", "tokens"]:
-                            if key in value and isinstance(
-                                value[key], (int, float, str)
-                            ):
-                                try:
-                                    return int(float(value[key]))
-                                except (ValueError, TypeError):
-                                    continue
-                        return default
-                    try:
-                        return int(float(value))
-                    except (ValueError, TypeError):
-                        return default
+        if request.messages:
+            user_messages = [msg.model_dump() for msg in request.messages]
 
-                response_data["usage"] = {
-                    "completion_tokens_details": safe_int_convert(
-                        usage.get("completion_tokens_details")
-                    ),
-                    "prompt_tokens_details": safe_int_convert(
-                        usage.get("prompt_tokens_details")
-                    ),
-                    "queue_time": safe_int_convert(usage.get("queue_time")),
-                    "prompt_time": safe_int_convert(usage.get("prompt_time")),
-                    "completion_time": safe_int_convert(usage.get("completion_time")),
-                    "total_time": safe_int_convert(usage.get("total_time")),
-                }
+        messages_dict = base_messages + user_messages
 
-            return ChatCompletionResponse(**response_data)
-
-        except APIStatusError as e:
-            raise HTTPException(status_code=e.status_code, detail=e.response.text)
-        except Exception as e:
+        if not messages_dict:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred with the '{request.provider}' provider: {e}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either 'messages' or 'prompt_type' must be provided.",
             )
+
+        if request.stream:
+            return StreamingResponse(
+                stream_provider_response(
+                    providers[request.provider], request, messages_dict
+                ),
+                media_type="text/event-stream",
+            )
+        else:
+            try:
+                response_data = providers[request.provider].generate_text(
+                    messages=messages_dict, request=request
+                )
+
+                if "usage" in response_data:
+                    usage = response_data["usage"]
+
+                    def safe_int_convert(value, default=0):
+                        """Safely convert a value to int, handling dicts and non-numeric values."""
+                        if value is None:
+                            return default
+                        if isinstance(value, dict):
+                            # If it's a dict, try to extract a reasonable numeric value
+                            # Common patterns: {"total": 123} or {"value": 123}
+                            for key in ["total", "value", "count", "tokens"]:
+                                if key in value and isinstance(
+                                    value[key], (int, float, str)
+                                ):
+                                    try:
+                                        return int(float(value[key]))
+                                    except (ValueError, TypeError):
+                                        continue
+                            return default
+                        try:
+                            return int(float(value))
+                        except (ValueError, TypeError):
+                            return default
+
+                    response_data["usage"] = {
+                        "completion_tokens_details": safe_int_convert(
+                            usage.get("completion_tokens_details")
+                        ),
+                        "prompt_tokens_details": safe_int_convert(
+                            usage.get("prompt_tokens_details")
+                        ),
+                        "queue_time": safe_int_convert(usage.get("queue_time")),
+                        "prompt_time": safe_int_convert(usage.get("prompt_time")),
+                        "completion_time": safe_int_convert(usage.get("completion_time")),
+                        "total_time": safe_int_convert(usage.get("total_time")),
+                    }
+
+                log.info("Chat completion success", extra={"provider": request.provider, "model": request.model})
+                return ChatCompletionResponse(**response_data)
+
+            except APIStatusError as e:
+                log.error("API status error", extra={"status_code": e.status_code, "provider": request.provider})
+                span.set_attribute("error", True)
+                span.set_attribute("error.status_code", e.status_code)
+                raise HTTPException(status_code=e.status_code, detail=e.response.text)
+            except Exception as e:
+                log.error("Chat completion error", extra={"error": str(e), "provider": request.provider})
+                span.set_attribute("error", True)
+                span.record_exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"An error occurred with the '{request.provider}' provider: {e}",
+                )
 
 
 @router.get("/v1/prompts")

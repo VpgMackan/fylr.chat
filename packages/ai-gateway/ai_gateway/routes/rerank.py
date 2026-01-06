@@ -1,12 +1,14 @@
+import logging
+from opentelemetry import trace
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
-import structlog
 
 from ..providers import get_provider
 from ..config import settings
 
-log = structlog.get_logger()
+log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 router = APIRouter()
 
@@ -48,52 +50,66 @@ async def rerank(request: RerankRequest):
     Uses Jina's reranking API which employs cross-encoder models for
     more accurate relevance scoring compared to vector similarity alone.
     """
-    try:
+    with tracer.start_as_current_span("rerank") as span:
+        span.set_attribute("model", request.model)
+        span.set_attribute("num_documents", len(request.documents))
+        if request.top_n:
+            span.set_attribute("top_n", request.top_n)
+
         log.info(
-            "rerank_request",
-            query=request.query,
-            num_documents=len(request.documents),
-            model=request.model,
+            "Rerank request",
+            extra={
+                "num_documents": len(request.documents),
+                "model": request.model,
+                "top_n": request.top_n,
+            },
         )
 
-        if not request.documents:
-            return RerankResponse(model=request.model, results=[])
+        try:
+            if not request.documents:
+                return RerankResponse(model=request.model, results=[])
 
-        # Get the Jina provider for reranking
-        provider = get_provider("jina")
+            # Get the Jina provider for reranking
+            provider = get_provider("jina")
 
-        # Use the provider's rerank method
-        rerank_response = provider.rerank(
-            query=request.query,
-            documents=[doc.text for doc in request.documents],
-            model=request.model,
-            top_n=request.top_n,
-        )
-
-        # Build response with original document metadata
-        results = []
-        for result in rerank_response["results"]:
-            original_index = result["index"]
-            results.append(
-                RerankResult(
-                    index=original_index,
-                    relevance_score=result["relevance_score"],
-                    document=request.documents[original_index],
-                )
+            # Use the provider's rerank method
+            rerank_response = provider.rerank(
+                query=request.query,
+                documents=[doc.text for doc in request.documents],
+                model=request.model,
+                top_n=request.top_n,
             )
 
-        log.info(
-            "rerank_success",
-            num_results=len(results),
-            top_score=results[0].relevance_score if results else None,
-        )
+            # Build response with original document metadata
+            results = []
+            for result in rerank_response["results"]:
+                original_index = result["index"]
+                results.append(
+                    RerankResult(
+                        index=original_index,
+                        relevance_score=result["relevance_score"],
+                        document=request.documents[original_index],
+                    )
+                )
 
-        return RerankResponse(
-            model=rerank_response.get("model", request.model), results=results
-        )
+            log.info(
+                "Rerank success",
+                extra={
+                    "num_results": len(results),
+                    "top_score": results[0].relevance_score if results else None,
+                },
+            )
 
-    except Exception as e:
-        log.error("rerank_error", error=str(e), error_type=type(e).__name__)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to rerank documents: {str(e)}"
-        )
+            return RerankResponse(
+                model=rerank_response.get("model", request.model), results=results
+            )
+
+        except Exception as e:
+            log.error(
+                "Rerank error", extra={"error": str(e), "error_type": type(e).__name__}
+            )
+            span.set_attribute("error", True)
+            span.record_exception(e)
+            raise HTTPException(
+                status_code=500, detail=f"Failed to rerank documents: {str(e)}"
+            )
