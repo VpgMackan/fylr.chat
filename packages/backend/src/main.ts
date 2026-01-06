@@ -3,7 +3,7 @@ import './tracing';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
-import * as csurf from 'csurf';
+import csurf from 'csurf';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
