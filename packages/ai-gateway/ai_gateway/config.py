@@ -17,9 +17,6 @@ class Settings(BaseSettings):
     elevenlabs_api_key: Optional[str] = None
     elevenlabs_api_url: str = "https://api.elevenlabs.io"
 
-    groq_api_key: Optional[str] = None
-    groq_api_url: str = "https://api.groq.com/openai/v1"
-
     ollama_base_url: str = "http://localhost:11434/v1"
 
     posthog_api_key: Optional[str] = None

@@ -21,7 +21,7 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     server: Server,
   ): Promise<void> {
     const prompt = userMessage.content || '';
-    const strategyType = await this.classifyQueryComplexity(prompt);
+    const strategyType = await this.classifyQueryComplexity(prompt, conversation.userId);
 
     const thoughtMessage = await this.services.messageService.createMessage(
       {
@@ -52,6 +52,7 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
 
   private async classifyQueryComplexity(
     query: string,
+    userId?: string,
   ): Promise<'FAST' | 'NORMAL' | 'THOROUGH'> {
     try {
       const response = await this.services.llmService.generate({
@@ -60,6 +61,7 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
         prompt_vars: {
           query,
         },
+        ...(userId && { user_id: userId }),
       });
 
       const classification = response.trim().toUpperCase();

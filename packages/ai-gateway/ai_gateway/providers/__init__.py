@@ -2,7 +2,6 @@ from .providers.openai_compatible import OpenaiCompatibleProvider
 from .providers.jina import JinaProvider
 from .providers.auto import AutoProvider
 from .providers.elevenlabs import ElevenLabsProvider
-from .providers.groq import GroqProvider
 
 from ..config import settings
 
@@ -16,7 +15,6 @@ _base_providers = {
     ),
     "jina": JinaProvider(),
     "elevenlabs": ElevenLabsProvider(),
-    "groq": GroqProvider(),
 }
 
 # Create auto provider with reference to base providers

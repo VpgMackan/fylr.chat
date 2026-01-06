@@ -32,6 +32,7 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
       planningMessages,
       availableTools,
       'planner_system',
+      conversation.userId,
     );
 
     const planMessage = planResponse.choices[0]?.message;
@@ -116,6 +117,9 @@ export class FastStrategy extends HelperStrategy implements IAgentStrategy {
       server,
       userMessage.id,
       usedSourceChunks,
+      undefined,
+      undefined,
+      conversation.userId,
     );
   }
 

@@ -9,6 +9,7 @@ class ReasoningConfig(BaseModel):
     Configuration for reasoning/thinking tokens.
     Based on OpenRouter's unified reasoning parameter.
     """
+
     enabled: Optional[bool] = None  # Enable reasoning with default parameters
     effort: Optional[Literal["low", "medium", "high"]] = None  # OpenAI-style
     max_tokens: Optional[int] = None  # Anthropic-style
@@ -55,6 +56,8 @@ class ChatCompletionRequest(BaseModel):
     prompt_type: Optional[str] = None
     prompt_version: Optional[str] = None
     prompt_vars: Optional[Dict[str, Any]] = None
+
+    user_id: Optional[str] = None
 
     # Tool calling support
     tools: Optional[List[ToolDefinition]] = None

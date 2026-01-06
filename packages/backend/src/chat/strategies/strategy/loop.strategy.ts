@@ -122,6 +122,9 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
           server,
           userMessage.id,
           usedSourceChunks,
+          undefined,
+          undefined,
+          conversation.userId,
         );
         return;
       }
@@ -156,6 +159,8 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
           const llmResponse = await this.llmService.generateWithTools(
             llmMessages,
             availableTools,
+            undefined,
+            conversation.userId,
           );
 
           const responseMessage = llmResponse.choices[0]?.message;
@@ -213,6 +218,9 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
               server,
               userMessage.id,
               usedSourceChunks,
+              undefined,
+              undefined,
+              conversation.userId,
             );
             return;
           }
@@ -401,6 +409,9 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
         server,
         userMessage.id,
         usedSourceChunks,
+        undefined,
+        undefined,
+        conversation.userId,
       );
       return;
     } catch (error) {

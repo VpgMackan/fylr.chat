@@ -216,6 +216,7 @@ export class HelperStrategy {
     sourceChunks: VectorSearchResult[] = [],
     overrideQuery?: string,
     userRole?: UserRole,
+    userId?: string,
   ): Promise<void> {
     try {
       const plainTextMessages = HelperStrategy.convertToolMessagesToPlainText(messages);
@@ -234,6 +235,7 @@ export class HelperStrategy {
         prompt_type: 'synthesis',
         prompt_version: 'v1',
         prompt_vars: promptVars,
+        ...(userId && { user_id: userId }),
       });
 
       let fullResponse = '';

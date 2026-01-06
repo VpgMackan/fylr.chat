@@ -59,6 +59,9 @@ class OpenaiCompatibleProvider(BaseProvider):
             **request.options,
         }
 
+        if request.user_id:
+            params["posthog_distinct_id"] = request.user_id
+
         # Add tool-related parameters if provided
         if request.tools:
             params["tools"] = [tool.model_dump() for tool in request.tools]
@@ -96,6 +99,9 @@ class OpenaiCompatibleProvider(BaseProvider):
             "stream": True,
             **request.options,
         }
+
+        if request.user_id:
+            params["posthog_distinct_id"] = request.user_id
 
         # Add tool-related parameters if provided
         if request.tools:
