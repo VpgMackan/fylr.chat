@@ -13,6 +13,7 @@ import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { PermissionsService } from 'src/auth/permissions.service';
 import * as fs from 'fs/promises';
 import { VectorSearchResult } from 'src/ai/reranking.service';
+import { PosthogService } from 'src/posthog/posthog.service';
 
 @Injectable()
 export class SourceService {
@@ -24,6 +25,7 @@ export class SourceService {
     private readonly configService: ConfigService,
     private readonly rabbitMQService: RabbitMQService,
     private readonly permissionsService: PermissionsService,
+    private readonly posthogService: PosthogService,
   ) {
     const bucket = this.configService.get('S3_BUCKET_USER_FILE');
     if (!bucket) {
@@ -112,6 +114,15 @@ export class SourceService {
         };
 
         const entry = await tx.source.create({ data });
+
+        // Capture PostHog event for source upload
+        this.posthogService.capture(userId, 'source_uploaded', {
+          sourceId: entry.id,
+          libraryId,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          deferred: shouldDeferIngestion,
+        });
 
         // Only queue for processing if not deferred
         if (!shouldDeferIngestion) {

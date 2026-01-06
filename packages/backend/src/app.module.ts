@@ -15,6 +15,7 @@ import { ChatModule } from './chat/chat.module';
 import { SummaryModule } from './summary/summary.module';
 import { PodcastModule } from './podcast/podcast.module';
 import { GiftCardModule } from './gift-card/gift-card.module';
+import { PosthogModule } from './posthog/posthog.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { GiftCardModule } from './gift-card/gift-card.module';
     SummaryModule,
     PodcastModule,
     GiftCardModule,
+    PosthogModule,
   ],
   providers: [
     {

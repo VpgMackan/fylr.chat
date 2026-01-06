@@ -10,6 +10,7 @@ import { CreatePodcastDto } from '@fylr/types';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { S3Service } from 'src/common/s3/s3.service';
 import { PermissionsService } from 'src/auth/permissions.service';
+import { PosthogService } from 'src/posthog/posthog.service';
 
 @Injectable()
 export class PodcastService {
@@ -19,6 +20,7 @@ export class PodcastService {
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly permissionsService: PermissionsService,
+    private readonly posthogService: PosthogService,
   ) {}
 
   async getPodcastsByUserId(
@@ -119,6 +121,12 @@ export class PodcastService {
     });
 
     await this.rabbitMQService.sendToQueue('podcast-generator', newPodcast.id);
+
+    // Capture PostHog event for podcast generation request
+    this.posthogService.capture(userId, 'podcast_generation_requested', {
+      podcastId: newPodcast.id,
+      sourceCount: allSourceIds.size,
+    });
 
     return newPodcast;
   }
