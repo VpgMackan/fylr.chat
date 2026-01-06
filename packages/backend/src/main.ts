@@ -1,6 +1,8 @@
+import './tracing';
+
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import * as csurf from 'csurf';
 import helmet from 'helmet';
 
