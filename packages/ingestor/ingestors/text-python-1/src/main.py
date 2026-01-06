@@ -7,13 +7,14 @@ import requests
 from botocore.config import Config
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+import logging
 
 # Load environment variables BEFORE importing database module
 load_dotenv()
 
 from .handlers import HandlerManager
 from .database import get_db_session, Source, DocumentVector
-from .logger import logger
+from .telemetry import setup_telemetry
 
 ROUTING_KEYS_STR = os.getenv("INGESTOR_ROUTING_KEYS")
 QUEUE_NAME = os.getenv("INGESTOR_QUEUE_NAME")
@@ -33,6 +34,10 @@ S3_REGION = os.getenv("S3_REGION")
 S3_BUCKET_USER_FILE = os.getenv("S3_BUCKET_USER_FILE")
 
 AI_GATEWAY_URL = os.getenv("AI_GATEWAY_URL")
+
+SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "text-ingestor")
+setup_telemetry(SERVICE_NAME)
+logger = logging.getLogger(__name__)
 
 if not all([ROUTING_KEYS_STR, QUEUE_NAME, S3_BUCKET_USER_FILE, AI_GATEWAY_URL]):
     sys.exit("Error: Missing one or more required environment variables.")
