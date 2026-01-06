@@ -26,6 +26,9 @@ unstructured = { extras = ["pdf"], version = "^0.18.15" }
 opentelemetry-api = "^1.39.1"
 opentelemetry-sdk = "^1.39.1"
 opentelemetry-exporter-otlp = "^1.39.1"
+opentelemetry-distro = "^0.60b1"
+opentelemetry-instrumentation-pika = "^0.60b1"
+opentelemetry-instrumentation-httpx = "^0.60b1"
 
 [tool.poetry.scripts]
 start = "src.main:main"

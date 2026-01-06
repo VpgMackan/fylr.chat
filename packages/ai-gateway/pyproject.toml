@@ -18,6 +18,10 @@ asgi-correlation-id = "^4.0.1"
 elevenlabs = "^1.0.0"
 groq = "^0.31.1"
 posthog = "^7.4.3"
+opentelemetry-distro = "^0.60b1"
+opentelemetry-exporter-otlp = "^1.39.1"
+opentelemetry-instrumentation-fastapi = "^0.60b1"
+opentelemetry-instrumentation-httpx = "^0.60b1"
 
 
 [tool.poetry.scripts]
