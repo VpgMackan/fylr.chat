@@ -6,7 +6,7 @@ from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk.resources import Resource
 
 
-def setup_logger(name: str = "text-ingestor") -> logging.Logger:
+def setup_logger(name: str = "pdf-ingestor") -> logging.Logger:
     """
     Set up a logger with OpenTelemetry integration for PostHog.
 
@@ -18,7 +18,7 @@ def setup_logger(name: str = "text-ingestor") -> logging.Logger:
     """
     posthog_api_key = os.getenv("POSTHOG_API_KEY")
     posthog_host = os.getenv("POSTHOG_HOST", "https://eu.i.posthog.com")
-    service_name = os.getenv("OTEL_SERVICE_NAME", "text-ingestor")
+    service_name = os.getenv("OTEL_SERVICE_NAME", "pdf-ingestor")
 
     # Create resource with service information
     resource = Resource.create(

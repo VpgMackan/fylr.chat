@@ -67,7 +67,12 @@ def publish_status(channel, job_key, stage, message, error=False):
     )
     logger.info(
         "Job status update",
-        extra={"job_key": job_key, "stage": stage, "status_message": message, "error": error},
+        extra={
+            "job_key": job_key,
+            "stage": stage,
+            "status_message": message,
+            "error": error,
+        },
     )
 
 
