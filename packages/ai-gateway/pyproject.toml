@@ -17,6 +17,7 @@ structlog = "^24.1.0"
 asgi-correlation-id = "^4.0.1"
 elevenlabs = "^1.0.0"
 groq = "^0.31.1"
+posthog = "^7.4.3"
 
 
 [tool.poetry.scripts]

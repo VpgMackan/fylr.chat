@@ -1,18 +1,26 @@
 import httpx
-from openai import OpenAI, AsyncOpenAI
+from posthog import Posthog
+from posthog.ai.openai import OpenAI, AsyncOpenAI
 from typing import List, Dict, Any, AsyncGenerator
 
 from ..base import BaseProvider
 from ...schemas import ChatCompletionRequest
+from ...config import settings
 
 
 class OpenaiCompatibleProvider(BaseProvider):
     def __init__(self, api_key, base_url):
+        self.posthog = Posthog(
+            settings.posthog_api_key,
+            host=settings.posthog_api_url,
+            privacy_mode=settings.environment == "production",
+        )
         sync_transport = httpx.HTTPTransport(retries=3)
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url,
             http_client=httpx.Client(transport=sync_transport),
+            posthog_client=self.posthog,
         )
 
         async_transport = httpx.AsyncHTTPTransport(retries=3)
@@ -20,6 +28,7 @@ class OpenaiCompatibleProvider(BaseProvider):
             api_key=api_key,
             base_url=base_url,
             http_client=httpx.AsyncClient(transport=async_transport),
+            posthog_client=self.posthog,
         )
 
     def generate_text_to_speech(self, text, model, voice, options):
