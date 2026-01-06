@@ -11,20 +11,30 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 
 
 def setup_telemetry(service_name: str):
-    otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+    otel_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317")
     resource = Resource.create({"service.name": service_name})
 
     # --- Tracing Setup ---
     trace_provider = TracerProvider(resource=resource)
-    trace_exporter = OTLPSpanExporter(endpoint=otel_endpoint)
+    trace_exporter = OTLPSpanExporter(endpoint=otel_endpoint, insecure=True)
     trace_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
     trace.set_tracer_provider(trace_provider)
 
     # --- Logging Setup ---
     logger_provider = LoggerProvider(resource=resource)
-    log_exporter = OTLPLogExporter(endpoint=otel_endpoint)
+    log_exporter = OTLPLogExporter(endpoint=otel_endpoint, insecure=True)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 
-    handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
-    logging.getLogger().addHandler(handler)
-    logging.basicConfig(level=logging.INFO)
+    otel_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+
+    # Console handler for local visibility
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(otel_handler)
+    root_logger.addHandler(console_handler)
