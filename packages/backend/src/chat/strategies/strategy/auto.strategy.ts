@@ -9,6 +9,7 @@ import {
 import { HelperStrategy } from './helper.strategy';
 import { FastStrategy } from './fast.strategy';
 import { LoopStrategy } from './loop.strategy';
+import { withSpan, setSpanAttributes } from 'src/common/telemetry/tracer';
 
 export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
   constructor(readonly services: AgentStrategyServices) {
@@ -20,34 +21,50 @@ export class AutoStrategy extends HelperStrategy implements IAgentStrategy {
     conversation: ConversationWithSources,
     server: Server,
   ): Promise<void> {
-    const prompt = userMessage.content || '';
-    const strategyType = await this.classifyQueryComplexity(prompt, conversation.userId);
+    return withSpan(
+      'agent.auto_strategy.execute',
+      async (span) => {
+        const prompt = userMessage.content || '';
+        setSpanAttributes({
+          conversationId: conversation.id,
+          userId: conversation.userId,
+          promptLength: prompt.length,
+        });
 
-    const thoughtMessage = await this.services.messageService.createMessage(
-      {
-        role: 'assistant',
-        reasoning: `${strategyType} strategy selected based on LLM-powered semantic analysis.`,
-        toolCalls: [],
-        parentMessageId: userMessage.id,
+        const strategyType = await this.classifyQueryComplexity(
+          prompt,
+          conversation.userId,
+        );
+        setSpanAttributes({ selectedStrategy: strategyType });
+
+        const thoughtMessage = await this.services.messageService.createMessage(
+          {
+            role: 'assistant',
+            reasoning: `${strategyType} strategy selected based on LLM-powered semantic analysis.`,
+            toolCalls: [],
+            parentMessageId: userMessage.id,
+          },
+          conversation.id,
+        );
+        server.to(conversation.id).emit('conversationAction', {
+          action: 'agentThought',
+          conversationId: conversation.id,
+          data: thoughtMessage,
+        });
+
+        let strategy: IAgentStrategy;
+        if (strategyType === 'FAST') {
+          strategy = new FastStrategy(this.services);
+        } else if (strategyType === 'NORMAL') {
+          strategy = new LoopStrategy(5, this.services);
+        } else {
+          strategy = new LoopStrategy(15, this.services);
+        }
+
+        await strategy.execute(userMessage, conversation, server);
       },
-      conversation.id,
+      { conversationId: conversation.id, userId: conversation.userId },
     );
-    server.to(conversation.id).emit('conversationAction', {
-      action: 'agentThought',
-      conversationId: conversation.id,
-      data: thoughtMessage,
-    });
-
-    let strategy: IAgentStrategy;
-    if (strategyType === 'FAST') {
-      strategy = new FastStrategy(this.services);
-    } else if (strategyType === 'NORMAL') {
-      strategy = new LoopStrategy(5, this.services);
-    } else {
-      strategy = new LoopStrategy(15, this.services);
-    }
-
-    await strategy.execute(userMessage, conversation, server);
   }
 
   private async classifyQueryComplexity(

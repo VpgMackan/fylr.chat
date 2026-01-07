@@ -17,6 +17,7 @@ import {
   createEmptyResultResponse,
 } from '../../tools/error-handler';
 import { sanitizeObject } from 'src/utils/text-sanitizer';
+import { withSpan, setSpanAttributes } from 'src/common/telemetry/tracer';
 
 interface ConversationMetadata {
   agentMode?: string;
@@ -92,128 +93,47 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
     conversation: ConversationWithSources,
     server: Server,
   ): Promise<void> {
-    let currentIteration = 0;
-    const MAX_CONTEXT_MESSAGES = 50;
-    const usedSourceChunks: VectorSearchResult[] = [];
+    return withSpan(
+      'agent.loop_strategy.execute',
+      async (span) => {
+        let currentIteration = 0;
+        const MAX_CONTEXT_MESSAGES = 50;
+        const usedSourceChunks: VectorSearchResult[] = [];
 
-    try {
-      const embeddingModel =
-        conversation.sources.length > 0
-          ? conversation.sources[0].library.defaultEmbeddingModel
-          : undefined;
-
-      const hasSources = conversation.sources.length > 0;
-      const userMetadata = userMessage.metadata as ConversationMetadata;
-      const conversationMetadata =
-        conversation.metadata as ConversationMetadata;
-      const webSearchEnabled =
-        userMetadata?.webSearchEnabled === true ||
-        conversationMetadata?.webSearchEnabled === true;
-
-      const availableTools = this.getAvailableTools(
-        hasSources,
-        webSearchEnabled,
-      );
-
-      if (availableTools.length === 0) {
-        await this.provideFinalAnswer(
-          [],
-          conversation.id,
-          server,
-          userMessage.id,
-          usedSourceChunks,
-          undefined,
-          undefined,
-          conversation.userId,
-        );
-        return;
-      }
-
-      const initialThought = await this.messageService.createMessage(
-        {
-          role: 'assistant',
-          reasoning: 'Processing your request...',
-          parentMessageId: userMessage.id,
-        },
-        conversation.id,
-      );
-      server.to(conversation.id).emit('conversationAction', {
-        action: 'agentThought',
-        conversationId: conversation.id,
-        data: initialThought,
-      });
-
-      const messages = await this.prisma.message.findMany({
-        where: { conversationId: conversation.id },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      const llmMessages: ChatMessage[] = HelperStrategy.buildContextMessages(
-        messages,
-        MAX_CONTEXT_MESSAGES,
-      );
-
-      while (currentIteration < this.iterations) {
-        currentIteration++;
         try {
-          const llmResponse = await this.llmService.generateWithTools(
-            llmMessages,
-            availableTools,
-            undefined,
-            conversation.userId,
-          );
+          const embeddingModel =
+            conversation.sources.length > 0
+              ? conversation.sources[0].library.defaultEmbeddingModel
+              : undefined;
 
-          const responseMessage = llmResponse.choices[0]?.message;
-          if (!responseMessage) {
-            throw new InternalServerErrorException(
-              'LLM returned empty response',
-            );
-          }
+          const hasSources = conversation.sources.length > 0;
+          const userMetadata = userMessage.metadata as ConversationMetadata;
+          const conversationMetadata =
+            conversation.metadata as ConversationMetadata;
+          const webSearchEnabled =
+            userMetadata?.webSearchEnabled === true ||
+            conversationMetadata?.webSearchEnabled === true;
 
-          const thoughtMessage = await this.messageService.createMessage(
-            {
-              role: 'assistant',
-              reasoning: responseMessage.content,
-              toolCalls: responseMessage.tool_calls,
-              parentMessageId: userMessage.id,
-            },
-            conversation.id,
-          );
-          server.to(conversation.id).emit('conversationAction', {
-            action: 'agentThought',
+          setSpanAttributes({
             conversationId: conversation.id,
-            data: thoughtMessage,
+            userId: conversation.userId,
+            maxIterations: this.iterations,
+            hasSources,
+            sourceCount: conversation.sources.length,
+            webSearchEnabled,
+            embeddingModel: embeddingModel || 'none',
           });
 
-          // Only push assistant message if it has content or tool_calls
-          const hasContent =
-            responseMessage.content !== null &&
-            responseMessage.content !== undefined;
-          const hasToolCalls =
-            responseMessage.tool_calls && responseMessage.tool_calls.length > 0;
-          if (hasContent || hasToolCalls) {
-            llmMessages.push({
-              role: 'assistant',
-              content: responseMessage.content ?? undefined,
-              tool_calls: hasToolCalls
-                ? (responseMessage.tool_calls as ToolCall[])
-                : undefined,
-            });
-          }
-
-          if (
-            !responseMessage.tool_calls ||
-            responseMessage.tool_calls.length === 0
-          ) {
-            break;
-          }
-
-          const finalAnswerCall = responseMessage.tool_calls.find(
-            (tc) => tc.function.name === 'provide_final_answer',
+          const availableTools = this.getAvailableTools(
+            hasSources,
+            webSearchEnabled,
           );
-          if (finalAnswerCall) {
+
+          setSpanAttributes({ availableToolCount: availableTools.length });
+
+          if (availableTools.length === 0) {
             await this.provideFinalAnswer(
-              llmMessages,
+              [],
               conversation.id,
               server,
               userMessage.id,
@@ -225,208 +145,332 @@ export class LoopStrategy extends HelperStrategy implements IAgentStrategy {
             return;
           }
 
-          const toolResults = await Promise.all(
-            responseMessage.tool_calls.map(async (toolCall) => {
-              try {
-                const parsedArgs = JSON.parse(
-                  typeof toolCall.function.arguments === 'string'
-                    ? toolCall.function.arguments
-                    : JSON.stringify(toolCall.function.arguments),
-                ) as Record<string, unknown>;
-                const toolName = toolCall.function.name;
+          const initialThought = await this.messageService.createMessage(
+            {
+              role: 'assistant',
+              reasoning: 'Processing your request...',
+              parentMessageId: userMessage.id,
+            },
+            conversation.id,
+          );
+          server.to(conversation.id).emit('conversationAction', {
+            action: 'agentThought',
+            conversationId: conversation.id,
+            data: initialThought,
+          });
 
-                HelperStrategy.emitToolProgress(
-                  toolName,
-                  `Executing ${toolName}...`,
-                  server,
-                  conversation.id,
+          const messages = await this.prisma.message.findMany({
+            where: { conversationId: conversation.id },
+            orderBy: { createdAt: 'asc' },
+          });
+
+          const llmMessages: ChatMessage[] =
+            HelperStrategy.buildContextMessages(messages, MAX_CONTEXT_MESSAGES);
+
+          while (currentIteration < this.iterations) {
+            currentIteration++;
+            setSpanAttributes({ currentIteration });
+
+            try {
+              const llmResponse = await this.llmService.generateWithTools(
+                llmMessages,
+                availableTools,
+                undefined,
+                conversation.userId,
+              );
+
+              const responseMessage = llmResponse.choices[0]?.message;
+              if (!responseMessage) {
+                throw new InternalServerErrorException(
+                  'LLM returned empty response',
                 );
-                const result = (await this.toolService.executeTool(
-                  toolName,
-                  parsedArgs,
-                  {
-                    conversationId: conversation.id,
-                    userId: conversation.userId,
-                    embeddingModel: embeddingModel || '',
-                  },
-                )) as {
-                  results?: unknown[];
-                  success?: boolean;
-                  query?: string;
-                  url?: string;
-                };
+              }
 
-                if (
-                  toolName === 'search_documents' &&
-                  result.results &&
-                  Array.isArray(result.results)
-                ) {
-                  usedSourceChunks.push(
-                    ...(result.results as VectorSearchResult[]),
-                  );
-                  if (result.results.length === 0) {
+              const thoughtMessage = await this.messageService.createMessage(
+                {
+                  role: 'assistant',
+                  reasoning: responseMessage.content,
+                  toolCalls: responseMessage.tool_calls,
+                  parentMessageId: userMessage.id,
+                },
+                conversation.id,
+              );
+              server.to(conversation.id).emit('conversationAction', {
+                action: 'agentThought',
+                conversationId: conversation.id,
+                data: thoughtMessage,
+              });
+
+              // Only push assistant message if it has content or tool_calls
+              const hasContent =
+                responseMessage.content !== null &&
+                responseMessage.content !== undefined;
+              const hasToolCalls =
+                responseMessage.tool_calls &&
+                responseMessage.tool_calls.length > 0;
+              if (hasContent || hasToolCalls) {
+                llmMessages.push({
+                  role: 'assistant',
+                  content: responseMessage.content ?? undefined,
+                  tool_calls: hasToolCalls
+                    ? (responseMessage.tool_calls as ToolCall[])
+                    : undefined,
+                });
+              }
+
+              if (
+                !responseMessage.tool_calls ||
+                responseMessage.tool_calls.length === 0
+              ) {
+                break;
+              }
+
+              setSpanAttributes({
+                toolCallCount: responseMessage.tool_calls.length,
+              });
+
+              const finalAnswerCall = responseMessage.tool_calls.find(
+                (tc) => tc.function.name === 'provide_final_answer',
+              );
+              if (finalAnswerCall) {
+                await this.provideFinalAnswer(
+                  llmMessages,
+                  conversation.id,
+                  server,
+                  userMessage.id,
+                  usedSourceChunks,
+                  undefined,
+                  undefined,
+                  conversation.userId,
+                );
+                return;
+              }
+
+              const toolResults = await Promise.all(
+                responseMessage.tool_calls.map(async (toolCall) => {
+                  try {
+                    const parsedArgs = JSON.parse(
+                      typeof toolCall.function.arguments === 'string'
+                        ? toolCall.function.arguments
+                        : JSON.stringify(toolCall.function.arguments),
+                    ) as Record<string, unknown>;
+                    const toolName = toolCall.function.name;
+
+                    HelperStrategy.emitToolProgress(
+                      toolName,
+                      `Executing ${toolName}...`,
+                      server,
+                      conversation.id,
+                    );
+                    const result = (await this.toolService.executeTool(
+                      toolName,
+                      parsedArgs,
+                      {
+                        conversationId: conversation.id,
+                        userId: conversation.userId,
+                        embeddingModel: embeddingModel || '',
+                      },
+                    )) as {
+                      results?: unknown[];
+                      success?: boolean;
+                      query?: string;
+                      url?: string;
+                    };
+
+                    if (
+                      toolName === 'search_documents' &&
+                      result.results &&
+                      Array.isArray(result.results)
+                    ) {
+                      usedSourceChunks.push(
+                        ...(result.results as VectorSearchResult[]),
+                      );
+                      if (result.results.length === 0) {
+                        return {
+                          tool_call_id: toolCall.id,
+                          content: JSON.stringify(
+                            createEmptyResultResponse(
+                              toolName,
+                              (parsedArgs.query as string) || 'query',
+                            ),
+                          ),
+                          success: false,
+                        };
+                      }
+                    }
+
+                    if (
+                      toolName === 'web_search' &&
+                      result.results &&
+                      Array.isArray(result.results) &&
+                      result.results.length === 0
+                    ) {
+                      return {
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify(
+                          createEmptyResultResponse(
+                            toolName,
+                            (parsedArgs.query as string) || 'query',
+                          ),
+                        ),
+                        success: false,
+                      };
+                    }
+
+                    if (
+                      toolName === 'fetch_webpage' &&
+                      result.success === false
+                    ) {
+                      return {
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify(
+                          createEmptyResultResponse(
+                            toolName,
+                            (parsedArgs.url as string) || 'URL',
+                          ),
+                        ),
+                        success: false,
+                      };
+                    }
+
+                    const sanitizedResult = sanitizeObject(result);
+                    return {
+                      tool_call_id: toolCall.id,
+                      content: JSON.stringify(sanitizedResult),
+                      success: true,
+                    };
+                  } catch (error) {
+                    console.error(
+                      `Tool execution error for ${toolCall.function.name}:`,
+                      error,
+                    );
                     return {
                       tool_call_id: toolCall.id,
                       content: JSON.stringify(
-                        createEmptyResultResponse(
-                          toolName,
-                          (parsedArgs.query as string) || 'query',
-                        ),
+                        createStructuredError(error, toolCall.function.name),
                       ),
                       success: false,
                     };
                   }
-                }
+                }),
+              );
 
-                if (
-                  toolName === 'web_search' &&
-                  result.results &&
-                  Array.isArray(result.results) &&
-                  result.results.length === 0
-                ) {
-                  return {
-                    tool_call_id: toolCall.id,
-                    content: JSON.stringify(
-                      createEmptyResultResponse(
-                        toolName,
-                        (parsedArgs.query as string) || 'query',
-                      ),
-                    ),
-                    success: false,
-                  };
-                }
-
-                if (toolName === 'fetch_webpage' && result.success === false) {
-                  return {
-                    tool_call_id: toolCall.id,
-                    content: JSON.stringify(
-                      createEmptyResultResponse(
-                        toolName,
-                        (parsedArgs.url as string) || 'URL',
-                      ),
-                    ),
-                    success: false,
-                  };
-                }
-
-                const sanitizedResult = sanitizeObject(result);
-                return {
-                  tool_call_id: toolCall.id,
-                  content: JSON.stringify(sanitizedResult),
-                  success: true,
-                };
-              } catch (error) {
-                console.error(
-                  `Tool execution error for ${toolCall.function.name}:`,
-                  error,
+              for (const result of toolResults) {
+                await this.messageService.createMessage(
+                  {
+                    role: 'tool',
+                    toolCallId: result.tool_call_id,
+                    content: result.content,
+                    parentMessageId: userMessage.id,
+                  },
+                  conversation.id,
                 );
-                return {
-                  tool_call_id: toolCall.id,
-                  content: JSON.stringify(
-                    createStructuredError(error, toolCall.function.name),
-                  ),
-                  success: false,
-                };
+                llmMessages.push({
+                  role: 'tool',
+                  tool_call_id: result.tool_call_id,
+                  content: result.content,
+                });
               }
-            }),
+
+              setSpanAttributes({
+                usedSourceChunks: usedSourceChunks.length,
+                contextMessageCount: llmMessages.length,
+              });
+
+              if (llmMessages.length > MAX_CONTEXT_MESSAGES) {
+                HelperStrategy.pruneContextMessages(
+                  llmMessages,
+                  MAX_CONTEXT_MESSAGES,
+                );
+              }
+            } catch (iterationError) {
+              console.error(
+                `Error in iteration ${currentIteration}:`,
+                iterationError,
+              );
+
+              const errorMessage: ChatMessage = {
+                role: 'assistant',
+                content: JSON.stringify({
+                  error: true,
+                  error_type: 'iteration_error',
+                  message: `An error occurred during iteration ${currentIteration}: ${
+                    iterationError instanceof Error
+                      ? iterationError.message
+                      : 'Unknown error'
+                  }`,
+                  suggested_actions: [
+                    'Review the previous tool calls for issues',
+                    'Try a different approach or simpler query',
+                    'Use alternative tools if available',
+                    'Break down the task into smaller steps',
+                  ],
+                  retry_recommended: true,
+                }),
+              };
+
+              llmMessages.push(errorMessage);
+
+              server.to(conversation.id).emit('conversationAction', {
+                action: 'agentThought',
+                conversationId: conversation.id,
+                data: {
+                  role: 'assistant',
+                  reasoning: `Encountered an error: ${
+                    iterationError instanceof Error
+                      ? iterationError.message
+                      : 'Unknown error'
+                  }. Attempting to recover...`,
+                },
+              });
+            }
+
+            if (currentIteration >= this.iterations) {
+              console.warn(
+                `Reached max iterations (${this.iterations}) for conversation ${conversation.id}`,
+              );
+            }
+          }
+
+          setSpanAttributes({
+            completedIterations: currentIteration,
+            finalSourceChunksUsed: usedSourceChunks.length,
+          });
+
+          await this.provideFinalAnswer(
+            llmMessages,
+            conversation.id,
+            server,
+            userMessage.id,
+            usedSourceChunks,
+            undefined,
+            undefined,
+            conversation.userId,
           );
-
-          for (const result of toolResults) {
-            await this.messageService.createMessage(
-              {
-                role: 'tool',
-                toolCallId: result.tool_call_id,
-                content: result.content,
-                parentMessageId: userMessage.id,
-              },
-              conversation.id,
-            );
-            llmMessages.push({
-              role: 'tool',
-              tool_call_id: result.tool_call_id,
-              content: result.content,
-            });
-          }
-
-          if (llmMessages.length > MAX_CONTEXT_MESSAGES) {
-            HelperStrategy.pruneContextMessages(
-              llmMessages,
-              MAX_CONTEXT_MESSAGES,
-            );
-          }
-        } catch (iterationError) {
+          return;
+        } catch (error) {
           console.error(
-            `Error in iteration ${currentIteration}:`,
-            iterationError,
+            'Error in generateAndStreamAiResponseWithTools:',
+            error,
           );
-
-          const errorMessage: ChatMessage = {
-            role: 'assistant',
-            content: JSON.stringify({
-              error: true,
-              error_type: 'iteration_error',
-              message: `An error occurred during iteration ${currentIteration}: ${
-                iterationError instanceof Error
-                  ? iterationError.message
-                  : 'Unknown error'
-              }`,
-              suggested_actions: [
-                'Review the previous tool calls for issues',
-                'Try a different approach or simpler query',
-                'Use alternative tools if available',
-                'Break down the task into smaller steps',
-              ],
-              retry_recommended: true,
-            }),
-          };
-
-          llmMessages.push(errorMessage);
-
           server.to(conversation.id).emit('conversationAction', {
-            action: 'agentThought',
+            action: 'streamError',
             conversationId: conversation.id,
             data: {
-              role: 'assistant',
-              reasoning: `Encountered an error: ${
-                iterationError instanceof Error
-                  ? iterationError.message
-                  : 'Unknown error'
-              }. Attempting to recover...`,
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'An unexpected error occurred during processing',
             },
           });
+          return;
         }
-
-        if (currentIteration >= this.iterations) {
-          console.warn(
-            `Reached max iterations (${this.iterations}) for conversation ${conversation.id}`,
-          );
-        }
-      }
-
-      await this.provideFinalAnswer(
-        llmMessages,
-        conversation.id,
-        server,
-        userMessage.id,
-        usedSourceChunks,
-        undefined,
-        undefined,
-        conversation.userId,
-      );
-      return;
-    } catch (error) {
-      console.error('Error in generateAndStreamAiResponseWithTools:', error);
-      server.to(conversation.id).emit('conversationAction', {
-        action: 'streamError',
+      },
+      {
         conversationId: conversation.id,
-        data: {
-          message:
-            error instanceof Error
-              ? error.message
-              : 'An unexpected error occurred during processing',
-        },
-      });
-      return;
-    }
+        userId: conversation.userId,
+        maxIterations: this.iterations,
+      },
+    );
   }
 }

@@ -17,6 +17,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { MessageService } from './message.service';
 import { Server } from 'socket.io';
 import { AgentFactory, AgentMode } from './strategies/strategies.factory';
+import { withSpan, setSpanAttributes } from 'src/common/telemetry/tracer';
 
 @Injectable()
 export class ConversationService {
@@ -146,102 +147,113 @@ export class ConversationService {
     libraryIds?: string[],
     webSearchEnabled?: boolean,
   ) {
-    // Collect all source IDs from both sourceIds and libraryIds
-    let allSourceIds: string[] = [];
+    return withSpan(
+      'conversation.initiate',
+      async (span) => {
+        let allSourceIds: string[] = [];
 
-    // Add direct source IDs if provided
-    if (sourceIds && sourceIds.length > 0) {
-      allSourceIds = [...sourceIds];
-    }
+        if (sourceIds && sourceIds.length > 0) {
+          allSourceIds = [...sourceIds];
+        }
 
-    // Fetch sources from libraries if library IDs are provided
-    if (libraryIds && libraryIds.length > 0) {
-      const librarySources = await this.prisma.source.findMany({
-        where: {
-          libraryId: { in: libraryIds },
-          library: { userId },
-        },
-        select: { id: true },
-      });
-      allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
-    }
-
-    // Validate all sources exist and belong to the user
-    if (allSourceIds.length > 0) {
-      const sources = await this.prisma.source.findMany({
-        where: {
-          id: { in: allSourceIds },
-          library: { userId },
-        },
-      });
-
-      if (sources.length !== allSourceIds.length) {
-        throw new BadRequestException(
-          'Some sources not found or not accessible',
-        );
-      }
-    }
-
-    // Web search is only available in agentic mode
-    const useWebSearch = webSearchEnabled === true;
-
-    const newConversation = await this.prisma.conversation.create({
-      data: {
-        userId,
-        title: content.split(' ').slice(0, 5).join(' ') + '...',
-        metadata: {
-          agentMode,
-          webSearchEnabled: useWebSearch,
-        },
-        sources:
-          allSourceIds.length > 0
-            ? { connect: allSourceIds.map((id) => ({ id })) }
-            : undefined,
-      },
-      include: {
-        sources: {
-          include: {
-            library: {
-              select: { defaultEmbeddingModel: true },
+        if (libraryIds && libraryIds.length > 0) {
+          const librarySources = await this.prisma.source.findMany({
+            where: {
+              libraryId: { in: libraryIds },
+              library: { userId },
             },
-          },
-        },
-      },
-    });
+            select: { id: true },
+          });
+          allSourceIds = [...allSourceIds, ...librarySources.map((s) => s.id)];
+        }
 
-    if (this.server) {
-      const userMessage = await this.messageService.createMessage(
-        {
-          role: 'user',
-          content,
-          metadata: {
-            agentMode,
-            webSearchEnabled: useWebSearch,
-          },
-        },
-        newConversation.id,
-      );
-
-      const agent = await this.agentFactory.getStrategy(agentMode, userId);
-
-      agent
-        .execute(userMessage, newConversation, this.server)
-        .catch((error) => {
-          console.error(
-            `Failed to generate AI response for conversation ${newConversation.id}:`,
-            error,
-          );
-          this.server.to(newConversation.id).emit('conversationAction', {
-            action: 'streamError',
-            conversationId: newConversation.id,
-            data: {
-              message: 'Failed to generate AI response. Please try again.',
+        if (allSourceIds.length > 0) {
+          const sources = await this.prisma.source.findMany({
+            where: {
+              id: { in: allSourceIds },
+              library: { userId },
             },
           });
-        });
-    }
 
-    return newConversation;
+          if (sources.length !== allSourceIds.length) {
+            throw new BadRequestException(
+              'Some sources not found or not accessible',
+            );
+          }
+        }
+
+        const useWebSearch = webSearchEnabled === true;
+
+        setSpanAttributes({
+          userId,
+          agentMode,
+          source_count: allSourceIds.length,
+          webSearchEnabled: useWebSearch,
+          content_length: content.length,
+        });
+
+        const newConversation = await this.prisma.conversation.create({
+          data: {
+            userId,
+            title: content.split(' ').slice(0, 5).join(' ') + '...',
+            metadata: {
+              agentMode,
+              webSearchEnabled: useWebSearch,
+            },
+            sources:
+              allSourceIds.length > 0
+                ? { connect: allSourceIds.map((id) => ({ id })) }
+                : undefined,
+          },
+          include: {
+            sources: {
+              include: {
+                library: {
+                  select: { defaultEmbeddingModel: true },
+                },
+              },
+            },
+          },
+        });
+
+        setSpanAttributes({ conversationId: newConversation.id });
+
+        if (this.server) {
+          const userMessage = await this.messageService.createMessage(
+            {
+              role: 'user',
+              content,
+              metadata: {
+                agentMode,
+                webSearchEnabled: useWebSearch,
+              },
+            },
+            newConversation.id,
+          );
+
+          const agent = await this.agentFactory.getStrategy(agentMode, userId);
+
+          agent
+            .execute(userMessage, newConversation, this.server)
+            .catch((error) => {
+              console.error(
+                `Failed to generate AI response for conversation ${newConversation.id}:`,
+                error,
+              );
+              this.server.to(newConversation.id).emit('conversationAction', {
+                action: 'streamError',
+                conversationId: newConversation.id,
+                data: {
+                  message: 'Failed to generate AI response. Please try again.',
+                },
+              });
+            });
+        }
+
+        return newConversation;
+      },
+      { userId, agentMode },
+    );
   }
 
   async getConversation(conversationId: string, userId: string) {
