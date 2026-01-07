@@ -10,12 +10,14 @@ import {
   LibraryApiResponse,
   UpdateLibraryDto,
 } from '@fylr/types';
+import { AiVectorService } from 'src/ai/vector.service';
 
 @Injectable()
 export class LibraryService {
   constructor(
     private prisma: PrismaService,
     private permissionsService: PermissionsService,
+    private vectorService: AiVectorService,
   ) {}
 
   async findMultipleByUserId(
@@ -85,6 +87,8 @@ export class LibraryService {
     const canCreate = await this.permissionsService.canCreateLibrary(
       data.userId,
     );
+    data.defaultEmbeddingModel =
+      await this.vectorService.getDefaultEmbeddingModel();
 
     if (!canCreate) {
       throw new ForbiddenException(
