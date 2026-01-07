@@ -8,6 +8,7 @@ from ..schemas import (
 
 from ai_gateway.providers import providers
 from ..config import settings
+from ..models_registry import models_registry
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -52,4 +53,23 @@ async def create_embedding(request: EmbeddingRequest):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"An error occurred with the '{provider_name}' provider: {e}",
+            )
+
+
+@router.get("/v1/embeddings/models")
+async def get_available_models():
+    """Get all available embedding models and the default model."""
+    with tracer.start_as_current_span("get_available_models"):
+        try:
+            models_data = models_registry.get_all_models()
+            log.info(
+                "Available models request",
+                extra={"model_count": len(models_data["models"])},
+            )
+            return models_data
+        except Exception as e:
+            log.error("Error fetching available models", extra={"error": str(e)})
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving available models: {e}",
             )
