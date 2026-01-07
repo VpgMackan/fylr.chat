@@ -1,12 +1,12 @@
 import json, uuid
-import structlog
+import logging
 
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session, joinedload
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class BaseGenerator(ABC):
@@ -23,8 +23,7 @@ class BaseGenerator(ABC):
             # Check if channel is still open before publishing
             if not channel.is_open:
                 log.warning(
-                    f"Channel is closed, cannot publish status update for {entity_type} {entity_id}",
-                    method="",
+                    f"Channel is closed, cannot publish status update for {entity_type} {entity_id}"
                 )
                 return
 
@@ -38,12 +37,11 @@ class BaseGenerator(ABC):
                 ),
             )
             log.info(
-                f"Published status to {routing_key}: {payload.get('stage')}", method=""
+                f"Published status to {routing_key}: {payload.get('stage')}"
             )
         except Exception as e:
             log.error(
-                f"Failed to publish status update for {entity_type} {entity_id}: {e}",
-                method="",
+                f"Failed to publish status update for {entity_type} {entity_id}: {e}"
             )
 
     def _process_message(
@@ -65,12 +63,15 @@ class BaseGenerator(ABC):
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
             log.error(
                 f"Invalid message body, expecting a JSON-serialized UUID string. Got '{body}'. Error: {e}",
-                method=log_label,
+                extra={"method": log_label},
             )
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
 
-        log.info(f"Processing {log_label} request for ID: {obj_id}", method=log_label)
+        log.info(
+            f"Processing {log_label} request for ID: {obj_id}",
+            extra={"method": log_label},
+        )
 
         try:
             obj = (
@@ -82,7 +83,7 @@ class BaseGenerator(ABC):
             if not obj:
                 log.warning(
                     f"{log_label.capitalize()} with ID {obj_id} not found in database.",
-                    method=log_label,
+                    extra={"method": log_label},
                 )
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
@@ -91,7 +92,7 @@ class BaseGenerator(ABC):
 
             log.info(
                 f"Successfully processed and updated {log_label} ID: {obj_id}",
-                method=log_label,
+                extra={"method": log_label},
             )
 
             # Check if channel is still open before acking
@@ -100,14 +101,14 @@ class BaseGenerator(ABC):
             else:
                 log.warning(
                     f"Channel closed before ack for {log_label} ID: {obj_id}. Message may be redelivered.",
-                    method=log_label,
+                    extra={"method": log_label},
                 )
 
         except Exception as e:
             log.error(
                 f"Error during {log_label} processing for ID {obj_id}: {e}",
                 exc_info=True,
-                method=log_label,
+                extra={"method": log_label},
             )
             # Check if channel is still open before nacking
             if channel.is_open:
@@ -115,7 +116,7 @@ class BaseGenerator(ABC):
             else:
                 log.warning(
                     f"Channel closed before nack for {log_label} ID: {obj_id}. Message may be redelivered.",
-                    method=log_label,
+                    extra={"method": log_label},
                 )
 
     @abstractmethod

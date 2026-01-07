@@ -1,5 +1,5 @@
 import uuid
-import structlog
+import logging
 from typing import List, Dict, Any
 
 from abc import ABC
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from ..entity import Source, DocumentVector
 from ..services.ai_gateway_service import ai_gateway_service
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class DatabaseHelper(ABC):
@@ -30,7 +30,7 @@ class DatabaseHelper(ABC):
         """
         log.info(
             f"Performing vector search for query: '{query_text}' in selected sources",
-            method="_fetch_related_documents",
+            extra={"method": "_fetch_related_documents"},
         )
 
         try:
@@ -72,7 +72,7 @@ class DatabaseHelper(ABC):
 
             log.info(
                 f"Found {len(related_docs)} related documents",
-                method="_fetch_related_documents",
+                extra={"method": "_fetch_related_documents"},
             )
             return related_docs
 
@@ -80,7 +80,7 @@ class DatabaseHelper(ABC):
             log.error(
                 f"Error during vector search: {e}",
                 exc_info=True,
-                method="_fetch_related_documents",
+                extra={"method": "_fetch_related_documents"},
             )
             return []
 
@@ -99,7 +99,7 @@ class DatabaseHelper(ABC):
         """
         log.info(
             f"Fetching sources with vectors for selected sources",
-            method="_fetch_sources_with_vectors",
+            extra={"method": "_fetch_sources_with_vectors"},
         )
 
         sources = (
@@ -111,6 +111,6 @@ class DatabaseHelper(ABC):
 
         log.info(
             f"Found {len(sources)} sources for selected source IDs",
-            method="_fetch_sources_with_vectors",
+            extra={"method": "_fetch_sources_with_vectors"},
         )
         return sources

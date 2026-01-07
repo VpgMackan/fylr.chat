@@ -64,11 +64,13 @@ export class SearchDocumentsTool extends BaseTool {
    */
   private async generateQueryVariations(
     originalQuery: string,
+    userId?: string,
   ): Promise<string[]> {
     try {
       const response = await this.llmService.generate({
         prompt_type: 'multi_query',
         prompt_vars: { query: originalQuery },
+        ...(userId && { user_id: userId }),
       });
 
       // Parse the response - expect one query per line
@@ -166,7 +168,10 @@ export class SearchDocumentsTool extends BaseTool {
           `[SearchDocumentsTool] Using multi-query expansion for: "${args.query}"`,
         );
 
-        const queryVariations = await this.generateQueryVariations(args.query);
+        const queryVariations = await this.generateQueryVariations(
+          args.query,
+          context.userId,
+        );
         console.log(
           `[SearchDocumentsTool] Generated ${queryVariations.length} query variations`,
         );

@@ -14,6 +14,7 @@ import {
 import { Message as PrismaMessage } from '@prisma/client';
 
 import { sanitizeMessage } from 'src/utils/text-sanitizer';
+import { withSpan, setSpanAttributes } from 'src/common/telemetry/tracer';
 
 interface MessageWithThoughts extends MessageApiResponse {
   agentThoughts?: MessageApiResponse[];
@@ -80,22 +81,40 @@ export class MessageService {
     body: CreateMessageDto,
     conversationId: string,
   ): Promise<PrismaMessage> {
-    try {
-      if (typeof body.metadata === 'string') {
-        body.metadata = JSON.parse(body.metadata);
-      }
-    } catch (e) {
-      throw new InternalServerErrorException('Invalid JSON format in metadata');
-    }
+    return withSpan(
+      'message.create',
+      async (span) => {
+        try {
+          if (typeof body.metadata === 'string') {
+            body.metadata = JSON.parse(body.metadata);
+          }
+        } catch (e) {
+          throw new InternalServerErrorException(
+            'Invalid JSON format in metadata',
+          );
+        }
 
-    const message = await this.prisma.message.create({
-      data: {
-        conversationId,
-        ...body,
+        setSpanAttributes({
+          conversationId,
+          role: body.role,
+          hasContent: !!body.content,
+          hasToolCalls: !!body.toolCalls,
+          hasReasoning: !!body.reasoning,
+        });
+
+        const message = await this.prisma.message.create({
+          data: {
+            conversationId,
+            ...body,
+          },
+        });
+
+        setSpanAttributes({ messageId: message.id });
+
+        return sanitizeMessage(message) as PrismaMessage;
       },
-    });
-
-    return sanitizeMessage(message) as PrismaMessage;
+      { conversationId },
+    );
   }
 
   async getMessage(id: string): Promise<MessageApiResponse | null> {

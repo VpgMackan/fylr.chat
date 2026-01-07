@@ -1,5 +1,4 @@
 import numpy as np
-import structlog
 
 from abc import ABC
 
@@ -9,8 +8,6 @@ from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import normalize
 
 from ..entity import Source
-
-log = structlog.getLogger(__name__)
 
 
 class VectorHelper(ABC):

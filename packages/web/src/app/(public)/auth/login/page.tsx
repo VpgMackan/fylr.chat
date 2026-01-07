@@ -4,6 +4,7 @@ import axios from '@/utils/axios';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { captureEvent } from '../../../../../instrumentation-client';
 
 export default function LoginPage() {
   const t = useTranslations('pages.auth.login');
@@ -22,6 +23,10 @@ export default function LoginPage() {
         email,
         password,
       });
+
+      // Track login event (user will be identified by useAuth hook)
+      captureEvent('user_logged_in', { method: 'email' });
+
       if (document.referrer.includes('/auth/signup')) {
         router.push('/');
       } else {

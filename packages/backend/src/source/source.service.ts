@@ -13,6 +13,8 @@ import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { PermissionsService } from 'src/auth/permissions.service';
 import * as fs from 'fs/promises';
 import { VectorSearchResult } from 'src/ai/reranking.service';
+import { PosthogService } from 'src/posthog/posthog.service';
+import { withSpan, setSpanAttributes } from 'src/common/telemetry/tracer';
 
 @Injectable()
 export class SourceService {
@@ -24,6 +26,7 @@ export class SourceService {
     private readonly configService: ConfigService,
     private readonly rabbitMQService: RabbitMQService,
     private readonly permissionsService: PermissionsService,
+    private readonly posthogService: PosthogService,
   ) {
     const bucket = this.configService.get('S3_BUCKET_USER_FILE');
     if (!bucket) {
@@ -37,104 +40,131 @@ export class SourceService {
     libraryId: string,
     userId: string,
   ) {
-    // Use transaction to prevent race conditions when checking source limits
-    return await this.prisma.$transaction(
-      async (tx) => {
-        const library = await tx.library.findFirst({
-          where: { id: libraryId, userId },
+    return withSpan(
+      'source.create',
+      async (span) => {
+        setSpanAttributes({
+          userId,
+          libraryId,
+          fileName: file.originalname,
+          mimeType: file.mimetype,
+          fileSize: file.size,
         });
 
-        if (!library) {
-          await fs.unlink(file.path);
-          throw new NotFoundException(
-            `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
-          );
-        }
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const library = await tx.library.findFirst({
+              where: { id: libraryId, userId },
+            });
 
-        // Get user to check role
-        const user = await tx.user.findUnique({ where: { id: userId } });
-        if (!user) {
-          await fs.unlink(file.path);
-          throw new NotFoundException('User not found.');
-        }
+            if (!library) {
+              await fs.unlink(file.path);
+              throw new NotFoundException(
+                `Libary with ID "${libraryId}" not found or you do not have permission to access it.`,
+              );
+            }
 
-        // Check source count limit within transaction to prevent race conditions
-        const currentCount = await tx.source.count({ where: { libraryId } });
-        const limit = user.role === 'PRO' ? Infinity : 50; // FREE users: 50 sources per library
+            const user = await tx.user.findUnique({ where: { id: userId } });
+            if (!user) {
+              await fs.unlink(file.path);
+              throw new NotFoundException('User not found.');
+            }
 
-        if (currentCount >= limit) {
-          await fs.unlink(file.path);
-          throw new ForbiddenException(
-            'You have reached the maximum number of sources for this library. Please upgrade to add more.',
-          );
-        }
+            const currentCount = await tx.source.count({
+              where: { libraryId },
+            });
+            const limit = user.role === 'PRO' ? Infinity : 50;
 
-        // Check daily upload limit - if exceeded, allow deferred ingestion
-        let shouldDeferIngestion = false;
-        try {
-          await this.permissionsService.authorizeFeatureUsage(
-            userId,
-            'SOURCE_UPLOAD_DAILY',
-          );
-        } catch (error) {
-          if (error instanceof ForbiddenException) {
-            // Allow upload but defer ingestion
-            shouldDeferIngestion = true;
-          } else {
-            throw error;
-          }
-        }
+            setSpanAttributes({
+              userRole: user.role,
+              currentSourceCount: currentCount,
+              sourceLimit: limit,
+            });
 
-        const jobKey = uuidv4();
-        const s3Key = file.filename || file.originalname;
+            if (currentCount >= limit) {
+              await fs.unlink(file.path);
+              throw new ForbiddenException(
+                'You have reached the maximum number of sources for this library. Please upgrade to add more.',
+              );
+            }
 
-        try {
-          const buffer = await fs.readFile(file.path);
-          await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
-            'Content-Type': file.mimetype,
-          });
-        } catch (error) {
-          await fs.unlink(file.path);
-          throw error;
-        }
+            let shouldDeferIngestion = false;
+            try {
+              await this.permissionsService.authorizeFeatureUsage(
+                userId,
+                'SOURCE_UPLOAD_DAILY',
+              );
+            } catch (error) {
+              if (error instanceof ForbiddenException) {
+                shouldDeferIngestion = true;
+              } else {
+                throw error;
+              }
+            }
 
-        await fs.unlink(file.path);
+            setSpanAttributes({ deferredIngestion: shouldDeferIngestion });
 
-        const data: Prisma.SourceCreateInput = {
-          library: { connect: { id: libraryId } },
-          name: file.originalname,
-          mimeType: file.mimetype,
-          url: s3Key,
-          size: file.size,
-          jobKey,
-          status: shouldDeferIngestion ? 'PENDING' : 'QUEUED',
-          pendingIngestion: shouldDeferIngestion,
-        };
+            const jobKey = uuidv4();
+            const s3Key = file.filename || file.originalname;
 
-        const entry = await tx.source.create({ data });
+            try {
+              const buffer = await fs.readFile(file.path);
+              await this.s3Service.upload(this.s3Bucket, s3Key, buffer, {
+                'Content-Type': file.mimetype,
+              });
+            } catch (error) {
+              await fs.unlink(file.path);
+              throw error;
+            }
 
-        // Only queue for processing if not deferred
-        if (!shouldDeferIngestion) {
-          await this.rabbitMQService.publishFileProcessingJob({
-            sourceId: entry.id,
-            s3Key,
-            jobKey,
-            embeddingModel: library.defaultEmbeddingModel,
-          });
-        }
+            await fs.unlink(file.path);
 
-        return {
-          message: shouldDeferIngestion
-            ? 'File uploaded successfully. Processing will start when your daily limit resets or you can manually trigger ingestion.'
-            : 'File uploaded successfully and queued for processing.',
-          jobKey,
-          database: entry,
-          deferred: shouldDeferIngestion,
-        };
+            const data: Prisma.SourceCreateInput = {
+              library: { connect: { id: libraryId } },
+              name: file.originalname,
+              mimeType: file.mimetype,
+              url: s3Key,
+              size: file.size,
+              jobKey,
+              status: shouldDeferIngestion ? 'PENDING' : 'QUEUED',
+              pendingIngestion: shouldDeferIngestion,
+            };
+
+            const entry = await tx.source.create({ data });
+            setSpanAttributes({ sourceId: entry.id });
+
+            this.posthogService.capture(userId, 'source_uploaded', {
+              sourceId: entry.id,
+              libraryId,
+              mimeType: file.mimetype,
+              fileSize: file.size,
+              deferred: shouldDeferIngestion,
+            });
+
+            if (!shouldDeferIngestion) {
+              await this.rabbitMQService.publishFileProcessingJob({
+                sourceId: entry.id,
+                s3Key,
+                jobKey,
+                embeddingModel: library.defaultEmbeddingModel,
+              });
+            }
+
+            return {
+              message: shouldDeferIngestion
+                ? 'File uploaded successfully. Processing will start when your daily limit resets or you can manually trigger ingestion.'
+                : 'File uploaded successfully and queued for processing.',
+              jobKey,
+              database: entry,
+              deferred: shouldDeferIngestion,
+            };
+          },
+          {
+            timeout: 30000,
+          },
+        );
       },
-      {
-        timeout: 30000,
-      },
+      { userId, libraryId },
     );
   }
 

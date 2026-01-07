@@ -10,11 +10,11 @@ from .database import get_db_session
 from .generator_service import GeneratorService
 from .generators.base_generator import BaseGenerator
 
-from .logging_config import configure_logging
-import structlog
+import logging
+from .telemetry import setup_telemetry
 
-configure_logging(log_level="INFO", json_logs=False)
-log = structlog.getLogger(__name__)
+setup_telemetry(settings.otel_service_name)
+log = logging.getLogger(__name__)
 
 
 def on_message_callback(
@@ -29,7 +29,7 @@ def on_message_callback(
     """
     log.info(
         f"Received message with delivery tag {method.delivery_tag}",
-        method="on_message_callback",
+        extra={"method": "on_message_callback"},
     )
     try:
         with get_db_session() as db:
@@ -38,15 +38,15 @@ def on_message_callback(
         log.error(
             f"Unhandled exception in message callback: {e}",
             exc_info=True,
-            method="on_message_callback",
+            extra={"method": "on_message_callback"},
         )
         # Only nack if channel is still open
         if channel.is_open:
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         else:
             log.warning(
-                f"Channel closed during error handling. Message may be redelivered.",
-                method="on_message_callback",
+                "Channel closed during error handling. Message may be redelivered.",
+                extra={"method": "on_message_callback"},
             )
 
 
@@ -55,7 +55,7 @@ def main():
     Main entry point for the Generator service.
     Initializes services and starts consuming messages from RabbitMQ.
     """
-    log.info("Starting Generator service...", method="main")
+    log.info("Starting Generator service...", extra={"method": "main"})
 
     try:
         generator_service = GeneratorService()
@@ -97,7 +97,7 @@ def main():
             if not generator_class:
                 log.critical(
                     f"Could not find or load generator class for '{gen_name}'. Skipping.",
-                    method="main",
+                    extra={"method": "main"},
                 )
                 continue
 
@@ -118,7 +118,7 @@ def main():
             )
             log.info(
                 f"Declared queue '{queue_name}' with DLQ support",
-                method="main",
+                extra={"method": "main"},
             )
 
             on_message_with_generator = partial(
@@ -131,22 +131,22 @@ def main():
                 auto_ack=False,
             )
 
-        log.info("Waiting for messages. To exit press CTRL+C", method="main")
+        log.info("Waiting for messages. To exit press CTRL+C", extra={"method": "main"})
         channel.start_consuming()
 
     except pika.exceptions.AMQPConnectionError as e:
-        log.critical(f"Failed to connect to RabbitMQ: {e}", method="main")
+        log.critical(f"Failed to connect to RabbitMQ: {e}", extra={"method": "main"})
         sys.exit(1)
     except KeyboardInterrupt:
-        log.info("Service stopped by user.", method="main")
+        log.info("Service stopped by user.", extra={"method": "main"})
     except Exception as e:
         log.critical(
             f"An unhandled error occurred during startup: {e}",
             exc_info=True,
-            method="main",
+            extra={"method": "main"},
         )
         sys.exit(1)
     finally:
         if "connection" in locals() and connection.is_open:
             connection.close()
-        log.info("Generator service shut down.", method="main")
+        log.info("Generator service shut down.", extra={"method": "main"})

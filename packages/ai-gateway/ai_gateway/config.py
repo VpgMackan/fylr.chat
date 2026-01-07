@@ -5,6 +5,7 @@ from typing import Optional
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    environment: str = "development"
     ai_gateway_port: int
 
     openai_api_key: Optional[str] = None
@@ -16,13 +17,16 @@ class Settings(BaseSettings):
     elevenlabs_api_key: Optional[str] = None
     elevenlabs_api_url: str = "https://api.elevenlabs.io"
 
-    groq_api_key: Optional[str] = None
-    groq_api_url: str = "https://api.groq.com/openai/v1"
-
     ollama_base_url: str = "http://localhost:11434/v1"
+
+    posthog_api_key: Optional[str] = None
+    posthog_host: str = "https://app.posthog.com"
 
     default_embedding_provider: str = "jina"
     default_embedding_model: str = "jina-clip-v2"
+
+    otel_service_name: str = "ai-gateway"
+    otel_exporter_otlp_endpoint: str = "localhost:4317"
 
 
 settings = Settings()

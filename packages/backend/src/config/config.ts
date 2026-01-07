@@ -62,6 +62,14 @@ class EnvironmentVariables {
 
   @IsString()
   TAVILY_API_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  POSTHOG_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  POSTHOG_HOST?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

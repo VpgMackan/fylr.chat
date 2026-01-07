@@ -1,16 +1,19 @@
 import uvicorn
+import logging
 
 from fastapi import FastAPI
-
-from .logging_config import configure_logging
-import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 
+from .telemetry import setup_telemetry, instrument_app
 from .config import settings
 from .routes.chat import router as chat_router
 from .routes.embedding import router as embedding_router
 from .routes.tts import router as tts_router
 from .routes.rerank import router as rerank_router
+
+# Setup telemetry before app creation
+setup_telemetry(settings.otel_service_name)
+log = logging.getLogger(__name__)
 
 app = FastAPI(
     title="AI Gateway",
@@ -18,11 +21,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add middleware and instrumentation
 app.add_middleware(CorrelationIdMiddleware)
-
-
-configure_logging(log_level="INFO", json_logs=False)
-log = structlog.get_logger()
+instrument_app(app)
 
 # --- API Endpoints ---
 app.include_router(chat_router)

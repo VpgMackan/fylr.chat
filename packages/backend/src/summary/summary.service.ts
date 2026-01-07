@@ -8,6 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSummaryDto } from '@fylr/types';
 import { RabbitMQService } from 'src/utils/rabbitmq.service';
 import { PermissionsService } from 'src/auth/permissions.service';
+import { PosthogService } from 'src/posthog/posthog.service';
 
 @Injectable()
 export class SummaryService {
@@ -15,6 +16,7 @@ export class SummaryService {
     private prisma: PrismaService,
     private readonly rabbitMQService: RabbitMQService,
     private readonly permissionsService: PermissionsService,
+    private readonly posthogService: PosthogService,
   ) {}
 
   async getSummariesByUserId(
@@ -120,6 +122,13 @@ export class SummaryService {
     });
 
     await this.rabbitMQService.sendToQueue('summary-generator', newSummary.id);
+
+    // Capture PostHog event for summary generation request
+    this.posthogService.capture(userId, 'summary_generation_requested', {
+      summaryId: newSummary.id,
+      episodeCount: episodes.length,
+      sourceCount: allSourceIds.size,
+    });
 
     return newSummary;
   }

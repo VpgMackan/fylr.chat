@@ -1,11 +1,11 @@
-import structlog
+import logging
 from typing import Dict, Type
 
 from .generators.base_generator import BaseGenerator
 from .generators.summary.summary_generator import SummaryGenerator
 from .generators.podcast.podcast_generator import PodcastGenerator
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class GeneratorService:

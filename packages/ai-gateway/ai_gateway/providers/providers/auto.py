@@ -1,12 +1,14 @@
-import structlog
+import logging
 from typing import List, Dict, Any, AsyncGenerator, Tuple
+from opentelemetry import trace
 
 from ..base import BaseProvider
 from ...prompts.registry import PromptNotFound
 from ...prompts import prompt_registry
 from ...schemas import ChatCompletionRequest
 
-log = structlog.get_logger()
+log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class AutoProvider(BaseProvider):
@@ -45,10 +47,12 @@ class AutoProvider(BaseProvider):
 
                 log.info(
                     "AutoProvider selected model based on prompt meta",
-                    prompt=request.prompt_type,
-                    complexity=complexity,
-                    provider=provider_name,
-                    model=model_name,
+                    extra={
+                        "prompt": request.prompt_type,
+                        "complexity": complexity,
+                        "provider": provider_name,
+                        "model": model_name,
+                    },
                 )
                 return provider_name, model_name, self.providers_registry[provider_name]
 
@@ -58,8 +62,10 @@ class AutoProvider(BaseProvider):
         provider_name, model_name = MODEL_MAP["default"]
         log.info(
             "AutoProvider using fallback model",
-            provider=provider_name,
-            model=model_name,
+            extra={
+                "provider": provider_name,
+                "model": model_name,
+            },
         )
         return provider_name, model_name, self.providers_registry[provider_name]
 
@@ -69,10 +75,14 @@ class AutoProvider(BaseProvider):
         """
         Selects a model and delegates the non-streaming call.
         """
-        provider_name, model_name, provider_instance = self._select_model(request)
-        request.model = model_name
+        with tracer.start_as_current_span("auto_generate_text") as span:
+            provider_name, model_name, provider_instance = self._select_model(request)
+            request.model = model_name
 
-        return provider_instance.generate_text(messages=messages, request=request)
+            span.set_attribute("selected_provider", provider_name)
+            span.set_attribute("selected_model", model_name)
+
+            return provider_instance.generate_text(messages=messages, request=request)
 
     async def generate_text_stream(
         self, messages: List[Dict[str, Any]], request: ChatCompletionRequest
@@ -80,10 +90,14 @@ class AutoProvider(BaseProvider):
         """
         Selects a model and delegates the streaming call.
         """
-        provider_name, model_name, provider_instance = self._select_model(request)
-        request.model = model_name
+        with tracer.start_as_current_span("auto_generate_text_stream") as span:
+            provider_name, model_name, provider_instance = self._select_model(request)
+            request.model = model_name
 
-        async for chunk in provider_instance.generate_text_stream(
-            messages=messages, request=request
-        ):
-            yield chunk
+            span.set_attribute("selected_provider", provider_name)
+            span.set_attribute("selected_model", model_name)
+
+            async for chunk in provider_instance.generate_text_stream(
+                messages=messages, request=request
+            ):
+                yield chunk

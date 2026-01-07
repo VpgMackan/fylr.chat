@@ -7,12 +7,14 @@ import requests
 from botocore.config import Config
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+import logging
 
 # Load environment variables BEFORE importing database module
 load_dotenv()
 
 from .handlers import HandlerManager
 from .database import get_db_session, Source, DocumentVector
+from .telemetry import setup_telemetry
 
 ROUTING_KEYS_STR = os.getenv("INGESTOR_ROUTING_KEYS")
 QUEUE_NAME = os.getenv("INGESTOR_QUEUE_NAME")
@@ -32,6 +34,10 @@ S3_REGION = os.getenv("S3_REGION")
 S3_BUCKET_USER_FILE = os.getenv("S3_BUCKET_USER_FILE")
 
 AI_GATEWAY_URL = os.getenv("AI_GATEWAY_URL")
+
+SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "pdf-ingestor")
+setup_telemetry(SERVICE_NAME)
+logger = logging.getLogger(__name__)
 
 if not all([ROUTING_KEYS_STR, QUEUE_NAME, S3_BUCKET_USER_FILE, AI_GATEWAY_URL]):
     sys.exit("Error: Missing one or more required environment variables.")
@@ -64,7 +70,15 @@ def publish_status(channel, job_key, stage, message, error=False):
         body=json.dumps({"eventName": "jobStatusUpdate", "payload": payload}),
         properties=pika.BasicProperties(delivery_mode=2),
     )
-    print(f"[{job_key}] Status: {stage} - {message}")
+    logger.info(
+        "Job status update",
+        extra={
+            "job_key": job_key,
+            "stage": stage,
+            "status_message": message,
+            "error": error,
+        },
+    )
 
 
 def get_embeddings(chunks: list[str], model: str) -> list[list[float]]:
@@ -96,9 +110,9 @@ def main():
 
     for rk in ROUTING_KEYS:
         channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=rk)
-        print(f"Binding queue '{QUEUE_NAME}' to routing key '{rk}'")
+        logger.info("Queue bound", extra={"queue": QUEUE_NAME, "routing_key": rk})
 
-    print(f"PDF Ingestor online. Listening on queue '{QUEUE_NAME}'...")
+    logger.info("Ingestor online", extra={"queue": QUEUE_NAME})
 
     def callback(ch, method, properties, body):
         message = json.loads(body)
@@ -171,8 +185,9 @@ def main():
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         except Exception as e:
-            print(
-                f"Error processing message for source {source_id}: {e}", file=sys.stderr
+            logger.exception(
+                "Error processing message",
+                extra={"source_id": source_id, "error": str(e)},
             )
             publish_status(ch, job_key, "FAILED", str(e), error=True)
             with get_db_session() as db:

@@ -1,4 +1,4 @@
-import structlog
+import logging
 import json
 import re
 import os
@@ -27,7 +27,7 @@ from ..vector_helper import VectorHelper
 from ..database_helper import DatabaseHelper
 from ...services.ai_gateway_service import ai_gateway_service
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
@@ -89,7 +89,7 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             except Exception as e:
                 log.error(
                     f"Error processing audio file {file_path}: {e}",
-                    method="_combine_audio_chunks",
+                    extra={"method": "_combine_audio_chunks"},
                 )
         buffer = io.BytesIO()
         podcast.export(buffer, format="wav")
@@ -111,7 +111,9 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
             log.info(f"Successfully uploaded audio to s3://{bucket}/{key}")
             return key
         except (BotoCoreError, ClientError) as e:
-            log.error(f"Failed to upload audio to S3: {e}", method="_upload_to_s3")
+            log.error(
+                f"Failed to upload audio to S3: {e}", extra={"method": "_upload_to_s3"}
+            )
             raise
 
     def _generate_segment_summaries(
@@ -184,7 +186,7 @@ class PodcastGenerator(BaseGenerator, DatabaseHelper, VectorHelper):
     def _create_podcast(self, db: Session, channel: BlockingChannel, podcast: Podcast):
         log.info(
             f"Generating podcast for '{podcast.title}' (ID: {podcast.id})",
-            method="_create_podcast",
+            extra={"method": "_create_podcast"},
         )
         self._publish_status(
             channel,

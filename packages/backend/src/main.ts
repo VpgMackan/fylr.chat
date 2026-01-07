@@ -1,11 +1,13 @@
+import './tracing';
+
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import * as cookieParser from 'cookie-parser';
-import * as csurf from 'csurf';
+import cookieParser from 'cookie-parser';
+import csurf from 'csurf';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
-
+import { OtelLoggerService } from './common/logger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
@@ -18,10 +20,16 @@ async function bootstrap() {
       origin: true,
       credentials: true,
     },
+    bufferLogs: true,
   });
 
+  // Use custom OpenTelemetry-integrated logger
+  const otelLogger = app.get(OtelLoggerService);
+  otelLogger.setContext('NestApplication');
+  app.useLogger(otelLogger);
+
   const httpAdapterHost = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));
+  app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost, otelLogger));
 
   app.use(helmet());
   app.use(cookieParser());

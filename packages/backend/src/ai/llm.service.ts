@@ -91,12 +91,14 @@ type TemplatePayload = {
   reasoning?: ReasoningConfig | boolean;
   provider?: string;
   model?: string;
+  user_id?: string;
 };
 
 type MessagePayload = {
   messages: ChatMessage[];
   tools?: ToolDefinition[];
   reasoning?: ReasoningConfig | boolean;
+  user_id?: string;
 };
 
 @Injectable()
@@ -173,6 +175,7 @@ export class LLMService {
     messages: ChatMessage[],
     tools: ToolDefinition[],
     promptType = 'agentic_system',
+    userId?: string,
   ): Promise<ChatCompletionResponse> {
     const payload = {
       provider: 'auto',
@@ -183,6 +186,7 @@ export class LLMService {
 
       tools,
       stream: false,
+      ...(userId && { user_id: userId }),
     };
     const response = (await this._fetchChatCompletionFromAiGateway(
       payload,
