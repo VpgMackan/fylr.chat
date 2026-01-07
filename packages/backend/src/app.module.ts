@@ -4,6 +4,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
+import { OtelLoggerModule } from './common/logger';
 
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -29,6 +30,7 @@ import { PosthogModule } from './posthog/posthog.module';
         limit: 120,
       },
     ]),
+    OtelLoggerModule,
     PrismaModule,
     UsersModule,
     AuthModule,
