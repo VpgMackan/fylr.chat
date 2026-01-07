@@ -87,6 +87,71 @@ class ModelsRegistry:
                 return m
         return None
 
+    def set_default_model(self, provider: str, model: str) -> bool:
+        """Set a model as the default and save to YAML file."""
+        target_model = self.get_model(provider, model)
+        if not target_model:
+            log.error(
+                f"Model not found: {provider}/{model}",
+                extra={"provider": provider, "model": model},
+            )
+            return False
+
+        # Remove default from all models
+        for m in self.models:
+            m["isDefault"] = False
+
+        # Set the target model as default
+        target_model["isDefault"] = True
+        self.default_model = self._build_model_string(target_model)
+
+        # Save to YAML file
+        self._save_models()
+        log.info(
+            f"Default model changed to {provider}/{model}",
+            extra={"provider": provider, "model": model, "fullModel": self.default_model},
+        )
+        return True
+
+    def deprecate_model(
+        self, provider: str, model: str, deprecation_date: str
+    ) -> bool:
+        """Mark a model as deprecated with a deprecation date and save to YAML file."""
+        target_model = self.get_model(provider, model)
+        if not target_model:
+            log.error(
+                f"Model not found: {provider}/{model}",
+                extra={"provider": provider, "model": model},
+            )
+            return False
+
+        target_model["isDeprecated"] = True
+        target_model["deprecationDate"] = deprecation_date
+
+        # Save to YAML file
+        self._save_models()
+        log.info(
+            f"Model deprecated: {provider}/{model}",
+            extra={
+                "provider": provider,
+                "model": model,
+                "deprecationDate": deprecation_date,
+            },
+        )
+        return True
+
+    def _save_models(self):
+        """Save the current models to the YAML configuration file."""
+        config_path = Path(__file__).parent / "config" / "models.yaml"
+
+        try:
+            config = {"models": self.models}
+            with open(config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+            log.info(f"Models saved to {config_path}")
+        except Exception as e:
+            log.error(f"Error saving models to {config_path}: {e}")
+
 
 # Initialize the global registry
 models_registry = ModelsRegistry()

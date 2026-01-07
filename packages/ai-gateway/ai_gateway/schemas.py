@@ -114,3 +114,18 @@ class EmbeddingResponse(BaseModel):
     provider: str
     model: str
     usage: Dict[str, int]
+
+
+class SetDefaultModelRequest(BaseModel):
+    """Request to set a model as the default."""
+
+    provider: str
+    model: str
+
+
+class DeprecateModelRequest(BaseModel):
+    """Request to deprecate a model."""
+
+    provider: str
+    model: str
+    deprecationDate: str  # ISO 8601 format

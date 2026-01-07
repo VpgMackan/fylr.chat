@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException, status
 from ..schemas import (
     EmbeddingRequest,
     EmbeddingResponse,
+    SetDefaultModelRequest,
+    DeprecateModelRequest,
 )
 
 from ai_gateway.providers import providers
@@ -72,4 +74,76 @@ async def get_available_models():
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error retrieving available models: {e}",
+            )
+
+
+@router.patch("/v1/embeddings/models/default")
+async def set_default_model(request: SetDefaultModelRequest):
+    """Admin endpoint to set the default embedding model."""
+    with tracer.start_as_current_span("set_default_model"):
+        try:
+            success = models_registry.set_default_model(request.provider, request.model)
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Model not found: {request.provider}/{request.model}",
+                )
+
+            models_data = models_registry.get_all_models()
+            log.info(
+                "Default model updated",
+                extra={
+                    "provider": request.provider,
+                    "model": request.model,
+                    "newDefault": models_data["default"],
+                },
+            )
+            return models_data
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.error(
+                "Error setting default model",
+                extra={"error": str(e), "provider": request.provider},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating default model: {e}",
+            )
+
+
+@router.patch("/v1/embeddings/models/deprecate")
+async def deprecate_model(request: DeprecateModelRequest):
+    """Admin endpoint to deprecate a model with a deprecation date."""
+    with tracer.start_as_current_span("deprecate_model"):
+        try:
+            success = models_registry.deprecate_model(
+                request.provider, request.model, request.deprecationDate
+            )
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Model not found: {request.provider}/{request.model}",
+                )
+
+            models_data = models_registry.get_all_models()
+            log.info(
+                "Model deprecated",
+                extra={
+                    "provider": request.provider,
+                    "model": request.model,
+                    "deprecationDate": request.deprecationDate,
+                },
+            )
+            return models_data
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.error(
+                "Error deprecating model",
+                extra={"error": str(e), "provider": request.provider},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deprecating model: {e}",
             )
