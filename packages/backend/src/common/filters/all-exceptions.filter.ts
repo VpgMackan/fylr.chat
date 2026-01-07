@@ -10,6 +10,7 @@ import { HttpAdapterHost } from '@nestjs/core';
 import e, { Request } from 'express';
 import { UserPayload } from '@fylr/types';
 import { OtelLoggerService } from '../logger';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 interface RequestWithUser extends Request {
   user?: UserPayload;
@@ -35,6 +36,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    // Record exception on active span for better observability
+    const span = trace.getActiveSpan();
+    if (span) {
+      span.recordException(
+        exception instanceof Error ? exception : new Error(String(exception)),
+      );
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message:
+          exception instanceof Error ? exception.message : String(exception),
+      });
+    }
 
     if (
       exception instanceof HttpException &&
