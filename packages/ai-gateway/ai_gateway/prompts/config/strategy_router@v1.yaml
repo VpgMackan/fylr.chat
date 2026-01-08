@@ -40,7 +40,7 @@ template: |
   **USER QUERY:**
   {{ query }}
 
-  **INSTRUCTIONS:**
+  **INSTRUCTIONS:**w
   1. Analyze the query's complexity, scope, and requirements
   2. Consider the semantic intent, not just keywords
   3. Respond with EXACTLY ONE WORD: FAST, NORMAL, or THOROUGH

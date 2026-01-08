@@ -87,15 +87,18 @@ export class LibraryService {
     const canCreate = await this.permissionsService.canCreateLibrary(
       data.userId,
     );
-    data.defaultEmbeddingModel =
-      await this.vectorService.getDefaultEmbeddingModel();
+    const newData = {
+      defaultEmbeddingModel:
+        await this.vectorService.getDefaultEmbeddingModel(),
+      ...data,
+    };
 
     if (!canCreate) {
       throw new ForbiddenException(
         'You have reached the maximum number of libraries for your plan. Please upgrade to create more.',
       );
     }
-    return await this.prisma.library.create({ data });
+    return await this.prisma.library.create({ data: newData });
   }
 
   async updateLibrary(
