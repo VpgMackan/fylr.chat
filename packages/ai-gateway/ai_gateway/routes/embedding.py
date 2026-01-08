@@ -17,14 +17,46 @@ log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
+def parse_full_model(full_model: str) -> tuple[str, str]:
+    """
+    Parse the embedding model format: timestamp@version@provider/model.
+    Returns (provider, model) or raises ValueError if invalid.
+    """
+    parts = full_model.split("@")
+    if len(parts) != 3:
+        raise ValueError(
+            "Invalid fullModel format. Expected timestamp@version@provider/model."
+        )
+
+    provider_model = parts[2]
+    if "/" not in provider_model:
+        raise ValueError(
+            "Invalid fullModel format. provider/model section missing '/'."
+        )
+
+    provider, model = provider_model.split("/", 1)
+    return provider, model
+
+
 @router.post("/v1/embeddings", response_model=EmbeddingResponse)
 async def create_embedding(request: EmbeddingRequest):
     provider_name = request.provider or settings.default_embedding_provider
     model_name = request.model or settings.default_embedding_model
 
+    if request.fullModel:
+        try:
+            provider_name, model_name = parse_full_model(request.fullModel)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
     with tracer.start_as_current_span("create_embedding") as span:
         span.set_attribute("provider", provider_name)
         span.set_attribute("model", model_name)
+        if request.fullModel:
+            span.set_attribute("full_model", request.fullModel)
         input_count = len(request.input) if isinstance(request.input, list) else 1
         span.set_attribute("input_count", input_count)
 
@@ -33,6 +65,7 @@ async def create_embedding(request: EmbeddingRequest):
             extra={
                 "provider": provider_name,
                 "model": model_name,
+                "full_model": request.fullModel,
                 "input_count": input_count,
             },
         )

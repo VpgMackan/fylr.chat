@@ -81,11 +81,11 @@ def publish_status(channel, job_key, stage, message, error=False):
     )
 
 
-def get_embeddings(chunks: list[str], model: str) -> list[list[float]]:
-    """Calls the AI Gateway to get embeddings."""
+def get_embeddings(chunks: list[str], embedding_model: str) -> list[list[float]]:
+    """Calls the AI Gateway passing the full model string as-is."""
     response = requests.post(
         f"{AI_GATEWAY_URL}/v1/embeddings",
-        json={"provider": "jina", "model": model, "input": chunks},
+        json={"fullModel": embedding_model, "input": chunks},
     )
     response.raise_for_status()
     return [item["embedding"] for item in response.json()["data"]]
@@ -119,7 +119,6 @@ def main():
         source_id = message.get("sourceId")
         s3_key = message.get("s3Key")
         job_key = message.get("jobKey")
-        embedding_model = message.get("embeddingModel")
 
         try:
             publish_status(ch, job_key, "STARTING", "Processing started.")
@@ -149,7 +148,11 @@ def main():
                 ch, job_key, "VECTORIZING", f"Split text into {len(chunks)} chunks."
             )
 
-            # 5. Get Embeddings
+            # 5. Get Embeddings (send full model string directly)
+            embedding_model = message.get("embeddingModel")
+            if not embedding_model:
+                raise ValueError("embeddingModel not provided in message")
+
             embeddings = get_embeddings(chunks, embedding_model)
             if len(embeddings) != len(chunks):
                 raise Exception("Mismatch between number of chunks and embeddings.")

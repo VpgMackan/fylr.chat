@@ -104,6 +104,7 @@ class ChatCompletionResponse(BaseModel):
 class EmbeddingRequest(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
+    fullModel: Optional[str] = None  # Format: timestamp@version@provider/model
     input: Union[str, List[str]]
     options: Dict[str, Any] = Field(default_factory=dict)
 
