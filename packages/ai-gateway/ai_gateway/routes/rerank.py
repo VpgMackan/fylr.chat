@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from ..providers import get_provider
+from ..providers import get_embedding_provider
 from ..config import settings
 
 log = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ async def rerank(request: RerankRequest):
                 return RerankResponse(model=request.model, results=[])
 
             # Get the Jina provider for reranking
-            provider = get_provider("jina")
+            provider = get_embedding_provider("jina")
 
             # Use the provider's rerank method
             rerank_response = provider.rerank(

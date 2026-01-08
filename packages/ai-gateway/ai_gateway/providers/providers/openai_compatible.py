@@ -5,7 +5,7 @@ from posthog.ai.openai import OpenAI, AsyncOpenAI
 from typing import List, Dict, Any, AsyncGenerator
 from opentelemetry import trace
 
-from ..base import BaseProvider
+from ..base import GeneralProvider
 from ...schemas import ChatCompletionRequest
 from ...config import settings
 
@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class OpenaiCompatibleProvider(BaseProvider):
+class OpenaiCompatibleProvider(GeneralProvider):
     def __init__(self, api_key, base_url):
         self.posthog = Posthog(
             settings.posthog_api_key,

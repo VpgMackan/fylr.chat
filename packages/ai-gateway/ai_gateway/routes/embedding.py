@@ -8,8 +8,7 @@ from ..schemas import (
     DeprecateModelRequest,
 )
 
-from ai_gateway.providers import providers
-from ..config import settings
+from ai_gateway.providers import get_embedding_provider
 from ..models_registry import models_registry
 
 router = APIRouter()
@@ -40,8 +39,8 @@ def parse_full_model(full_model: str) -> tuple[str, str]:
 
 @router.post("/v1/embeddings", response_model=EmbeddingResponse)
 async def create_embedding(request: EmbeddingRequest):
-    provider_name = request.provider or settings.default_embedding_provider
-    model_name = request.model or settings.default_embedding_model
+    provider_name = request.provider
+    model_name = request.model
 
     if request.fullModel:
         try:
@@ -51,6 +50,18 @@ async def create_embedding(request: EmbeddingRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
             )
+
+    if not provider_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provider is required for embedding requests.",
+        )
+
+    if not model_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Model is required for embedding requests.",
+        )
 
     with tracer.start_as_current_span("create_embedding") as span:
         span.set_attribute("provider", provider_name)
@@ -71,7 +82,17 @@ async def create_embedding(request: EmbeddingRequest):
         )
 
         try:
-            response = providers[provider_name].generate_embeddings(
+            provider = get_embedding_provider(provider_name)
+        except ValueError as e:
+            span.set_attribute("error", True)
+            span.record_exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+
+        try:
+            response = provider.generate_embeddings(
                 input_text=request.input, model=model_name, options=request.options
             )
             log.info(

@@ -22,8 +22,8 @@ from ..schemas import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
-from ..providers.base import BaseProvider
-from ai_gateway.providers import providers
+from ..providers.base import GeneralProvider
+from ai_gateway.providers import general_providers
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ tracer = trace.get_tracer(__name__)
 
 
 async def stream_provider_response(
-    provider: BaseProvider, request: ChatCompletionRequest, messages_dict: list
+    provider: GeneralProvider, request: ChatCompletionRequest, messages_dict: list
 ) -> AsyncGenerator[str, None]:
     """
     Calls the provider's streaming method and formats the output as SSE.
@@ -160,13 +160,13 @@ async def create_chat_completion(request: ChatCompletionRequest):
         if request.stream:
             return StreamingResponse(
                 stream_provider_response(
-                    providers[request.provider], request, messages_dict
+                    general_providers[request.provider], request, messages_dict
                 ),
                 media_type="text/event-stream",
             )
         else:
             try:
-                response_data = providers[request.provider].generate_text(
+                response_data = general_providers[request.provider].generate_text(
                     messages=messages_dict, request=request
                 )
 

@@ -1,6 +1,6 @@
 models:
-  - provider: jina
-    model: jina-clip-v2
+  - provider: ollama
+    model: qwen-embedding-4b
     version: "1.0"
     timestamp: "2026-01-08T20:00:00Z"
     dimensions: 1024
@@ -8,8 +8,8 @@ models:
     isDeprecated: false
     deprecationDate: null
 
-  - provider: ollama
-    model: qwen-embedding-4b
+  - provider: jina
+    model: jina-clip-v2
     version: "1.0"
     timestamp: "2026-01-07T20:00:00Z"
     dimensions: 1024
