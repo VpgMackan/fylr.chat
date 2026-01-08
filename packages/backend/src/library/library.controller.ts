@@ -46,6 +46,11 @@ export class LibraryController {
     return this.libraryService.listUserLibraries(req.user.id);
   }
 
+  @Get('requiring-migration')
+  getLibrariesRequiringMigration(@Request() req: RequestWithUser) {
+    return this.libraryService.getLibrariesRequiringMigration(req.user.id);
+  }
+
   @Get('/:id')
   getLibraryById(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.libraryService.findOneById(id, req.user.id);
@@ -82,5 +87,10 @@ export class LibraryController {
   @Delete('/:id')
   deleteLibraryById(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.libraryService.deleteLibrary(id, req.user.id);
+  }
+
+  @Post('/:id/update-model')
+  updateLibraryModel(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.libraryService.updateModel(id, req.user.id);
   }
 }
