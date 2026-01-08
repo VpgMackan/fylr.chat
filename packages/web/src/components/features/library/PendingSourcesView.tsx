@@ -115,10 +115,10 @@ export default function PendingSourcesView() {
                 Daily Upload Usage
               </h3>
               <p className="text-sm text-gray-600">
-                {stats.usage.dailySourceUploads} of{' '}
-                {stats.limits.dailySourceUploads === Infinity
+                {stats.usage.SOURCE_UPLOAD_DAILY} of{' '}
+                {stats.limits.features.SOURCE_UPLOAD_DAILY === Infinity
                   ? 'unlimited'
-                  : stats.limits.dailySourceUploads}{' '}
+                  : stats.limits.features.SOURCE_UPLOAD_DAILY}{' '}
                 uploads used today
               </p>
             </div>
@@ -232,8 +232,9 @@ export default function PendingSourcesView() {
                         disabled={
                           processingIds.has(source.id) ||
                           (stats
-                            ? stats.usage.dailySourceUploads >=
-                              stats.limits.dailySourceUploads
+                            ? (stats.usage.SOURCE_UPLOAD_DAILY ?? 0) >=
+                              (stats.limits.features.SOURCE_UPLOAD_DAILY ??
+                                Infinity)
                             : false)
                         }
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-sm transition-colors"
@@ -247,8 +248,9 @@ export default function PendingSourcesView() {
                             Processing...
                           </>
                         ) : stats &&
-                          stats.usage.dailySourceUploads >=
-                            stats.limits.dailySourceUploads ? (
+                          (stats.usage.SOURCE_UPLOAD_DAILY ?? 0) >=
+                            (stats.limits.features.SOURCE_UPLOAD_DAILY ??
+                              Infinity) ? (
                           <>
                             <Icon icon="mdi:lock" className="w-4 h-4" />
                             Limit Reached

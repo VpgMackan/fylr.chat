@@ -7,12 +7,14 @@ import axios from '@/utils/axios';
 interface SidebarActionsProps {
   onCreateChat?: () => void;
   onCreateContent?: () => void;
+  onManageMigrations?: () => void;
   onSelectLibrary?: () => void;
 }
 
 export default function SidebarActions({
   onCreateChat,
   onCreateContent,
+  onManageMigrations,
   onSelectLibrary,
 }: SidebarActionsProps) {
   const [pendingCount, setPendingCount] = useState(0);
@@ -47,6 +49,12 @@ export default function SidebarActions({
         name=""
         icon="heroicons-solid:sparkles"
         onClick={onCreateContent}
+        variant="secondary"
+      />
+      <Button
+        name=""
+        icon="mdi:database-refresh"
+        onClick={onManageMigrations}
         variant="secondary"
       />
       {pendingCount > 0 && (

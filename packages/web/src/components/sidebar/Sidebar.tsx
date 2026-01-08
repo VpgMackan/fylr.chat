@@ -9,6 +9,7 @@ import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
 import CreateContentModal from '../modals/CreateContentModal';
 import SettingsModal from '../modals/SettingsModal';
+import MigrationModal from '../features/library/MigrationModal';
 import { useUser } from '@/contexts/UserContext';
 import {
   getConversations,
@@ -70,6 +71,7 @@ export default function Sidebar({ selectedId }: SidebarProps) {
   const { userRole } = useUser();
   const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [showMigrations, setShowMigrations] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -279,12 +281,17 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
       />
+      <MigrationModal
+        isOpen={showMigrations}
+        onClose={() => setShowMigrations(false)}
+      />
       <div className="flex flex-row w-96">
         {/* Narrow Navigation Sidebar */}
         <div className="bg-gradient-to-b from-gray-50 to-gray-100 p-2 flex flex-col h-full shadow-lg w-20">
           <SidebarActions
             onCreateChat={onCreateChat}
             onCreateContent={() => setCreateContentModalOpen(true)}
+            onManageMigrations={() => setShowMigrations(true)}
           />
 
           <hr className="border-gray-300 my-3" />
