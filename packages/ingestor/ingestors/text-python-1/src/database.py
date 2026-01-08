@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Integer,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
@@ -25,7 +26,7 @@ class DocumentVector(Base):
     file_id = Column(String, ForeignKey("Sources.id"), nullable=False)
     embedding = Column(PgVector(1024))
     content = Column(Text)
-    chunk_index = Column(Integer)
+    chunk_index = Column(Integer, name="chunk_index")
 
     source = relationship("Source", back_populates="vectors")
 
@@ -45,6 +46,11 @@ class Source(Base):
     ingestor_type = Column(String, nullable=True, name="ingestorType")
     ingestor_version = Column(String, nullable=True, name="ingestorVersion")
 
+    pending_ingestion = Column(Boolean, default=False, name="pending_ingestion")
+    reingestion_status = Column(String, nullable=True, name="reingestionStatus")
+    reingestion_started_at = Column(DateTime, nullable=True, name="reingestionStartedAt")
+    reingestion_completed_at = Column(DateTime, nullable=True, name="reingestionCompletedAt")
+
     vectors = relationship("DocumentVector", back_populates="source")
     library = relationship("Library", back_populates="sources")
 
@@ -59,6 +65,10 @@ class Library(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     tags = Column(ARRAY(String))
     title = Column(String, nullable=False)
+
+    default_embedding_model = Column(String, nullable=False, name="default_embedding_model")
+    migration_status = Column(String, nullable=True, name="migrationStatus")
+    reingestion_started_at = Column(DateTime, nullable=True, name="reingestionStartedAt")
 
     sources = relationship("Source", back_populates="library")
 

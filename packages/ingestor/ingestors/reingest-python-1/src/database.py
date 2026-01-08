@@ -48,8 +48,12 @@ class Source(Base):
 
     pending_ingestion = Column(Boolean, default=False, name="pending_ingestion")
     reingestion_status = Column(String, nullable=True, name="reingestionStatus")
-    reingestion_started_at = Column(DateTime, nullable=True, name="reingestionStartedAt")
-    reingestion_completed_at = Column(DateTime, nullable=True, name="reingestionCompletedAt")
+    reingestion_started_at = Column(
+        DateTime, nullable=True, name="reingestionStartedAt"
+    )
+    reingestion_completed_at = Column(
+        DateTime, nullable=True, name="reingestionCompletedAt"
+    )
 
     vectors = relationship("DocumentVector", back_populates="source")
     library = relationship("Library", back_populates="sources")
@@ -66,9 +70,13 @@ class Library(Base):
     tags = Column(ARRAY(String))
     title = Column(String, nullable=False)
 
-    default_embedding_model = Column(String, nullable=False, name="default_embedding_model")
+    default_embedding_model = Column(
+        String, nullable=False, name="default_embedding_model"
+    )
     migration_status = Column(String, nullable=True, name="migrationStatus")
-    reingestion_started_at = Column(DateTime, nullable=True, name="reingestionStartedAt")
+    reingestion_started_at = Column(
+        DateTime, nullable=True, name="reingestionStartedAt"
+    )
 
     sources = relationship("Source", back_populates="library")
 
