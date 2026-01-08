@@ -92,6 +92,40 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async publishReingestionJob(data: {
+    sourceId: string;
+    jobKey: string;
+    targetEmbeddingModel: string;
+  }) {
+    const routingKey = 'reingest.v1';
+
+    const jobPayload = {
+      jobType: 'reingest',
+      ...data,
+    };
+
+    try {
+      await this.channel.publish(
+        'file-processing-exchange',
+        routingKey,
+        Buffer.from(JSON.stringify(jobPayload)),
+        {
+          persistent: true,
+        },
+      );
+
+      console.log(
+        `[RabbitMQ] Published reingestion job to exchange 'file-processing-exchange' with routing key '${routingKey}' for source '${data.sourceId}'`,
+      );
+    } catch (error) {
+      console.error(
+        'Error publishing reingestion job to file-processing-exchange:',
+        error,
+      );
+      throw error;
+    }
+  }
+
   async sendToQueue(queue: string, data: { [key: string]: unknown } | string) {
     try {
       const queueOptions: {
