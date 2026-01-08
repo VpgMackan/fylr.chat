@@ -2,7 +2,8 @@ from .providers.openai_compatible import OpenaiCompatibleProvider
 from .providers.auto import AutoProvider
 from .providers.elevenlabs import ElevenLabsProvider
 
-from .embedding.jina import JinaProvider
+from .embedding.jina import JinaEmbeddingProvider
+from .embedding.ollama import OllamaEmbeddingProvider
 
 from .base import GeneralProvider, EmbeddingProvider
 from ..config import settings
@@ -23,7 +24,8 @@ general_providers: dict[str, GeneralProvider] = {
 }
 
 embedding_providers: dict[str, EmbeddingProvider] = {
-    "jina": JinaProvider(),
+    "jina": JinaEmbeddingProvider(),
+    "ollama": OllamaEmbeddingProvider(),
 }
 
 

@@ -7,6 +7,7 @@ import { AxiosError } from 'axios';
 @Injectable()
 export class AiVectorService {
   private readonly logger = new Logger(AiVectorService.name);
+  private cachedDefaultFullModel?: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -15,7 +16,7 @@ export class AiVectorService {
 
   private async _fetchEmbeddingsFromAiGateway(
     text: string,
-    model?: string,
+    fullModel?: string,
     options: Record<string, unknown> = {},
     task?: string,
   ): Promise<number[]> {
@@ -27,6 +28,8 @@ export class AiVectorService {
     if (task) {
       requestPayload.options = { ...options, task };
     }
+
+    requestPayload.fullModel = await this._resolveFullModel(fullModel);
 
     const aiGatewayUrl =
       this.configService.getOrThrow<string>('AI_GATEWAY_URL');
@@ -170,6 +173,7 @@ export class AiVectorService {
       const responseData = response.data as { default: string };
 
       if (responseData?.default) {
+        this.cachedDefaultFullModel = responseData.default;
         return responseData.default;
       } else {
         this.logger.error('Unexpected response structure:', responseData);
@@ -193,6 +197,18 @@ export class AiVectorService {
             );
       }
     }
+  }
+
+  private async _resolveFullModel(fullModel?: string): Promise<string> {
+    if (fullModel) {
+      return fullModel;
+    }
+
+    if (this.cachedDefaultFullModel) {
+      return this.cachedDefaultFullModel;
+    }
+
+    return this.getDefaultEmbeddingModel();
   }
 
   async generate(

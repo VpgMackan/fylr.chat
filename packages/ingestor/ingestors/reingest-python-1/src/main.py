@@ -14,6 +14,7 @@ from .database import get_db_session, Source, DocumentVector
 from .telemetry import setup_telemetry
 
 QUEUE_NAME = os.getenv("INGESTOR_QUEUE_NAME")
+FILE_EXCHANGE_NAME = "file-processing-exchange"
 EVENTS_EXCHANGE_NAME = "fylr-events"
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
@@ -61,7 +62,7 @@ def get_embeddings(chunks: list[str], embedding_model: str) -> list[list[float]]
     """Calls the AI Gateway passing the full model string as-is."""
     response = requests.post(
         f"{AI_GATEWAY_URL}/v1/embeddings",
-        json={"fullModel": embedding_model, "input": chunks},
+        json={"fullModel": embedding_model, "input": chunks, "options": {}},
     )
     response.raise_for_status()
     return [item["embedding"] for item in response.json()["data"]]
@@ -79,7 +80,13 @@ def main():
     channel.exchange_declare(
         exchange=EVENTS_EXCHANGE_NAME, exchange_type="topic", durable=True
     )
+    channel.exchange_declare(
+        exchange=FILE_EXCHANGE_NAME, exchange_type="topic", durable=True
+    )
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    channel.queue_bind(
+        exchange=FILE_EXCHANGE_NAME, queue=QUEUE_NAME, routing_key="reingest.v1"
+    )
 
     logger.info("Ingestor online", extra={"queue": QUEUE_NAME})
 
@@ -87,7 +94,7 @@ def main():
         message = json.loads(body)
         source_id = message.get("sourceId")
         job_key = message.get("jobKey")
-        embedding_model = message.get("embeddingModel")
+        embedding_model = message.get("targetEmbeddingModel")
 
         if not embedding_model:
             logger.error(

@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class JinaProvider(EmbeddingProvider):
+class JinaEmbeddingProvider(EmbeddingProvider):
     def generate_embeddings(self, input_text, model, options: object = {}):
         with tracer.start_as_current_span("jina_generate_embeddings") as span:
             span.set_attribute("model", model)
