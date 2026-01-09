@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 
 import SourceListItem from './SourceListItem';
-import ManageSourcesModal from '@/components/features/library/ManageSourcesModal';
+import ManageSourcesModal from '@/components/modals/ManageSourcesModal';
 import { getSourcesByLibraryId } from '@/services/api/source.api';
 import { getLibraryById } from '@/services/api/library.api';
 import { SourceApiResponse } from '@fylr/types';

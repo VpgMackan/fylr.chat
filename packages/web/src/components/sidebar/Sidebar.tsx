@@ -7,9 +7,9 @@ import { Icon } from '@iconify/react';
 import Button from '@/components/ui/Button';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
-import CreateContentModal from '../modals/CreateContentModal';
-import SettingsModal from '../modals/SettingsModal';
-import MigrationModal from '../features/library/MigrationModal';
+import CreateContentModal from '../modals/Content/CreateContentModal';
+import SettingsModal from '../modals/Settings/SettingsModal';
+import MigrationModal from '../modals/MigrationModal';
 import { useUser } from '@/contexts/UserContext';
 import {
   getConversations,
