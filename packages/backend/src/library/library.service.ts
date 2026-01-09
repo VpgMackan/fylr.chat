@@ -67,6 +67,8 @@ export class LibraryService {
       select: {
         id: true,
         title: true,
+        defaultEmbeddingModel: true,
+        migrationStatus: true,
       },
       orderBy: {
         createdAt: 'desc',

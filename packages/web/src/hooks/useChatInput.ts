@@ -4,6 +4,7 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
 } from 'react';
 import type { SuggestionDataItem } from 'react-mentions';
 import { listLibraries, SimpleLibrary } from '@/services/api/library.api';
@@ -12,6 +13,15 @@ import { getSourcesByLibraryId } from '@/services/api/source.api';
 interface Mention {
   id: string;
   display: string;
+}
+
+interface UseChatInputOptions {
+  onInvalidLibrarySelection?: (details: {
+    attemptedLibraryId?: string;
+    attemptedLibraryTitle?: string;
+    attemptedModel?: string;
+    existingModel?: string;
+  }) => void;
 }
 
 export function useChatInput(
@@ -24,7 +34,9 @@ export function useChatInput(
   }) => void,
   agentMode: string,
   webSearchEnabled: boolean = false,
+  options?: UseChatInputOptions,
 ) {
+  const { onInvalidLibrarySelection } = options ?? {};
   const [value, setValue] = useState('');
   const [plainText, setPlainText] = useState('');
   const [mentions, setMentions] = useState<Mention[]>([]);
@@ -37,6 +49,17 @@ export function useChatInput(
     new Set(),
   );
 
+  const lastValidState = useRef({
+    value: '',
+    plainText: '',
+    mentions: [] as Mention[],
+  });
+
+  const libraryMap = useMemo(
+    () => new Map(allLibraries.map((lib) => [lib.id, lib])),
+    [allLibraries],
+  );
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -46,6 +69,52 @@ export function useChatInput(
         console.error('[ChatInput] Error fetching libraries:', err);
       });
   }, []);
+
+  const findIncompatibleSelection = useCallback(
+    (nextMentions: Mention[]) => {
+      if (nextMentions.length === 0) return null;
+
+      const models = new Set<string>();
+
+      nextMentions.forEach((mention) => {
+        const model = libraryMap.get(mention.id)?.defaultEmbeddingModel;
+        if (model) {
+          models.add(model);
+        }
+      });
+
+      if (models.size <= 1) {
+        return null;
+      }
+
+      const previousModels = new Set(
+        lastValidState.current.mentions
+          .map((mention) => libraryMap.get(mention.id)?.defaultEmbeddingModel)
+          .filter((model): model is string => Boolean(model)),
+      );
+
+      const attempted = nextMentions.find(
+        (mention) =>
+          !lastValidState.current.mentions.some(
+            (prev) => prev.id === mention.id,
+          ),
+      );
+
+      return {
+        attemptedLibraryId: attempted?.id,
+        attemptedLibraryTitle: attempted
+          ? libraryMap.get(attempted.id)?.title
+          : undefined,
+        attemptedModel: attempted
+          ? libraryMap.get(attempted.id)?.defaultEmbeddingModel
+          : undefined,
+        existingModel:
+          previousModels.values().next().value ||
+          libraryMap.get(nextMentions[0].id)?.defaultEmbeddingModel,
+      };
+    },
+    [libraryMap],
+  );
 
   const adjustHeight = () => {
     const ta = textareaRef.current;
@@ -92,17 +161,33 @@ export function useChatInput(
     setValue('');
     setPlainText('');
     setMentions([]);
+    lastValidState.current = { value: '', plainText: '', mentions: [] };
   };
 
   const handleChange = (
     e: any,
     newValue: string,
     newPlainTextValue: string,
-    mentions: Mention[],
+    nextMentions: Mention[],
   ) => {
+    const incompatibility = findIncompatibleSelection(nextMentions);
+
+    if (incompatibility) {
+      onInvalidLibrarySelection?.(incompatibility);
+      setValue(lastValidState.current.value);
+      setPlainText(lastValidState.current.plainText);
+      setMentions(lastValidState.current.mentions);
+      return;
+    }
+
     setValue(newValue);
     setPlainText(newPlainTextValue);
-    setMentions(mentions);
+    setMentions(nextMentions);
+    lastValidState.current = {
+      value: newValue,
+      plainText: newPlainTextValue,
+      mentions: nextMentions,
+    };
   };
 
   const loadLibrariesWithSources = async () => {

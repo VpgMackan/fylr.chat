@@ -7,6 +7,7 @@ import { useChatInput } from '@/hooks/useChatInput';
 import { useUsageStats } from '@/hooks/useUsageStats';
 import type { SourceApiResponseWithIsActive } from '@fylr/types';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 interface ChatInputProps {
   onSend: (payload: {
@@ -100,6 +101,12 @@ export default function ChatInput({
     setWebSearchEnabled(!webSearchEnabled);
   }, [setWebSearchEnabled, webSearchEnabled]);
 
+  const handleBlockedLibrarySelection = useCallback(() => {
+    toast.error(
+      'Libraries must share the same embedding model. Please migrate libraries before combining them.',
+    );
+  }, []);
+
   const handleToggleAgentModeMenu = useCallback(() => {
     setShowAgentModeMenu((prev) => !prev);
   }, []);
@@ -156,7 +163,9 @@ export default function ChatInput({
     isLibrarySelected,
     libraryData,
     plainText,
-  } = useChatInput(onSend, agentMode, webSearchEnabled);
+  } = useChatInput(onSend, agentMode, webSearchEnabled, {
+    onInvalidLibrarySelection: handleBlockedLibrarySelection,
+  });
 
   const getConversationSourceIds = (): Set<string> => {
     const sourceIds = new Set<string>();

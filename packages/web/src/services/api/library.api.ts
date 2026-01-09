@@ -4,6 +4,8 @@ import { LibraryApiResponse, UpdateLibraryDto } from '@fylr/types';
 export interface SimpleLibrary {
   id: string;
   title: string;
+  defaultEmbeddingModel: string;
+  migrationStatus?: string | null;
 }
 
 export const listLibraries = async (): Promise<SimpleLibrary[]> => {
