@@ -104,6 +104,7 @@ class ChatCompletionResponse(BaseModel):
 class EmbeddingRequest(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
+    fullModel: Optional[str] = None  # Format: timestamp@version@provider/model
     input: Union[str, List[str]]
     options: Dict[str, Any] = Field(default_factory=dict)
 
@@ -114,3 +115,18 @@ class EmbeddingResponse(BaseModel):
     provider: str
     model: str
     usage: Dict[str, int]
+
+
+class SetDefaultModelRequest(BaseModel):
+    """Request to set a model as the default."""
+
+    provider: str
+    model: str
+
+
+class DeprecateModelRequest(BaseModel):
+    """Request to deprecate a model."""
+
+    provider: str
+    model: str
+    deprecationDate: str  # ISO 8601 format

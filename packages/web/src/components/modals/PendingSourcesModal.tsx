@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import axios from '@/utils/axios';
+import SmallModal from './SmallModal';
 import { useUsageStats } from '@/hooks/useUsageStats';
 import Link from 'next/link';
 
@@ -18,7 +19,15 @@ interface PendingSource {
   };
 }
 
-export default function PendingSourcesView() {
+interface PendingSourcesModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function PendingSourcesModal({
+  isOpen,
+  onClose,
+}: PendingSourcesModalProps) {
   const [pendingSources, setPendingSources] = useState<PendingSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +51,10 @@ export default function PendingSourcesView() {
   };
 
   useEffect(() => {
-    fetchPendingSources();
-  }, []);
+    if (isOpen) {
+      fetchPendingSources();
+    }
+  }, [isOpen]);
 
   const handleTriggerIngestion = async (sourceId: string) => {
     setProcessingIds((prev) => new Set(prev).add(sourceId));
@@ -68,7 +79,6 @@ export default function PendingSourcesView() {
       });
     }
   };
-
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
@@ -80,45 +90,39 @@ export default function PendingSourcesView() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Icon
-            icon="mdi:loading"
-            className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2"
-          />
-          <p className="text-gray-600">Loading pending sources...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!isOpen) return null;
+
+  const footerText = ``;
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Pending Sources
-        </h1>
-        <p className="text-gray-600">
-          These files have been uploaded but are waiting to be processed due to
-          daily upload limits.
-        </p>
-      </div>
+    <SmallModal
+      onClose={onClose}
+      accent="blue"
+      title="Pending Sources"
+      icon="mdi:database-arrow-right"
+      footerText={footerText}
+    >
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Icon icon="mdi:alert-circle" className="w-5 h-5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
 
-      {/* Usage Stats Card */}
       {stats && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-900 mb-1">
+              <h3 className="font-medium text-gray-900 dark:text-white mb-1">
                 Daily Upload Usage
               </h3>
-              <p className="text-sm text-gray-600">
-                {stats.usage.dailySourceUploads} of{' '}
-                {stats.limits.dailySourceUploads === Infinity
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {stats.usage.SOURCE_UPLOAD_DAILY} of{' '}
+                {stats.limits.features.SOURCE_UPLOAD_DAILY === Infinity
                   ? 'unlimited'
-                  : stats.limits.dailySourceUploads}{' '}
+                  : stats.limits.features.SOURCE_UPLOAD_DAILY}{' '}
                 uploads used today
               </p>
             </div>
@@ -136,35 +140,38 @@ export default function PendingSourcesView() {
                   refetchStats();
                   fetchPendingSources();
                 }}
-                className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
                 title="Refresh"
               >
-                <Icon icon="mdi:refresh" className="w-5 h-5 text-blue-600" />
+                <Icon icon="mdi:refresh" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Icon icon="mdi:alert-circle" className="w-5 h-5" />
-            <span>{error}</span>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Icon
+              icon="mdi:loading"
+              className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-2"
+            />
+            <p className="text-gray-600 dark:text-gray-400">
+              Loading pending sources...
+            </p>
           </div>
         </div>
-      )}
-
-      {pendingSources.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+      ) : pendingSources.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
           <Icon
-            icon="mdi:check-circle"
-            className="w-16 h-16 text-green-500 mx-auto mb-4"
+            icon="mdi:check-circle-outline"
+            className="text-6xl text-green-500 mx-auto mb-4"
           />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <p className="text-gray-900 dark:text-white text-lg mb-2 font-semibold">
             No Pending Sources
-          </h3>
-          <p className="text-gray-600 mb-4">
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
             All your uploaded files have been processed!
           </p>
           <Link
@@ -176,38 +183,41 @@ export default function PendingSourcesView() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-center overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 border-b border-gray-200 dark:bg-gray-900 dark:border-gray-950">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     File Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Library
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Uploaded
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {pendingSources.map((source) => (
-                  <tr key={source.id} className="hover:bg-gray-50">
+                  <tr
+                    key={source.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <Icon
                           icon="mdi:file-document"
-                          className="w-5 h-5 text-gray-400 mr-3"
+                          className="w-5 h-5 text-gray-400 dark:text-white mr-3"
                         />
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {source.name}
                         </span>
                       </div>
@@ -220,10 +230,10 @@ export default function PendingSourcesView() {
                         {source.library.title}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                       {formatFileSize(source.size)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                       {formatDate(source.uploadTime)}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -232,8 +242,9 @@ export default function PendingSourcesView() {
                         disabled={
                           processingIds.has(source.id) ||
                           (stats
-                            ? stats.usage.dailySourceUploads >=
-                              stats.limits.dailySourceUploads
+                            ? (stats.usage.SOURCE_UPLOAD_DAILY ?? 0) >=
+                              (stats.limits.features.SOURCE_UPLOAD_DAILY ??
+                                Infinity)
                             : false)
                         }
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-sm transition-colors"
@@ -247,8 +258,9 @@ export default function PendingSourcesView() {
                             Processing...
                           </>
                         ) : stats &&
-                          stats.usage.dailySourceUploads >=
-                            stats.limits.dailySourceUploads ? (
+                          (stats.usage.SOURCE_UPLOAD_DAILY ?? 0) >=
+                            (stats.limits.features.SOURCE_UPLOAD_DAILY ??
+                              Infinity) ? (
                           <>
                             <Icon icon="mdi:lock" className="w-4 h-4" />
                             Limit Reached
@@ -270,22 +282,22 @@ export default function PendingSourcesView() {
       )}
 
       {pendingSources.length > 0 && stats && stats.role === 'FREE' && (
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
           <div className="flex items-start gap-3">
             <Icon
               icon="mdi:information"
-              className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
+              className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0"
             />
             <div className="text-sm">
-              <p className="font-medium text-yellow-800 mb-1">
+              <p className="font-medium text-yellow-800 dark:text-yellow-300 mb-1">
                 Daily Upload Limit
               </p>
-              <p className="text-yellow-700">
+              <p className="text-yellow-700 dark:text-yellow-300">
                 Your daily upload limit will reset at midnight. You can process
                 pending sources then, or{' '}
                 <Link
                   href="/settings?tab=subscription"
-                  className="font-medium underline hover:text-yellow-800"
+                  className="font-medium underline hover:text-yellow-800 dark:hover:text-yellow-200"
                 >
                   upgrade to Pro
                 </Link>{' '}
@@ -295,6 +307,6 @@ export default function PendingSourcesView() {
           </div>
         </div>
       )}
-    </div>
+    </SmallModal>
   );
 }

@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Any, AsyncGenerator, Tuple
 from opentelemetry import trace
 
-from ..base import BaseProvider
+from ..base import GeneralProvider
 from ...prompts.registry import PromptNotFound
 from ...prompts import prompt_registry
 from ...schemas import ChatCompletionRequest
@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class AutoProvider(BaseProvider):
+class AutoProvider(GeneralProvider):
     """
     A meta-provider that automatically selects the best underlying provider
     and model based on the request's context (e.g., prompt template metadata).
@@ -22,7 +22,7 @@ class AutoProvider(BaseProvider):
 
     def _select_model(
         self, request: ChatCompletionRequest
-    ) -> Tuple[str, str, BaseProvider]:
+    ) -> Tuple[str, str, GeneralProvider]:
         """
         Selects the provider and model name based on rules.
         Returns: (provider_name, model_name, provider_instance)

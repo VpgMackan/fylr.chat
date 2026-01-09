@@ -32,9 +32,6 @@ export class CreateLibraryDtoApiRequest {
 
   @IsString()
   title!: string;
-
-  @IsString()
-  defaultEmbeddingModel!: string;
 }
 
 export class CreateLibraryDto {
@@ -53,7 +50,4 @@ export class CreateLibraryDto {
 
   @IsString()
   title!: string;
-
-  @IsString()
-  defaultEmbeddingModel!: string;
 }

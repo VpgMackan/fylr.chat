@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 
-import Button from '../ui/Button';
+import Button from '../../ui/Button';
 import CreateLibraryContent, {
   CreateLibraryContentRef,
 } from './CreateLibraryContent';

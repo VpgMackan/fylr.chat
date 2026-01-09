@@ -7,10 +7,10 @@ import { getProfile, updateProfile, logout } from '@/services/api/auth.api';
 import { UserApiResponse } from '@fylr/types';
 import SessionsManager from '@/components/features/profile/SessionsManager';
 import SubscriptionManager from '@/components/features/profile/SubscriptionManager';
-import { TrackingSettings } from '../TrackingSettings';
-import { resetUser, captureEvent } from '../../../instrumentation-client';
+import { TrackingSettings } from '../../TrackingSettings';
+import { resetUser, captureEvent } from '../../../../instrumentation-client';
 
-import Button from '../ui/Button';
+import Button from '@/components/ui/Button';
 
 type SettingsType =
   | 'Subscription'

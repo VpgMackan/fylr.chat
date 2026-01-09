@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import axios from '@/utils/axios';
 import { isAxiosError } from 'axios';
 import { logout as logoutApi } from '@/services/api/auth.api';
@@ -17,8 +17,13 @@ export function useAuth() {
   const [userRole, setUserRole] = useState<string>('FREE');
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const checkAuth = async () => {
       try {
         const { data } = await axios.get('auth/profile');
@@ -34,7 +39,12 @@ export function useAuth() {
       } catch (error: unknown) {
         if (isAxiosError(error) && error.response?.status === 401) {
           setIsAuthenticated(false);
-          router.push('/auth/login');
+          
+          // Don't redirect if already on auth pages (check pathname for /auth/)
+          const isAuthPage = pathname && pathname.includes('/auth/');
+          if (!isAuthPage) {
+            router.push('/auth/login');
+          }
         }
       } finally {
         setIsLoading(false);
@@ -42,7 +52,7 @@ export function useAuth() {
     };
 
     checkAuth();
-  }, [router]);
+  }, []);
 
   const logout = async () => {
     try {

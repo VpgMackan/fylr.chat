@@ -2,7 +2,7 @@ import logging
 from opentelemetry import trace
 from fastapi import APIRouter, HTTPException, status, Response
 
-from ai_gateway.providers import providers
+from ai_gateway.providers import general_providers
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ async def text_to_speech(request: dict):
         )
 
         try:
-            response = providers[provider_name].generate_text_to_speech(
+            response = general_providers[provider_name].generate_text_to_speech(
                 text=request["text"],
                 model=model,
                 voice=request.get("voice"),

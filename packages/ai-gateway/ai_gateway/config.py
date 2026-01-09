@@ -22,9 +22,6 @@ class Settings(BaseSettings):
     posthog_api_key: Optional[str] = None
     posthog_host: str = "https://app.posthog.com"
 
-    default_embedding_provider: str = "jina"
-    default_embedding_model: str = "jina-clip-v2"
-
     otel_service_name: str = "ai-gateway"
     otel_exporter_otlp_endpoint: str = "localhost:4317"
 

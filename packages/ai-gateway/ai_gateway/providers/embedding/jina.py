@@ -2,7 +2,7 @@ import logging
 import httpx
 from typing import List, Optional
 from opentelemetry import trace
-from ..base import BaseProvider
+from ..base import EmbeddingProvider
 from ...config import settings
 from ...schemas import EmbeddingResponse
 
@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class JinaProvider(BaseProvider):
+class JinaEmbeddingProvider(EmbeddingProvider):
     def generate_embeddings(self, input_text, model, options: object = {}):
         with tracer.start_as_current_span("jina_generate_embeddings") as span:
             span.set_attribute("model", model)

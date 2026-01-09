@@ -4,14 +4,14 @@ from elevenlabs import ElevenLabs
 from typing import Dict, Any
 from opentelemetry import trace
 
-from ..base import BaseProvider
+from ..base import GeneralProvider
 from ...config import settings
 
 log = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class ElevenLabsProvider(BaseProvider):
+class ElevenLabsProvider(GeneralProvider):
     def __init__(self):
         if not settings.elevenlabs_api_key:
             log.warning("elevenlabs_api_key_not_set")

@@ -155,6 +155,14 @@ export class ChatGateway
             webSearchEnabled?: boolean;
           };
 
+          if (libraryIds && libraryIds.length > 0) {
+            await this.conversationService.ensureLibrariesShareEmbeddingModel(
+              libraryIds,
+              client.user.id,
+              conversationId,
+            );
+          }
+
           // Handle both sourceIds and libraryIds
           if (
             (sourceIds && sourceIds.length > 0) ||

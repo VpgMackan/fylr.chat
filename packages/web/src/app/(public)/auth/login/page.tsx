@@ -98,12 +98,13 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600">
               {t.rich('noAccount', {
                 signup: (children) => (
-                  <a
-                    href="/auth/signup"
-                    className="text-blue-600 hover:text-blue-500 font-medium"
+                  <button
+                    type="button"
+                    onClick={() => router.push('/auth/signup')}
+                    className="text-blue-600 hover:text-blue-500 font-medium underline bg-none border-none cursor-pointer"
                   >
                     {children}
-                  </a>
+                  </button>
                 ),
               })}
             </p>

@@ -7,8 +7,9 @@ import { Icon } from '@iconify/react';
 import Button from '@/components/ui/Button';
 import SidebarActions from './SidebarActions';
 import ConversationList from './ConversationList';
-import CreateContentModal from '../modals/CreateContentModal';
-import SettingsModal from '../modals/SettingsModal';
+import CreateContentModal from '../modals/Content/CreateContentModal';
+import SettingsModal from '../modals/Settings/SettingsModal';
+import MigrationModal from '../modals/MigrationModal';
 import { useUser } from '@/contexts/UserContext';
 import {
   getConversations,
@@ -31,6 +32,7 @@ import {
   deleteLibrary,
 } from '@/services/api/library.api';
 import toast from 'react-hot-toast';
+import PendingSourcesModal from '../modals/PendingSourcesModal';
 
 type ContentType =
   | 'Conversations'
@@ -70,6 +72,8 @@ export default function Sidebar({ selectedId }: SidebarProps) {
   const { userRole } = useUser();
   const [createContentModalOpen, setCreateContentModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [showMigrations, setShowMigrations] = useState(false);
+  const [showPendingSources, setShowPendingSources] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('');
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -279,12 +283,22 @@ export default function Sidebar({ selectedId }: SidebarProps) {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
       />
+      <MigrationModal
+        isOpen={showMigrations}
+        onClose={() => setShowMigrations(false)}
+      />
+      <PendingSourcesModal
+        isOpen={showPendingSources}
+        onClose={() => setShowPendingSources(false)}
+      />
       <div className="flex flex-row w-96">
         {/* Narrow Navigation Sidebar */}
         <div className="bg-gradient-to-b from-gray-50 to-gray-100 p-2 flex flex-col h-full shadow-lg w-20">
           <SidebarActions
             onCreateChat={onCreateChat}
             onCreateContent={() => setCreateContentModalOpen(true)}
+            onManageMigrations={() => setShowMigrations(true)}
+            onPendingSources={() => setShowPendingSources(true)}
           />
 
           <hr className="border-gray-300 my-3" />

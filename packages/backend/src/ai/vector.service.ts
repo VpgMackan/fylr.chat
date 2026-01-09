@@ -7,6 +7,7 @@ import { AxiosError } from 'axios';
 @Injectable()
 export class AiVectorService {
   private readonly logger = new Logger(AiVectorService.name);
+  private cachedDefaultFullModel?: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -15,7 +16,7 @@ export class AiVectorService {
 
   private async _fetchEmbeddingsFromAiGateway(
     text: string,
-    model?: string,
+    fullModel?: string,
     options: Record<string, unknown> = {},
     task?: string,
   ): Promise<number[]> {
@@ -24,14 +25,11 @@ export class AiVectorService {
       options,
     };
 
-    if (model) {
-      requestPayload.provider = 'jina';
-      requestPayload.model = model;
-    }
-
     if (task) {
       requestPayload.options = { ...options, task };
     }
+
+    requestPayload.fullModel = await this._resolveFullModel(fullModel);
 
     const aiGatewayUrl =
       this.configService.getOrThrow<string>('AI_GATEWAY_URL');
@@ -79,6 +77,138 @@ export class AiVectorService {
             );
       }
     }
+  }
+
+  async fetchModels(): Promise<
+    {
+      provider: string;
+      model: string;
+      version: string;
+      timestamp: string;
+      dimensions: number;
+      isDefault: boolean;
+      isDeprecated: boolean;
+      deprecationDate?: string;
+      fullModel: string;
+    }[]
+  > {
+    const aiGatewayUrl =
+      this.configService.getOrThrow<string>('AI_GATEWAY_URL');
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(`${aiGatewayUrl}/v1/embeddings/models`, {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        this.logger.error(
+          `Error fetching models (unexpected status): ${response.status} ${response.statusText}`,
+          response.data,
+        );
+        throw new Error(`Failed to fetch models: ${response.statusText}`);
+      }
+
+      const responseData = response.data as {
+        models: Array<{
+          provider: string;
+          model: string;
+          version: string;
+          timestamp: string;
+          dimensions: number;
+          isDefault: boolean;
+          isDeprecated: boolean;
+          deprecationDate?: string;
+          fullModel: string;
+        }>;
+        default: string;
+      };
+
+      if (responseData?.models) {
+        return responseData.models;
+      } else {
+        this.logger.error('Unexpected response structure:', responseData);
+        throw new Error('Failed to extract models from response');
+      }
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        this.logger.error(
+          `AI Gateway Error: ${error.response?.status} ${error.response?.statusText}`,
+          error.response?.data || error.message,
+        );
+        throw new Error(
+          `AI Gateway request failed: ${error.response?.statusText || error.message}`,
+        );
+      } else {
+        this.logger.error('Unexpected error during AI Gateway call:', error);
+        throw error instanceof Error
+          ? error
+          : new Error('An unexpected error occurred while fetching models.');
+      }
+    }
+  }
+
+  async getDefaultEmbeddingModel(): Promise<string> {
+    const aiGatewayUrl =
+      this.configService.getOrThrow<string>('AI_GATEWAY_URL');
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(`${aiGatewayUrl}/v1/embeddings/models`, {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        this.logger.error(
+          `Error fetching default model (unexpected status): ${response.status} ${response.statusText}`,
+          response.data,
+        );
+        throw new Error(
+          `Failed to fetch default model: ${response.statusText}`,
+        );
+      }
+
+      const responseData = response.data as { default: string };
+
+      if (responseData?.default) {
+        this.cachedDefaultFullModel = responseData.default;
+        return responseData.default;
+      } else {
+        this.logger.error('Unexpected response structure:', responseData);
+        throw new Error('Failed to extract default model from response');
+      }
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        this.logger.error(
+          `AI Gateway Error: ${error.response?.status} ${error.response?.statusText}`,
+          error.response?.data || error.message,
+        );
+        throw new Error(
+          `AI Gateway request failed: ${error.response?.statusText || error.message}`,
+        );
+      } else {
+        this.logger.error('Unexpected error during AI Gateway call:', error);
+        throw error instanceof Error
+          ? error
+          : new Error(
+              'An unexpected error occurred while fetching default model.',
+            );
+      }
+    }
+  }
+
+  private async _resolveFullModel(fullModel?: string): Promise<string> {
+    if (fullModel) {
+      return fullModel;
+    }
+
+    if (this.cachedDefaultFullModel) {
+      return this.cachedDefaultFullModel;
+    }
+
+    return this.getDefaultEmbeddingModel();
   }
 
   async generate(

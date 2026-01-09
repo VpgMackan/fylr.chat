@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,12 +11,17 @@ import {
   LibraryApiResponse,
   UpdateLibraryDto,
 } from '@fylr/types';
+import { AiVectorService } from 'src/ai/vector.service';
+import { RabbitMQService } from 'src/utils/rabbitmq.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class LibraryService {
   constructor(
     private prisma: PrismaService,
     private permissionsService: PermissionsService,
+    private vectorService: AiVectorService,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async findMultipleByUserId(
@@ -61,6 +67,8 @@ export class LibraryService {
       select: {
         id: true,
         title: true,
+        defaultEmbeddingModel: true,
+        migrationStatus: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -85,13 +93,18 @@ export class LibraryService {
     const canCreate = await this.permissionsService.canCreateLibrary(
       data.userId,
     );
+    const newData = {
+      defaultEmbeddingModel:
+        await this.vectorService.getDefaultEmbeddingModel(),
+      ...data,
+    };
 
     if (!canCreate) {
       throw new ForbiddenException(
         'You have reached the maximum number of libraries for your plan. Please upgrade to create more.',
       );
     }
-    return await this.prisma.library.create({ data });
+    return await this.prisma.library.create({ data: newData });
   }
 
   async updateLibrary(
@@ -110,5 +123,134 @@ export class LibraryService {
     return await this.prisma.library.delete({
       where: { id },
     });
+  }
+
+  async updateModel(id: string, userId: string) {
+    const { library } = await this.findOneById(id, userId);
+    const targetModel = await this.vectorService.getDefaultEmbeddingModel();
+
+    if (library.defaultEmbeddingModel === targetModel) {
+      throw new BadRequestException(
+        'Library already uses the latest default embedding model.',
+      );
+    }
+
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.library.update({
+        where: { id: library.id },
+        data: {
+          migrationStatus: 'pending',
+          reingestionStartedAt: now,
+          defaultEmbeddingModel: targetModel,
+        },
+      });
+
+      await tx.source.updateMany({
+        where: { libraryId: library.id },
+        data: {
+          reingestionStatus: 'pending',
+          reingestionStartedAt: now,
+          reingestionCompletedAt: null,
+        },
+      });
+    });
+
+    const jobs = await Promise.all(
+      library.sources.map(async (source) => {
+        const jobKey = uuidv4();
+
+        await this.rabbitMQService.publishReingestionJob({
+          sourceId: source.id,
+          jobKey,
+          targetEmbeddingModel: targetModel,
+        });
+
+        return { sourceId: source.id, jobKey };
+      }),
+    );
+
+    return {
+      message: 'Library model update initiated.',
+      libraryId: library.id,
+      targetEmbeddingModel: targetModel,
+      jobs,
+    };
+  }
+
+  async getLibrariesRequiringMigration(userId: string) {
+    const models = await this.vectorService.fetchModels();
+    const modelMap = new Map(models.map((m) => [m.fullModel, m]));
+    const defaultModel = models.find((m) => m.isDefault)?.fullModel;
+
+    if (!defaultModel) {
+      throw new BadRequestException('No default embedding model configured.');
+    }
+
+    const deprecatedSet = new Set(
+      models.filter((m) => m.isDeprecated).map((m) => m.fullModel),
+    );
+    const knownModelSet = new Set(models.map((m) => m.fullModel));
+
+    const libraries = await this.prisma.library.findMany({
+      where: {
+        userId,
+        OR: [
+          { defaultEmbeddingModel: { not: defaultModel } },
+          { defaultEmbeddingModel: { in: Array.from(deprecatedSet) } },
+          { defaultEmbeddingModel: { notIn: Array.from(knownModelSet) } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        defaultEmbeddingModel: true,
+      },
+    });
+
+    const deprecated: Array<{
+      id: string;
+      title: string;
+      model: string;
+      reason: 'deprecated' | 'unknown';
+    }> = [];
+
+    const nonDefault: Array<{
+      id: string;
+      title: string;
+      model: string;
+      reason: 'not-default';
+    }> = [];
+
+    libraries.forEach((library) => {
+      const modelInfo = modelMap.get(library.defaultEmbeddingModel);
+      const isDeprecated = modelInfo?.isDeprecated ?? !modelInfo;
+
+      if (isDeprecated) {
+        deprecated.push({
+          id: library.id,
+          title: library.title,
+          model: library.defaultEmbeddingModel,
+          reason: modelInfo ? 'deprecated' : 'unknown',
+        });
+        return;
+      }
+
+      if (library.defaultEmbeddingModel !== defaultModel) {
+        nonDefault.push({
+          id: library.id,
+          title: library.title,
+          model: library.defaultEmbeddingModel,
+          reason: 'not-default',
+        });
+      }
+    });
+
+    return {
+      defaultModel,
+      deprecated,
+      nonDefault,
+    };
   }
 }

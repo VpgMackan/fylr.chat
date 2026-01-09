@@ -117,16 +117,18 @@ model RefreshToken {
 }
 
 model Library {
-  id                    String   @id @default(uuid())
-  userId                String   @map("user_id")
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
   icon                  String
-  description           String   @db.Text
-  createdAt             DateTime @default(now()) @map("created_at")
-  tags                  String[] @db.Text
+  description           String    @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  tags                  String[]  @db.Text
   title                 String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   sources               Source[]
-  defaultEmbeddingModel String   @map("default_embedding_model")
+  defaultEmbeddingModel String    @map("default_embedding_model")
+  migrationStatus       String?
+  reingestionStartedAt  DateTime?
 
   @@map("Libraries")
 }
@@ -147,6 +149,10 @@ model Source {
 
   ingestorType    String?
   ingestorVersion String?
+
+  reingestionStatus      String?
+  reingestionStartedAt   DateTime?
+  reingestionCompletedAt DateTime?
 
   conversations Conversation[] @relation("ConversationSources")
   summaries     Summary[]      @relation("SummarySources")

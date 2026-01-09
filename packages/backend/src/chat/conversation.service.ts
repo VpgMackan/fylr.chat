@@ -34,6 +34,73 @@ export class ConversationService {
     this.server = server;
   }
 
+  async ensureLibrariesShareEmbeddingModel(
+    libraryIds: string[] | undefined,
+    userId: string,
+    conversationId?: string,
+  ): Promise<string | null> {
+    const ids = (libraryIds ?? []).filter(Boolean);
+
+    if (ids.length === 0 && !conversationId) {
+      return null;
+    }
+
+    const libraries = ids.length
+      ? await this.prisma.library.findMany({
+          where: { id: { in: ids }, userId },
+          select: { id: true, defaultEmbeddingModel: true },
+        })
+      : [];
+
+    if (libraries.length !== ids.length) {
+      throw new BadRequestException(
+        'Some libraries were not found or are not accessible.',
+      );
+    }
+
+    const models = new Set<string>();
+
+    libraries.forEach((library) => {
+      if (library.defaultEmbeddingModel) {
+        models.add(library.defaultEmbeddingModel);
+      }
+    });
+
+    if (conversationId) {
+      const conversation = await this.prisma.conversation.findFirst({
+        where: { id: conversationId, userId },
+        select: {
+          sources: {
+            select: {
+              library: {
+                select: { id: true, defaultEmbeddingModel: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!conversation) {
+        throw new ForbiddenException('Conversation not found or access denied.');
+      }
+
+      conversation.sources.forEach((source) => {
+        const model = source.library?.defaultEmbeddingModel;
+        if (model) {
+          models.add(model);
+        }
+      });
+    }
+
+    if (models.size > 1) {
+      throw new BadRequestException(
+        'Selected libraries use different embedding models. Please migrate libraries with the migration tool before combining them.',
+      );
+    }
+
+    return models.values().next().value ?? null;
+  }
+
   async generateWebSocketToken(
     user: UserPayload,
     conversationId: string,
@@ -82,6 +149,11 @@ export class ConversationService {
           );
         }
       }
+
+      await this.ensureLibrariesShareEmbeddingModel(
+        body.libraryIds,
+        userId,
+      );
 
       // Collect all source IDs from both sourceIds and libraryIds
       let allSourceIds: string[] = [];
@@ -150,6 +222,11 @@ export class ConversationService {
     return withSpan(
       'conversation.initiate',
       async (span) => {
+        await this.ensureLibrariesShareEmbeddingModel(
+          libraryIds,
+          userId,
+        );
+
         let allSourceIds: string[] = [];
 
         if (sourceIds && sourceIds.length > 0) {
