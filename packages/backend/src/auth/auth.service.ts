@@ -118,16 +118,23 @@ export class AuthService {
   }
 
   private async generateTokens(payload: UserPayload): Promise<Tokens> {
+    const accessExpires = this.parseExpiry(
+      this.configService.get<string>('JWT_EXPIRY', '15m'),
+    );
+    const refreshExpires = this.parseExpiry(
+      this.configService.get<string>('JWT_REFRESH_EXPIRY', '7d'),
+    );
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.getOrThrow<string>('JWT_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_EXPIRY', '15m'),
+        expiresIn: accessExpires,
       }),
       this.jwtService.signAsync(
         { ...payload, jti: uuidv4() },
         {
           secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-          expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRY', '7d'),
+          expiresIn: refreshExpires,
         },
       ),
     ]);
@@ -149,6 +156,29 @@ export class AuthService {
         hashedToken,
       },
     });
+  }
+
+  private parseExpiry(exp?: string): number | undefined {
+    if (!exp) return undefined;
+    const trimmed = String(exp).trim();
+    // pure number (seconds)
+    if (/^\d+$/.test(trimmed)) return Number(trimmed);
+    const m = trimmed.match(/^(\d+)([smhd])$/i);
+    if (!m) return undefined;
+    const n = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    switch (unit) {
+      case 's':
+        return n;
+      case 'm':
+        return n * 60;
+      case 'h':
+        return n * 60 * 60;
+      case 'd':
+        return n * 60 * 60 * 24;
+      default:
+        return undefined;
+    }
   }
 
   async generateWebSocketToken(user: UserPayload): Promise<{ token: string }> {
