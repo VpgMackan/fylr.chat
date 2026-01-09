@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icon } from '@iconify/react';
 import Button from '../ui/Button';
 import axios from '@/utils/axios';
@@ -9,16 +8,17 @@ interface SidebarActionsProps {
   onCreateContent?: () => void;
   onManageMigrations?: () => void;
   onSelectLibrary?: () => void;
+  onPendingSources?: () => void;
 }
 
 export default function SidebarActions({
   onCreateChat,
   onCreateContent,
   onManageMigrations,
+  onPendingSources,
   onSelectLibrary,
 }: SidebarActionsProps) {
   const [pendingCount, setPendingCount] = useState(0);
-  const router = useRouter();
 
   useEffect(() => {
     const fetchPendingCount = async () => {
@@ -60,8 +60,8 @@ export default function SidebarActions({
       {pendingCount > 0 && (
         <div className="relative">
           <button
-            onClick={() => router.push('/pending-sources')}
-            className="w-full p-2 rounded-xl bg-yellow-100 hover:bg-yellow-200 text-yellow-800 transition-all shadow-sm hover:shadow-md relative"
+            onClick={onPendingSources}
+            className="w-full p-2 rounded-xl bg-yellow-100 hover:bg-yellow-200 text-yellow-800 transition-all shadow-sm hover:shadow-md relative flex items-center justify-center"
             title="Pending Sources"
           >
             <Icon icon="mdi:clock-alert" width="24" height="24" />
